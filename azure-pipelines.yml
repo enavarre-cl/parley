@@ -1,0 +1,54 @@
+# Pipeline de CI para Azure DevOps. Equivalente al antiguo .github/workflows/ci.yml.
+# npm ci → lint → compile (typecheck) → tests → empaquetar .vsix → publicar artefacto.
+
+trigger:
+  branches:
+    include:
+      - main
+
+pr:
+  branches:
+    include:
+      - main
+
+pool:
+  vmImage: ubuntu-latest
+
+steps:
+  - task: NodeTool@0
+    displayName: 'Instalar Node.js 20'
+    inputs:
+      versionSpec: '20.x'
+
+  # Cachea ~/.npm entre ejecuciones (clave = hash de package-lock.json).
+  - task: Cache@2
+    displayName: 'Caché de npm'
+    inputs:
+      key: 'npm | "$(Agent.OS)" | package-lock.json'
+      restoreKeys: |
+        npm | "$(Agent.OS)"
+      path: $(Pipeline.Workspace)/.npm
+
+  - script: npm config set cache "$(Pipeline.Workspace)/.npm" --global
+    displayName: 'Apuntar npm a la caché'
+
+  - script: npm ci
+    displayName: 'Instalar dependencias (npm ci)'
+
+  - script: npm run lint
+    displayName: 'Lint (ESLint)'
+
+  - script: npm run compile
+    displayName: 'Compilar (typecheck)'
+
+  - script: npm test
+    displayName: 'Tests (node:test)'
+
+  - script: npx --yes @vscode/vsce package -o lang-chat.vsix
+    displayName: 'Empaquetar (.vsix)'
+
+  - task: PublishPipelineArtifact@1
+    displayName: 'Publicar el .vsix'
+    inputs:
+      targetPath: lang-chat.vsix
+      artifact: vsix
