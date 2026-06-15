@@ -165,7 +165,16 @@ export class OpenAIProvider implements LLMProvider {
       }
       // Algunos servidores (OpenRouter, etc.) mandan el error DENTRO del stream.
       if (json?.error) {
-        const m = json.error?.message ?? JSON.stringify(json.error);
+        const err = json.error;
+        let m = err?.message ?? JSON.stringify(err);
+        // OpenRouter esconde la causa real (p. ej. "tools no soportadas") en metadata.
+        const meta = err?.metadata;
+        if (meta) {
+          const raw = typeof meta.raw === 'string' ? meta.raw.trim() : meta.raw ? JSON.stringify(meta.raw) : '';
+          if (raw) m += ` — ${raw}`;
+          if (meta.provider_name) m += ` (proveedor: ${meta.provider_name})`;
+        }
+        if (err?.code) m += ` [${err.code}]`;
         throw new Error(`Backend (stream): ${m}`);
       }
       if (json?.usage) {
