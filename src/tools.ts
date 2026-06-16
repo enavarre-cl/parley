@@ -322,6 +322,13 @@ export class ToolHub {
   async call(name: string, args: any): Promise<string> {
     const builtin = BUILTIN.find((b) => b.schema.name === name);
     if (builtin) return builtin.run(args);
+    // Las tools MCP llevan separador `server__tool`. Sin él (p. ej. el modelo inventa `fs_//read`),
+    // damos un error CLARO con las tools disponibles para que el modelo se autocorrija (no un
+    // "servidor MCP vacío" inútil que además puede romper el siguiente turno).
+    if (!name.includes('__')) {
+      const avail = this.schemas().map((s) => s.name).join(', ');
+      throw new Error(`Unknown tool "${name}". Available tools: ${avail}`);
+    }
     return this.mcp.call(name, args);
   }
 

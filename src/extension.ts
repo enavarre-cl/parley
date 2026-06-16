@@ -1336,7 +1336,16 @@ class ChatEditorProvider implements vscode.CustomTextEditorProvider {
           if (!doc) break;
           const i = msg.index;
           if (Number.isInteger(i) && i >= 0 && i < doc.messages.length) {
-            doc.messages.splice(i, 1);
+            // Arrastra la cadena de tools OCULTA adyacente (assistant con toolCalls + resultados
+            // 'tool') en AMBOS lados: antes (turno completo) y después (turno roto sin respuesta
+            // final). Si no, quedarían huérfanas en el JSON.
+            let start = i;
+            let end = i;
+            while (start > 0 && isHiddenToolMsg(doc.messages[start - 1])) start--;
+            while (end + 1 < doc.messages.length && isHiddenToolMsg(doc.messages[end + 1])) end++;
+            doc.messages.splice(start, end - start + 1);
+            // Si solo quedan restos de tools (ningún mensaje mostrable), limpia del todo.
+            if (!doc.messages.some((m) => !isHiddenToolMsg(m))) doc.messages = [];
             doc.summary = undefined; // los índices del resumen cambiaron
             await writeDoc(doc);
             sendHistory();
@@ -1350,7 +1359,10 @@ class ChatEditorProvider implements vscode.CustomTextEditorProvider {
           if (!doc) break;
           const i = msg.index;
           if (Number.isInteger(i) && i >= 0 && i < doc.messages.length) {
-            doc.messages.splice(i); // quita desde i hasta el final
+            // Incluye la cadena de tools oculta que precede al punto de corte.
+            let start = i;
+            while (start > 0 && isHiddenToolMsg(doc.messages[start - 1])) start--;
+            doc.messages.splice(start); // quita desde start hasta el final
             doc.summary = undefined;
             await writeDoc(doc);
             sendHistory();
@@ -1708,6 +1720,11 @@ function msgTokens(m: ChatMessage): number {
   let t = estTokens(m.content) + 4;
   for (const a of m.attachments ?? []) t += a.kind === 'image' ? 1200 : estTokens(a.data);
   return t;
+}
+
+/** ¿Mensaje interno de tools (oculto en la UI)? El assistant con toolCalls o un resultado 'tool'. */
+function isHiddenToolMsg(m: ChatMessage): boolean {
+  return m.role === 'tool' || (m.role === 'assistant' && Array.isArray(m.toolCalls) && m.toolCalls.length > 0);
 }
 
 /** Valida y limita los adjuntos que llegan del webview. */

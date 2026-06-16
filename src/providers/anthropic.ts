@@ -1,7 +1,7 @@
 import { ChatMessage, ChatResult, GenerationParams, LLMProvider, ModelInfo, StreamCallbacks } from './types';
 import { formatHttpError } from './httpError';
 import { httpFetch } from '../http';
-import { readLines } from './stream';
+import { readLines, safeToolArgs } from './stream';
 import { imageAttachments, documentAttachments } from './multimodal';
 
 /**
@@ -71,7 +71,7 @@ export class AnthropicProvider implements LLMProvider {
         if (m.content) content.push({ type: 'text', text: m.content });
         for (const tc of m.toolCalls) {
           let input: any = {};
-          try { input = JSON.parse(tc.arguments || '{}'); } catch { /* vacío */ }
+          try { input = JSON.parse(safeToolArgs(tc.arguments)); } catch { /* vacío */ }
           content.push({ type: 'tool_use', id: tc.id, name: tc.name, input });
         }
         msgs.push({ role: 'assistant', content });
@@ -174,7 +174,7 @@ export class AnthropicProvider implements LLMProvider {
     const toolCalls = Object.values(blocks).map((b) => ({
       id: b.id,
       name: b.name,
-      arguments: b.json || '{}',
+      arguments: safeToolArgs(b.json),
     }));
 
     const usage = (inTok || outTok)

@@ -101,10 +101,39 @@
   }
 
   // Formato inline: escapa HTML y aplica código, enlaces, negrita, cursiva, tachado.
+  // LaTeX inline → Unicode (los modelos sueltan $\rightarrow$, \alpha, etc. en el razonamiento).
+  const LATEX = {
+    rightarrow: '→', to: '→', longrightarrow: '→', Rightarrow: '⇒', implies: '⇒', iff: '⇔',
+    leftarrow: '←', gets: '←', Leftarrow: '⇐', leftrightarrow: '↔', Leftrightarrow: '⇔',
+    uparrow: '↑', downarrow: '↓', mapsto: '↦',
+    times: '×', div: '÷', cdot: '·', pm: '±', mp: '∓', ast: '∗', star: '⋆', circ: '∘', bullet: '•',
+    leq: '≤', le: '≤', geq: '≥', ge: '≥', neq: '≠', ne: '≠', approx: '≈', equiv: '≡', sim: '∼', cong: '≅',
+    ll: '≪', gg: '≫', propto: '∝', infty: '∞', partial: '∂', nabla: '∇', sqrt: '√', angle: '∠',
+    sum: '∑', prod: '∏', int: '∫', forall: '∀', exists: '∃', neg: '¬', land: '∧', lor: '∨', oplus: '⊕',
+    in: '∈', notin: '∉', subset: '⊂', subseteq: '⊆', supset: '⊃', supseteq: '⊇', cup: '∪', cap: '∩', emptyset: '∅',
+    ldots: '…', dots: '…', cdots: '⋯', prime: '′', therefore: '∴', because: '∵',
+    alpha: 'α', beta: 'β', gamma: 'γ', delta: 'δ', epsilon: 'ε', varepsilon: 'ε', zeta: 'ζ', eta: 'η',
+    theta: 'θ', vartheta: 'ϑ', iota: 'ι', kappa: 'κ', lambda: 'λ', mu: 'μ', nu: 'ν', xi: 'ξ', pi: 'π',
+    rho: 'ρ', sigma: 'σ', tau: 'τ', upsilon: 'υ', phi: 'φ', varphi: 'φ', chi: 'χ', psi: 'ψ', omega: 'ω',
+    Gamma: 'Γ', Delta: 'Δ', Theta: 'Θ', Lambda: 'Λ', Xi: 'Ξ', Pi: 'Π', Sigma: 'Σ', Upsilon: 'Υ',
+    Phi: 'Φ', Psi: 'Ψ', Omega: 'Ω',
+  };
+  function deLatex(t) {
+    // Quita los delimitadores $…$ SOLO si envuelven un \comando (no toca monedas tipo $5).
+    t = t.replace(/\$\$?([^$\n]*?\\[a-zA-Z][^$\n]*?)\$\$?/g, '$1');
+    t = t.replace(/\\\\/g, ' ');                  // salto de línea LaTeX
+    t = t.replace(/\\[()[\]]/g, ' ');             // \( \) \[ \]
+    t = t.replace(/\\(left|right|big|Big|bigg|Bigg)\b/g, ''); // tamaños de delimitadores
+    t = t.replace(/\\[,;:! ]/g, ' ');             // espaciado fino
+    t = t.replace(/\\([a-zA-Z]+)/g, (m, c) => (LATEX[c] !== undefined ? LATEX[c] : m)); // símbolos conocidos
+    return t;
+  }
+
   function inlineMd(text) {
     let t = escapeHtml(text);
     const codes = [];
     t = t.replace(/`([^`]+)`/g, (_, c) => { codes.push(c); return '\u0000' + (codes.length - 1) + '\u0000'; });
+    t = deLatex(t); // LaTeX inline → Unicode (los code-spans ya están protegidos arriba)
     t = t.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (_, label, url) => {
       // Allowlist de esquema: bloquea javascript:/data:/vbscript:… (defensa en profundidad además de la CSP).
       const scheme = /^([a-z][a-z0-9+.-]*):/i.exec(url);
@@ -703,10 +732,15 @@
   }
 
   let suppressScroll = false; // evita auto-scroll durante un re-render masivo
+  let stickToBottom = true;   // seguir el fondo mientras llega texto; se desactiva si el usuario sube
   function scrollDown() {
-    if (suppressScroll) return;
+    if (suppressScroll || !stickToBottom) return; // si el usuario subió, no lo arrastramos al final
     messagesEl.scrollTop = messagesEl.scrollHeight;
   }
+  // El usuario manda: cerca del fondo → seguimos pegados; si sube a leer → paramos el auto-scroll.
+  messagesEl.addEventListener('scroll', () => {
+    stickToBottom = messagesEl.scrollHeight - messagesEl.scrollTop - messagesEl.clientHeight < 80;
+  });
 
   // Avisos persistentes (errores, resúmenes): NO se borran al re-renderizar el historial.
   function notice(text, isError) {
@@ -1425,6 +1459,7 @@
     const text = inputEl.value.trim();
     if (!text && pending.length === 0) return;
     clearNotices();
+    stickToBottom = true; // al enviar, vuelve a pegarse al fondo
     const attachments = pending.slice();
     addMessage('user', text, { attachments });
     if (doc) doc.messages.push({ role: 'user', content: text, attachments });

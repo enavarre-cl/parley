@@ -2,7 +2,7 @@ import { ChatMessage, ChatResult, GenerationParams, LLMProvider, ModelInfo, Stre
 import { createThinkSplitter } from './think';
 import { formatHttpError } from './httpError';
 import { httpFetch } from '../http';
-import { readLines } from './stream';
+import { readLines, safeToolArgs } from './stream';
 import { imageAttachments, documentAttachments, dataUrl } from './multimodal';
 
 /** content de un mensaje en formato OpenAI: string, o array de parts si hay imágenes/documentos. */
@@ -27,7 +27,9 @@ function openAIMessage(m: ChatMessage): any {
     msg.tool_calls = m.toolCalls.map((tc) => ({
       id: tc.id,
       type: 'function',
-      function: { name: tc.name, arguments: tc.arguments },
+      // Sanea al ENVIAR: repara una tool-call ya guardada con JSON inválido (si no, el provider
+      // devuelve 400 en cada turno y la conversación queda bloqueada para siempre).
+      function: { name: tc.name, arguments: safeToolArgs(tc.arguments) },
     }));
     if (!msg.content) msg.content = null;
   }
@@ -209,7 +211,7 @@ export class OpenAIProvider implements LLMProvider {
 
     const toolCalls = Object.values(toolAcc)
       .filter((t) => t.name)
-      .map((t) => ({ id: t.id || `call_${t.name}`, name: t.name, arguments: t.arguments || '{}' }));
+      .map((t) => ({ id: t.id || `call_${t.name}`, name: t.name, arguments: safeToolArgs(t.arguments) }));
 
     return { answer, thinking, usage, toolCalls: toolCalls.length ? toolCalls : undefined };
   }

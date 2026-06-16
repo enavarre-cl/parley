@@ -2,7 +2,7 @@ import { ChatMessage, ChatResult, GenerationParams, LLMProvider, ModelInfo, Stre
 import { createThinkSplitter } from './think';
 import { formatHttpError } from './httpError';
 import { httpFetch } from '../http';
-import { readLines } from './stream';
+import { readLines, safeToolArgs } from './stream';
 import { imageAttachments } from './multimodal';
 
 /**
@@ -61,7 +61,7 @@ export class OllamaProvider implements LLMProvider {
         if (m.toolCalls?.length) {
           out.tool_calls = m.toolCalls.map((tc) => {
             let args: any = {};
-            try { args = JSON.parse(tc.arguments || '{}'); } catch { /* vacío */ }
+            try { args = JSON.parse(safeToolArgs(tc.arguments)); } catch { /* vacío */ }
             return { function: { name: tc.name, arguments: args } };
           });
         }
@@ -132,7 +132,7 @@ export class OllamaProvider implements LLMProvider {
           toolCalls.push({
             id: `call_${fn.name}_${toolCalls.length}`,
             name: fn.name,
-            arguments: typeof fn.arguments === 'string' ? fn.arguments : JSON.stringify(fn.arguments ?? {}),
+            arguments: typeof fn.arguments === 'string' ? safeToolArgs(fn.arguments) : JSON.stringify(fn.arguments ?? {}),
           });
         }
       }
