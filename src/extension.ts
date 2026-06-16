@@ -5,7 +5,13 @@ import * as os from 'os';
 import * as https from 'https';
 import * as cp from 'child_process';
 import * as crypto from 'crypto';
-import { buildProvider, chatDefaults, providerInfo, isProviderId, setApiKeyOverride, ChatMessage, ProviderId } from './providers';
+import { buildProvider, chatDefaults, providerInfo, isProviderId, setApiKeyOverride, setManagedOllamaBaseUrl, ChatMessage, ProviderId } from './providers';
+import { OllamaManager } from './ollama/manager';
+import { DownloadManager } from './ollama/downloads';
+import { ModelCardCache } from './ollama/cards';
+import { ModelsTreeProvider } from './modelsView';
+import { ModelsPanel } from './modelsPanel';
+import { remove as removeModel } from './ollama/registry';
 import {
   ChatDoc,
   ChatParams,
@@ -17,54 +23,10 @@ import {
 import { ToolHub } from './tools';
 import { wavData, concatWavs, splitForTTS } from './audio';
 import { initProxy } from './http';
+import { tr, resolvedLang } from './i18n';
 
 // Hub de tools (filesystem nativo + servidores MCP), compartido por todos los chats.
 const toolHub = new ToolHub();
-
-// ---- i18n del backend (inglés como clave; solo diccionario español) ----
-/** Idioma efectivo: respeta langChat.language ('auto'|'en'|'es') o el locale de VS Code. */
-export function resolvedLang(): 'en' | 'es' {
-  const pref = vscode.workspace.getConfiguration('langChat').get<string>('language', 'auto');
-  if (pref === 'en' || pref === 'es') return pref;
-  return vscode.env.language.toLowerCase().startsWith('es') ? 'es' : 'en';
-}
-const BACKEND_ES: Record<string, string> = {
-  'Create chat': 'Crear chat',
-  'The .chat file has invalid JSON: ': 'El archivo .chat tiene JSON inválido: ',
-  'Could not write the .chat file.': 'No se pudo escribir en el archivo .chat.',
-  'missing API key': 'falta API key',
-  'no connection': 'sin conexión',
-  'Missing the API key for': 'Falta la API key de',
-  'Set it in the settings (🔧).': 'Configúrala en los ajustes (🔧).',
-  'model': 'modelo',
-  'models': 'modelos',
-  '🗜️ Summarizing previous context…': '🗜️ Resumiendo contexto previo…',
-  '⚠️ Could not summarize context: ': '⚠️ No se pudo resumir el contexto: ',
-  '⚠️ Some MCP servers failed to start: ': '⚠️ Algunos servidores MCP no arrancaron: ',
-  'The model returned no content. Try another model; on OpenRouter, check the key\'s credits/limits.':
-    'El modelo no devolvió contenido. Prueba con otro modelo; en OpenRouter, revisa créditos/límites de la key.',
-  'No model selected. Make sure the backend is active and press ⟳.':
-    'No hay modelo seleccionado. Comprueba que el backend esté activo y pulsa ⟳.',
-  'Create .md': 'Crear .md',
-  'Use as system prompt': 'Usar como system prompt',
-  'fork': 'bifurcación',
-  'Set the Piper voice model path in settings (langChat.tts.piperModel).':
-    'Configura la ruta del modelo de voz Piper en los ajustes (langChat.tts.piperModel).',
-  'Could not run Piper: ': 'No se pudo ejecutar Piper: ',
-  'Piper failed: ': 'Piper falló: ',
-  'Downloading voice: ': 'Descargando voz: ',
-  'Could not download voice: ': 'No se pudo descargar la voz: ',
-  'Generating audio…': 'Generando audio…',
-  'Downloading the Piper engine (first time only)…': 'Descargando el motor Piper (solo la primera vez)…',
-  'Setting up the Piper engine (one-time, ~1–2 min)…': 'Preparando el motor Piper (una sola vez, ~1–2 min)…',
-  'Downloading a self-contained Python (one-time)…': 'Descargando un Python autocontenido (una sola vez)…',
-  'Could not set up Piper: ': 'No se pudo preparar Piper: ',
-  'Piper updated.': 'Piper actualizado.',
-};
-/** Traduce una cadena del backend al idioma efectivo (inglés es la clave). */
-export function tr(s: string): string {
-  return resolvedLang() === 'es' ? (BACKEND_ES[s] ?? s) : s;
-}
 
 // Release del binario Piper standalone y nombre del asset por plataforma/arquitectura.
 const PIPER_RELEASE = '2023.11.14-2';
@@ -195,6 +157,13 @@ async function loadApiKeys(context: vscode.ExtensionContext): Promise<void> {
   }
 }
 
+/** Extrae el id de repo HF de un nombre de modelo local de Ollama (`hf.co/user/repo:quant` → `user/repo`). */
+function localModelHfId(name?: string): string | undefined {
+  if (!name || !/^hf\.co\//i.test(name)) return undefined;
+  const id = name.replace(/^hf\.co\//i, '').replace(/:[^:/]+$/, '');
+  return id || undefined;
+}
+
 export function activate(context: vscode.ExtensionContext) {
   const provider = new ChatEditorProvider(context);
 
@@ -215,12 +184,12 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand('langChat.setApiKey', async () => {
       const pick = await vscode.window.showQuickPick(
         KEY_PROVIDERS.map((p) => ({ label: p.label, id: p.id })),
-        { placeHolder: 'Backend para la API key' }
+        { placeHolder: tr('Backend for the API key') }
       );
       if (!pick) return;
       const key = await vscode.window.showInputBox({
         password: true,
-        prompt: `API key de ${pick.label} (vacío = borrar)`,
+        prompt: `${tr('API key for')} ${pick.label} ${tr('(empty = delete)')}`,
         placeHolder: '••••••••',
       });
       if (key === undefined) return; // cancelado
@@ -228,7 +197,82 @@ export function activate(context: vscode.ExtensionContext) {
       if (key) await context.secrets.store(secretKey, key);
       else await context.secrets.delete(secretKey);
       setApiKeyOverride(pick.id, key || undefined);
-      vscode.window.showInformationMessage(`API key de ${pick.label} ${key ? 'guardada' : 'borrada'} (cifrada en SecretStorage).`);
+      vscode.window.showInformationMessage(`${tr('API key for')} ${pick.label} ${key ? tr('saved') : tr('deleted')} ${tr('(encrypted in SecretStorage).')}`);
+    })
+  );
+
+  // ---- Modelos locales (Ollama gestionado + explorador) ----
+  const ollama = new OllamaManager(context, (s) => {
+    if (vscode.workspace.getConfiguration('langChat').get<boolean>('tts.debug', false)) console.log(s);
+  });
+  // Publica el baseUrl gestionado para que el provider Ollama lo use cuando esté listo.
+  ollama.onDidChangeStatus(() => setManagedOllamaBaseUrl(ollama.status === 'ready' ? ollama.baseUrl() : undefined));
+  const needServer = async (): Promise<string | undefined> => {
+    try {
+      // Si está listo, vuelve al instante; si no, muestra progreso (la 1ª vez baja el binario).
+      if (ollama.status === 'ready') return ollama.baseUrl();
+      return await vscode.window.withProgress(
+        { location: vscode.ProgressLocation.Window, title: 'Ollama' },
+        () => ollama.start((received, total) => { void received; void total; })
+      );
+    } catch (e: any) { vscode.window.showErrorMessage(`Ollama: ${e?.message || e}`); return undefined; }
+  };
+  // Descargas persistentes (sobreviven a reinicios) que auto-arrancan el servidor al (re)intentar.
+  const downloads = new DownloadManager(
+    () => needServer(),
+    (name, modelPath, projPath) => ollama.create(name, modelPath, projPath),
+    () => modelsTree.refresh(),
+    context.globalState,
+    path.join(context.globalStorageUri.fsPath, 'imports')
+  );
+  const modelsTree = new ModelsTreeProvider(ollama, downloads);
+  // Caché de fichas (sidecar): ver/encolar guarda la info de HF; cancelar/eliminar la borra.
+  const cards = new ModelCardCache(path.join(context.globalStorageUri.fsPath, 'model-cards'));
+  const panelHooks = {
+    onChanged: () => modelsTree.refresh(),
+    useModel: async (name: string) => {
+      if (ChatEditorProvider.activeApply) { await ChatEditorProvider.activeApply({ provider: 'ollama', model: name }); return true; }
+      return false;
+    },
+  };
+
+  context.subscriptions.push(
+    ollama,
+    downloads,
+    vscode.window.registerTreeDataProvider('langChat.models', modelsTree),
+    vscode.commands.registerCommand('langChat.models.add', () => ModelsPanel.show(context, ollama, downloads, cards, panelHooks)),
+    vscode.commands.registerCommand('langChat.models.openModelFromDownload', (item: any) => {
+      const modelId = item?.download?.modelId;
+      if (!modelId) return;
+      ModelsPanel.show(context, ollama, downloads, cards, panelHooks);
+      ModelsPanel.revealModel(modelId);
+    }),
+    vscode.commands.registerCommand('langChat.models.cancelDownload', (item: any) => {
+      if (item?.download) { cards.remove(item.download.modelId); downloads.cancel(item.download.id); }
+    }),
+    vscode.commands.registerCommand('langChat.models.retryDownload', (item: any) => {
+      if (item?.download?.id) downloads.retry(item.download.id);
+    }),
+    vscode.commands.registerCommand('langChat.models.removeDownload', (item: any) => {
+      if (item?.download) { cards.remove(item.download.modelId); downloads.remove(item.download.id); }
+    }),
+    vscode.commands.registerCommand('langChat.models.clearDownloads', () => downloads.clearFinished()),
+    vscode.commands.registerCommand('langChat.models.refresh', () => modelsTree.refresh()),
+    vscode.commands.registerCommand('langChat.models.startServer', async () => { await needServer(); }),
+    vscode.commands.registerCommand('langChat.models.stopServer', () => { ollama.stop(); }),
+    vscode.commands.registerCommand('langChat.models.deleteModel', async (item: any) => {
+      const name = item?.model?.name; const baseUrl = ollama.baseUrl();
+      if (!name || !baseUrl) return;
+      const ok = await vscode.window.showWarningMessage(`${tr('Delete the model')} ${name}?`, { modal: true }, tr('Delete'));
+      if (ok !== tr('Delete')) return;
+      try { await removeModel(baseUrl, name); modelsTree.refresh(); }
+      catch (e: any) { vscode.window.showErrorMessage(`${tr('Could not delete: ')}${e?.message || e}`); }
+    }),
+    vscode.commands.registerCommand('langChat.models.openLocalModel', (item: any) => {
+      const id = localModelHfId(item?.model?.name);
+      if (!id) { vscode.window.showInformationMessage(tr('This model is not from Hugging Face.')); return; }
+      ModelsPanel.show(context, ollama, downloads, cards, panelHooks);
+      ModelsPanel.revealModel(id);
     })
   );
 }
@@ -258,6 +302,8 @@ async function createNewChat(): Promise<void> {
 
 class ChatEditorProvider implements vscode.CustomTextEditorProvider {
   static readonly viewType = 'langChat.editor';
+  /** Applier del chat enfocado: la vista de modelos lo usa para "usar este modelo". */
+  static activeApply: ((patch: any) => Promise<void>) | undefined;
 
   constructor(private readonly context: vscode.ExtensionContext) {}
 
@@ -1482,10 +1528,31 @@ class ChatEditorProvider implements vscode.CustomTextEditorProvider {
       pushDoc();
     });
 
+    // La vista de modelos puede aplicar provider+modelo al chat actualmente enfocado.
+    const applyConfig = async (patch: any): Promise<void> => {
+      if (busy) return;
+      const doc = getDoc();
+      if (!doc) return;
+      const before = doc.provider;
+      applyPatch(doc, patch);
+      await writeDoc(doc);
+      if (doc.provider !== before) await loadModels();
+      pushDoc();
+    };
+    // Apunta al ÚLTIMO chat activo. No lo limpiamos al perder foco: si lo hiciéramos, al enfocar la
+    // barra lateral para "Usar en el chat" se perdería la referencia. Solo se limpia en dispose.
+    const setActive = (active: boolean): void => {
+      if (active) ChatEditorProvider.activeApply = applyConfig;
+    };
+    setActive(panel.active);
+    const onState = panel.onDidChangeViewState(() => setActive(panel.active));
+
     panel.onDidDispose(() => {
       abort?.abort();
       onMsg.dispose();
       onChange.dispose();
+      onState.dispose();
+      if (ChatEditorProvider.activeApply === applyConfig) ChatEditorProvider.activeApply = undefined;
     });
   }
 

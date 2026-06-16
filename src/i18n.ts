@@ -1,0 +1,97 @@
+/** i18n del backend (extension host). Inglés como clave; solo mantenemos el diccionario español. */
+import * as vscode from 'vscode';
+
+/** Idioma efectivo: respeta langChat.language ('auto'|'en'|'es') o el locale de VS Code. */
+export function resolvedLang(): 'en' | 'es' {
+  const pref = vscode.workspace.getConfiguration('langChat').get<string>('language', 'auto');
+  if (pref === 'en' || pref === 'es') return pref;
+  return vscode.env.language.toLowerCase().startsWith('es') ? 'es' : 'en';
+}
+
+const BACKEND_ES: Record<string, string> = {
+  // Chat / TTS
+  'Create chat': 'Crear chat',
+  'The .chat file has invalid JSON: ': 'El archivo .chat tiene JSON inválido: ',
+  'Could not write the .chat file.': 'No se pudo escribir en el archivo .chat.',
+  'missing API key': 'falta API key',
+  'no connection': 'sin conexión',
+  'Missing the API key for': 'Falta la API key de',
+  'Set it in the settings (🔧).': 'Configúrala en los ajustes (🔧).',
+  'model': 'modelo',
+  'models': 'modelos',
+  '🗜️ Summarizing previous context…': '🗜️ Resumiendo contexto previo…',
+  '⚠️ Could not summarize context: ': '⚠️ No se pudo resumir el contexto: ',
+  '⚠️ Some MCP servers failed to start: ': '⚠️ Algunos servidores MCP no arrancaron: ',
+  'The model returned no content. Try another model; on OpenRouter, check the key\'s credits/limits.':
+    'El modelo no devolvió contenido. Prueba con otro modelo; en OpenRouter, revisa créditos/límites de la key.',
+  'No model selected. Make sure the backend is active and press ⟳.':
+    'No hay modelo seleccionado. Comprueba que el backend esté activo y pulsa ⟳.',
+  'Create .md': 'Crear .md',
+  'Use as system prompt': 'Usar como system prompt',
+  'fork': 'bifurcación',
+  'Set the Piper voice model path in settings (langChat.tts.piperModel).':
+    'Configura la ruta del modelo de voz Piper en los ajustes (langChat.tts.piperModel).',
+  'Could not run Piper: ': 'No se pudo ejecutar Piper: ',
+  'Piper failed: ': 'Piper falló: ',
+  'Downloading voice: ': 'Descargando voz: ',
+  'Could not download voice: ': 'No se pudo descargar la voz: ',
+  'Generating audio…': 'Generando audio…',
+  'Downloading the Piper engine (first time only)…': 'Descargando el motor Piper (solo la primera vez)…',
+  'Setting up the Piper engine (one-time, ~1–2 min)…': 'Preparando el motor Piper (una sola vez, ~1–2 min)…',
+  'Downloading a self-contained Python (one-time)…': 'Descargando un Python autocontenido (una sola vez)…',
+  'Could not set up Piper: ': 'No se pudo preparar Piper: ',
+  'Piper updated.': 'Piper actualizado.',
+
+  // Modelos locales — árbol
+  'Server: stopped': 'Servidor: detenido',
+  'Server: downloading…': 'Servidor: descargando…',
+  'Server: starting…': 'Servidor: arrancando…',
+  'Server: ready': 'Servidor: listo',
+  'Server: error': 'Servidor: error',
+  'Local models': 'Modelos locales',
+  'Start the server to see the models': 'Arranca el servidor para ver los modelos',
+  'Error: ': 'Error: ',
+  'No models. Press "Add" to download.': 'Sin modelos. Pulsa "Agregar" para descargar.',
+  'Downloads': 'Descargas',
+  'No downloads': 'Sin descargas',
+  'queued': 'en cola',
+  'downloading…': 'descargando…',
+  'cancelled': 'cancelada',
+  'interrupted': 'interrumpida',
+  'retry to resume': 'reintenta para reanudar',
+  'error: ': 'error: ',
+
+  // Modelos locales — explorador (panel host) y descargas
+  'Explore models': 'Explorar modelos',
+  'Search GGUF models on Hugging Face…': 'Buscar modelos GGUF en Hugging Face…',
+  'downloading model': 'descargando modelo',
+  'downloading projector (vision)': 'descargando proyector (visión)',
+  'registering in Ollama': 'registrando en Ollama',
+  'could not start the Ollama server': 'no se pudo arrancar el servidor Ollama',
+  'interrupted (VS Code was closed)': 'interrumpida (se cerró VS Code)',
+
+  // Modelos locales — comandos / avisos
+  'Delete the model': 'Eliminar el modelo',
+  'Delete': 'Eliminar',
+  'Could not delete: ': 'No se pudo eliminar: ',
+  'This model is not from Hugging Face.': 'Este modelo no viene de Hugging Face.',
+  'Not enough space for': 'Puede que no haya espacio para',
+  'Free:': 'Libre:',
+  'Download anyway?': '¿Descargar igual?',
+  'Download anyway': 'Descargar igual',
+  'Using': 'Usando en el chat',
+  'Open a chat and select the Ollama provider to use': 'Abre un chat y selecciona el provider Ollama para usar',
+  'Downloaded model: ': 'Modelo descargado: ',
+  // Comando setApiKey
+  'Backend for the API key': 'Backend para la API key',
+  'API key for': 'API key de',
+  '(empty = delete)': '(vacío = borrar)',
+  'saved': 'guardada',
+  'deleted': 'borrada',
+  '(encrypted in SecretStorage).': '(cifrada en SecretStorage).',
+};
+
+/** Traduce una cadena del backend al idioma efectivo (inglés es la clave). */
+export function tr(s: string): string {
+  return resolvedLang() === 'es' ? (BACKEND_ES[s] ?? s) : s;
+}

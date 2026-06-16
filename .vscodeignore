@@ -6,12 +6,13 @@ tsconfig.json
 .gitignore
 .eslintrc*
 plan.md
+plan-incremento.md
+azure-pipelines.yml
 **/*.map
 **/*.ts
 .vscode-test/**
 ejemplo.chat
 media/icon-src.svg
-media/icon.svg
 **/*.chat
 **/*.attach
 **/*.sysprompt

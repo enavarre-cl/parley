@@ -31,8 +31,151 @@
       {
         "command": "langChat.setApiKey",
         "title": "%cmd.setApiKey.title%"
+      },
+      {
+        "command": "langChat.models.add",
+        "title": "%cmd.models.add.title%",
+        "category": "Lang Chat",
+        "icon": "$(add)"
+      },
+      {
+        "command": "langChat.models.refresh",
+        "title": "%cmd.models.refresh.title%",
+        "category": "Lang Chat",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "langChat.models.startServer",
+        "title": "%cmd.models.startServer.title%",
+        "category": "Lang Chat",
+        "icon": "$(play)"
+      },
+      {
+        "command": "langChat.models.stopServer",
+        "title": "%cmd.models.stopServer.title%",
+        "category": "Lang Chat",
+        "icon": "$(debug-stop)"
+      },
+      {
+        "command": "langChat.models.deleteModel",
+        "title": "%cmd.models.deleteModel.title%",
+        "category": "Lang Chat",
+        "icon": "$(close)"
+      },
+      {
+        "command": "langChat.models.cancelDownload",
+        "title": "%cmd.models.cancelDownload.title%",
+        "category": "Lang Chat",
+        "icon": "$(stop-circle)"
+      },
+      {
+        "command": "langChat.models.retryDownload",
+        "title": "%cmd.models.retryDownload.title%",
+        "category": "Lang Chat",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "langChat.models.removeDownload",
+        "title": "%cmd.models.removeDownload.title%",
+        "category": "Lang Chat",
+        "icon": "$(close)"
+      },
+      {
+        "command": "langChat.models.clearDownloads",
+        "title": "%cmd.models.clearDownloads.title%",
+        "category": "Lang Chat",
+        "icon": "$(clear-all)"
+      },
+      {
+        "command": "langChat.models.openModelFromDownload",
+        "title": "%cmd.models.openModelFromDownload.title%",
+        "category": "Lang Chat",
+        "icon": "$(go-to-file)"
+      },
+      {
+        "command": "langChat.models.openLocalModel",
+        "title": "%cmd.models.openLocalModel.title%",
+        "category": "Lang Chat"
       }
     ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "langChat",
+          "title": "Lang Chat",
+          "icon": "media/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "langChat": [
+        {
+          "id": "langChat.models",
+          "name": "%view.models.name%"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "langChat.models.add",
+          "when": "view == langChat.models",
+          "group": "navigation@1"
+        },
+        {
+          "command": "langChat.models.refresh",
+          "when": "view == langChat.models",
+          "group": "navigation@2"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "langChat.models.startServer",
+          "when": "view == langChat.models && viewItem =~ /ollamaServer\\.(stopped|error)/",
+          "group": "inline"
+        },
+        {
+          "command": "langChat.models.stopServer",
+          "when": "view == langChat.models && viewItem == ollamaServer.ready",
+          "group": "inline"
+        },
+        {
+          "command": "langChat.models.add",
+          "when": "view == langChat.models && viewItem == ollamaModels",
+          "group": "inline"
+        },
+        {
+          "command": "langChat.models.deleteModel",
+          "when": "view == langChat.models && viewItem == ollamaModel",
+          "group": "inline"
+        },
+        {
+          "command": "langChat.models.clearDownloads",
+          "when": "view == langChat.models && viewItem == ollamaDownloads",
+          "group": "inline"
+        },
+        {
+          "command": "langChat.models.cancelDownload",
+          "when": "view == langChat.models && viewItem =~ /ollamaDownload\\.(downloading|queued)/",
+          "group": "inline"
+        },
+        {
+          "command": "langChat.models.retryDownload",
+          "when": "view == langChat.models && viewItem == ollamaDownload.failed",
+          "group": "inline@1"
+        },
+        {
+          "command": "langChat.models.removeDownload",
+          "when": "view == langChat.models && viewItem == ollamaDownload.failed",
+          "group": "inline@2"
+        },
+        {
+          "command": "langChat.models.openModelFromDownload",
+          "when": "view == langChat.models && viewItem =~ /ollamaDownload\\./",
+          "group": "navigation"
+        }
+      ]
+    },
     "customEditors": [
       {
         "viewType": "langChat.editor",
@@ -118,10 +261,32 @@
         "title": "Ollama",
         "order": 3,
         "properties": {
+          "langChat.ollama.managed": {
+            "type": "boolean",
+            "default": true,
+            "description": "%config.ollama.managed.desc%"
+          },
+          "langChat.ollama.port": {
+            "type": "number",
+            "default": 0,
+            "markdownDescription": "%config.ollama.port.desc%"
+          },
+          "langChat.ollama.modelsPath": {
+            "type": "string",
+            "default": "",
+            "markdownDescription": "%config.ollama.modelsPath.desc%"
+          },
+          "langChat.ollama.maxConcurrentDownloads": {
+            "type": "number",
+            "default": 2,
+            "minimum": 1,
+            "maximum": 6,
+            "markdownDescription": "%config.ollama.maxConcurrentDownloads.desc%"
+          },
           "langChat.ollama.baseUrl": {
             "type": "string",
             "default": "http://localhost:11434",
-            "description": "%config.ollama.baseUrl.desc%"
+            "markdownDescription": "%config.ollama.baseUrl.desc%"
           }
         }
       },

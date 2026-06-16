@@ -37,10 +37,19 @@ export function resolveApiKey(id: ProviderId): string {
   return keyOverrides[id] || cfg.get<string>(`${id}.apiKey`, '') || '';
 }
 
+// baseUrl del servidor Ollama gestionado (lo fija el OllamaManager cuando está listo).
+let managedOllamaBaseUrl: string | undefined;
+export function setManagedOllamaBaseUrl(url: string | undefined): void { managedOllamaBaseUrl = url; }
+/** baseUrl de Ollama: el gestionado si está activo y listo; si no, el de settings. */
+function ollamaBaseUrl(cfg: vscode.WorkspaceConfiguration): string {
+  if (managedOllamaBaseUrl && cfg.get<boolean>('ollama.managed', true)) return managedOllamaBaseUrl;
+  return cfg.get<string>('ollama.baseUrl', 'http://localhost:11434');
+}
+
 export function buildProvider(providerId: ProviderId): LLMProvider {
   const cfg = vscode.workspace.getConfiguration('langChat');
   if (providerId === 'ollama') {
-    return new OllamaProvider(cfg.get<string>('ollama.baseUrl', 'http://localhost:11434'));
+    return new OllamaProvider(ollamaBaseUrl(cfg));
   }
   if (providerId === 'gemini') {
     return new GeminiProvider(
@@ -84,7 +93,7 @@ export function providerInfo(id: ProviderId): ProviderInfo {
     return {
       id,
       label: 'Ollama',
-      endpoint: cfg.get<string>('ollama.baseUrl', 'http://localhost:11434'),
+      endpoint: ollamaBaseUrl(cfg),
       needsKey: false,
       hasKey: true,
     };
