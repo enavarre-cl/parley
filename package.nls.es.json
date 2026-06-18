@@ -4,6 +4,7 @@
   "cmd.setApiKey.title": "Lang Chat: Configurar API Key (segura)",
   "cmd.compareVersion.title": "Comparar versiones (chat renderizado)",
   "cmd.spell.openDictionary.title": "Abrir diccionario",
+  "cmd.tts.openVoices.title": "Agregar voz",
   "cmd.tts.removeVoice.title": "Borrar voz",
   "cmd.engine.install.title": "Instalar motor",
   "cmd.engine.update.title": "Actualizar motor",

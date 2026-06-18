@@ -109,6 +109,12 @@
         "category": "Lang Chat"
       },
       {
+        "command": "langChat.tts.openVoices",
+        "title": "%cmd.tts.openVoices.title%",
+        "category": "Lang Chat",
+        "icon": "$(add)"
+      },
+      {
         "command": "langChat.tts.removeVoice",
         "title": "%cmd.tts.removeVoice.title%",
         "category": "Lang Chat",
@@ -230,6 +236,11 @@
           "group": "inline"
         },
         {
+          "command": "langChat.tts.openVoices",
+          "when": "view == langChat.models && viewItem == piperVoices",
+          "group": "inline"
+        },
+        {
           "command": "langChat.tts.removeVoice",
           "when": "view == langChat.models && viewItem == piperVoice",
           "group": "inline"
@@ -256,6 +267,10 @@
         },
         {
           "command": "langChat.spell.openDictionary",
+          "when": "false"
+        },
+        {
+          "command": "langChat.tts.openVoices",
           "when": "false"
         },
         {

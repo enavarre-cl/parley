@@ -26,7 +26,8 @@ import { tr, resolvedLang } from './i18n';
 import { registerCompare } from './compareView';
 import { SpellWordsStore, SpellLang } from './spellWords';
 import { openDictionaryPanel } from './dictionaryPanel';
-import { removePiperVoice } from './piperVoices';
+import { openVoicesPanel } from './voicesPanel';
+import { removePiperVoice, listPiperVoices } from './piperVoices';
 import { PiperManager } from './piper/manager';
 
 // Hub de tools (filesystem nativo + servidores MCP), compartido por todos los chats.
@@ -59,7 +60,11 @@ export function activate(context: vscode.ExtensionContext) {
   const spellWords = new SpellWordsStore(context);
   context.subscriptions.push(spellWords);
   const piper = new PiperManager(context);
-  const provider = new ChatEditorProvider(context, spellWords, piper);
+  // Avisa a los chats abiertos cuando cambia el set de voces descargadas (panel/árbol) para
+  // que el selector de voz del chat solo muestre las descargadas.
+  const voicesChanged = new vscode.EventEmitter<void>();
+  context.subscriptions.push(voicesChanged);
+  const provider = new ChatEditorProvider(context, spellWords, piper, voicesChanged.event);
 
   registerCompare(context); // comando de comparación de versiones (Timeline / paleta)
 
@@ -182,6 +187,9 @@ export function activate(context: vscode.ExtensionContext) {
     }),
     vscode.commands.registerCommand('langChat.models.clearDownloads', () => downloads.clearFinished()),
     vscode.commands.registerCommand('langChat.models.refresh', () => modelsTree.refresh()),
+    vscode.commands.registerCommand('langChat.tts.openVoices', () => {
+      openVoicesPanel(context, piper, piperVoicesDir, () => { modelsTree.refresh(); voicesChanged.fire(); });
+    }),
     vscode.commands.registerCommand('langChat.tts.removeVoice', async (item: any) => {
       const id = item?.word; // el nodo de voz lleva el id en `word`
       if (typeof id !== 'string') return;
@@ -190,6 +198,7 @@ export function activate(context: vscode.ExtensionContext) {
       if (pick !== yes) return;
       removePiperVoice(piperVoicesDir, id);
       modelsTree.refresh();
+      voicesChanged.fire();
     }),
     vscode.commands.registerCommand('langChat.engine.install', (item: any) => runEngineTask(item?.word, 'install')),
     vscode.commands.registerCommand('langChat.engine.update', (item: any) => runEngineTask(item?.word, 'update')),
@@ -199,7 +208,7 @@ export function activate(context: vscode.ExtensionContext) {
       const name = which === 'ollama' ? 'Ollama' : 'Piper';
       const yes = tr('Delete');
       if (await vscode.window.showWarningMessage(tr('Delete this engine?') + ` (${name})`, { modal: true }, yes) !== yes) return;
-      if (which === 'ollama') ollama.deleteBinary(); else piper.delete();
+      if (which === 'ollama') { ollama.deleteBinary(); cards.clear(); } else { piper.delete(); voicesChanged.fire(); }
       modelsTree.refresh();
     }),
     vscode.commands.registerCommand('langChat.models.startServer', async () => { await needServer(); }),
@@ -252,8 +261,14 @@ class ChatEditorProvider implements vscode.CustomTextEditorProvider {
   constructor(
     private readonly context: vscode.ExtensionContext,
     private readonly spellWords: SpellWordsStore,
-    private readonly piper: PiperManager
+    private readonly piper: PiperManager,
+    private readonly onVoicesChanged: vscode.Event<void>
   ) {}
+
+  /** Voces Piper descargadas (ids), para que el chat solo ofrezca esas en su selector. */
+  private downloadedVoiceIds(): string[] {
+    return listPiperVoices(vscode.Uri.joinPath(this.context.globalStorageUri, 'piper-voices').fsPath).map((v) => v.id);
+  }
 
   resolveCustomTextEditor(
     document: vscode.TextDocument,
@@ -377,7 +392,7 @@ class ChatEditorProvider implements vscode.CustomTextEditorProvider {
         model = cfg.get<string>('tts.piperModel', '') || '';
       }
       if (!model) {
-        post({ type: 'ttsError', message: tr('Set the Piper voice model path in settings (langChat.tts.piperModel).') });
+        post({ type: 'ttsError', message: tr('No voice available. Download one from the Lang Chat panel (Voices ➕), or set a custom .onnx path in Settings (langChat.tts.piperModel).') });
         return;
       }
       if (cancelled()) return;
@@ -1053,6 +1068,7 @@ class ChatEditorProvider implements vscode.CustomTextEditorProvider {
           pushLang();
           pushDoc();
           webview.postMessage({ type: 'spellWords', words: await this.spellWords.all() });
+          webview.postMessage({ type: 'piperVoices', ids: this.downloadedVoiceIds() });
           await loadModels();
           break;
         case 'spellAddWord':
@@ -1336,12 +1352,15 @@ class ChatEditorProvider implements vscode.CustomTextEditorProvider {
 
     // Cualquier cambio en el diccionario personal (panel, otro chat) → refresca este webview.
     const onSpell = this.spellWords.onDidChange(async () => webview.postMessage({ type: 'spellWords', words: await this.spellWords.all() }));
+    // Cambio en las voces descargadas (panel de voces, árbol) → re-filtra el selector del chat.
+    const onVoices = this.onVoicesChanged(() => webview.postMessage({ type: 'piperVoices', ids: this.downloadedVoiceIds() }));
     panel.onDidDispose(() => {
       abort?.abort();
       onMsg.dispose();
       onChange.dispose();
       onState.dispose();
       onSpell.dispose();
+      onVoices.dispose();
       if (ChatEditorProvider.activeApply === applyConfig) ChatEditorProvider.activeApply = undefined;
     });
   }
@@ -1484,7 +1503,9 @@ class ChatEditorProvider implements vscode.CustomTextEditorProvider {
   <script nonce="${nonce}">window.SPELL_DICTS = {
     es: { aff: '${uri('dict/es.aff')}', dic: '${uri('dict/es.dic')}' },
     en: { aff: '${uri('dict/en.aff')}', dic: '${uri('dict/en.dic')}' }
-  };</script>
+  };
+  window.DOWNLOADED_VOICES = ${JSON.stringify(this.downloadedVoiceIds())};
+  window.PIPER_CUSTOM_SET = ${JSON.stringify(!!vscode.workspace.getConfiguration('langChat').get<string>('tts.piperModel', ''))};</script>
   <script nonce="${nonce}" src="${uri('zoom.js')}"></script>
   <script nonce="${nonce}" src="${uri('i18n.js')}"></script>
   <script nonce="${nonce}" src="${uri('spell-engine.js')}"></script>

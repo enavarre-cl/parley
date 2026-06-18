@@ -55,6 +55,18 @@ const PIPER_VOICE_SHA256: Record<string, string> = {
   'en_US-hfc_female-medium': '914c473788fc1fa8b63ace1cdcdb44588f4ae523d3ab37df1536616835a140b7',
   'en_GB-jenny_dioco-medium': '469c630d209e139dd392a66bf4abde4ab86390a0269c1e47b4e5d7ce81526b01',
 };
+/** Catálogo de voces curadas para descargar (id + etiqueta + idioma). Los ids DEBEN
+ *  coincidir con las claves de PIPER_VOICE_SHA256 (fail-closed) y con media/main.js. */
+export interface PiperVoiceInfo { id: string; label: string; lang: 'es' | 'en'; }
+export const PIPER_VOICE_CATALOG: PiperVoiceInfo[] = [
+  { id: 'es_MX-claude-high', label: 'Claude — Español 🇲🇽 (femenina)', lang: 'es' },
+  { id: 'es_AR-daniela-high', label: 'Daniela — Español 🇦🇷 (femenina)', lang: 'es' },
+  { id: 'es_ES-sharvard-medium', label: 'Sharvard — Español 🇪🇸', lang: 'es' },
+  { id: 'en_US-amy-medium', label: 'Amy — English 🇺🇸 (female)', lang: 'en' },
+  { id: 'en_US-hfc_female-medium', label: 'HFC — English 🇺🇸 (female)', lang: 'en' },
+  { id: 'en_GB-jenny_dioco-medium', label: 'Jenny — English 🇬🇧 (female)', lang: 'en' },
+];
+
 /** URLs de HuggingFace de una voz Piper a partir de su id (lang_REGION-name-quality). */
 function piperVoiceUrls(id: string): { onnx: string; json: string } {
   const [region, name, quality] = id.split('-');
@@ -260,9 +272,9 @@ export class PiperManager {
     notify?.(tr('Piper updated.'));
   }
 
-  /** Borra TODO el motor (venv + Python autocontenido + binario standalone). No toca las voces. */
+  /** Borra TODO el motor (venv + Python autocontenido + binario standalone) y sus voces descargadas. */
   delete(): void {
-    for (const d of ['piper-venv', 'piper-bin', 'python']) {
+    for (const d of ['piper-venv', 'piper-bin', 'python', 'piper-voices']) {
       try { fs.rmSync(this.dir(d), { recursive: true, force: true }); } catch { /* nada */ }
     }
     this.setupPromise = null;

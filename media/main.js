@@ -282,6 +282,10 @@
     supported: 'speechSynthesis' in window,
     voices: [],
     piperVoices: PIPER_VOICES,
+    // Set de ids de voces descargadas: inyectado en el HTML (window.DOWNLOADED_VOICES) para que
+    // esté listo desde el primer render; el mensaje 'piperVoices' lo actualiza en vivo.
+    downloadedVoices: new Set(Array.isArray(window.DOWNLOADED_VOICES) ? window.DOWNLOADED_VOICES : []),
+    customSet: !!window.PIPER_CUSTOM_SET, // ¿hay una ruta .onnx custom configurada en Ajustes?
     // Preferencias persistidas en el estado del webview.
     prefs: Object.assign({ engine: 'system', voiceURI: '', rate: 1, piperVoice: 'es_MX-claude-high' }, (vscode.getState() && vscode.getState().tts) || {}),
     speakingBtn: null, // botón 🔊 activo (para alternar icono)
@@ -998,9 +1002,22 @@
       sel.addEventListener('change', () => { tts.prefs.voiceURI = sel.value; tts.save(); });
       configFields.appendChild(fieldRow(t('Voice'), sel));
     } else {
-      // Piper: selector de voz curada (se descarga sola la 1ª vez).
+      // Piper: el selector ofrece SOLO las voces DESCARGADAS. La opción Custom solo aparece si hay
+      // una ruta .onnx configurada en Ajustes (o si es la selección actual) — para un usuario
+      // normal sin path custom, el combo muestra exclusivamente lo descargado.
+      const dl = tts.downloadedVoices;
+      const showCustom = tts.customSet || tts.prefs.piperVoice === 'custom';
+      const available = tts.piperVoices.filter((v) =>
+        v.id === 'custom' ? showCustom : dl.has(v.id)
+      );
+      const realVoices = available.filter((v) => v.id !== 'custom');
+      // Si la voz seleccionada ya no está descargada, reasigna a una válida (1ª real, o Custom).
+      if (tts.prefs.piperVoice !== 'custom' && !dl.has(tts.prefs.piperVoice)) {
+        tts.prefs.piperVoice = realVoices.length ? realVoices[0].id : 'custom';
+        tts.save();
+      }
       const sel = document.createElement('select');
-      for (const v of tts.piperVoices) {
+      for (const v of available) {
         const o = document.createElement('option');
         o.value = v.id;
         o.textContent = v.id === 'custom' ? v.label + t('Custom (path in Settings)') : v.label;
@@ -1014,7 +1031,9 @@
       note.className = 'cfg-note';
       note.textContent = tts.prefs.piperVoice === 'custom'
         ? t('Set the .onnx model path in Settings (langChat.tts.piperModel).')
-        : t('The engine and voice download automatically the first time, then work offline.');
+        : !realVoices.length
+          ? t('No voices downloaded. Add one from the Lang Chat panel (Voices ➕).')
+          : t('Downloaded voices work offline. Add more from the Lang Chat panel (Voices ➕).');
       configFields.appendChild(note);
     }
 
@@ -2024,6 +2043,11 @@
         break;
       case 'spellWords':
         if (window.LangSpell) window.LangSpell.setWords(msg.words || []);
+        break;
+      case 'piperVoices':
+        // Voces Piper descargadas: el selector del chat solo ofrece estas (+ Custom).
+        tts.downloadedVoices = new Set(msg.ids || []);
+        if (doc && !configPanel.classList.contains('hidden')) renderConfig();
         break;
       case 'doc':
         doc = msg.doc;

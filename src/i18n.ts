@@ -22,6 +22,13 @@ const BACKEND_ES: Record<string, string> = {
   'Voices': 'Voces',
   'No voices downloaded': 'Sin voces descargadas',
   'Delete this voice?': '¿Borrar esta voz?',
+  'Add voice': 'Agregar voz',
+  'Delete voice': 'Borrar voz',
+  'Download': 'Descargar',
+  'Downloaded': 'Descargada',
+  'Downloading…': 'Descargando…',
+  'Download neural voices to read messages aloud. They are verified against a pinned checksum.':
+    'Descarga voces neuronales para leer los mensajes en voz alta. Se verifican contra un checksum pineado.',
   // Comparación de versiones
   'Compare': 'Comparar',
   'Compare: ': 'Comparar: ',
@@ -54,8 +61,8 @@ const BACKEND_ES: Record<string, string> = {
   'Create .md': 'Crear .md',
   'Use as system prompt': 'Usar como system prompt',
   'fork': 'bifurcación',
-  'Set the Piper voice model path in settings (langChat.tts.piperModel).':
-    'Configura la ruta del modelo de voz Piper en los ajustes (langChat.tts.piperModel).',
+  'No voice available. Download one from the Lang Chat panel (Voices ➕), or set a custom .onnx path in Settings (langChat.tts.piperModel).':
+    'No hay ninguna voz disponible. Descarga una desde el panel Lang Chat (Voces ➕), o configura una ruta .onnx personalizada en Ajustes (langChat.tts.piperModel).',
   'Piper failed: ': 'Piper falló: ',
   'Downloading voice: ': 'Descargando voz: ',
   'Could not download voice: ': 'No se pudo descargar la voz: ',

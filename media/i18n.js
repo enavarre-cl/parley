@@ -157,6 +157,8 @@
     'Custom (path in Settings)': 'Personalizada (ruta en Ajustes)',
     'Set the .onnx model path in Settings (langChat.tts.piperModel).': 'Configura la ruta del modelo .onnx en Ajustes (langChat.tts.piperModel).',
     'The engine and voice download automatically the first time, then work offline.': 'El motor y la voz se descargan solos la primera vez y luego funcionan sin conexión.',
+    'No voices downloaded. Add one from the Lang Chat panel (Voices ➕).': 'No hay voces descargadas. Agrega una desde el panel Lang Chat (Voces ➕).',
+    'Downloaded voices work offline. Add more from the Lang Chat panel (Voices ➕).': 'Las voces descargadas funcionan sin conexión. Agrega más desde el panel Lang Chat (Voces ➕).',
     'Update': 'Actualizar',
     'Re-download the Piper engine and voice (e.g. if updated upstream).': 'Vuelve a descargar el motor y la voz de Piper (p. ej. si se actualizaron en origen).',
     'Voice': 'Voz',

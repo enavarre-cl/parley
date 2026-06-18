@@ -1,0 +1,41 @@
+* { box-sizing: border-box; }
+body {
+  font-family: var(--vscode-font-family);
+  font-size: var(--vscode-font-size, 13px);
+  color: var(--vscode-foreground);
+  background: var(--vscode-editor-background);
+  padding: 16px 20px;
+  max-width: 640px;
+}
+h2 { margin: 0 0 4px; font-size: 16px; }
+.sub { opacity: .65; font-size: 12px; margin: 0 0 12px; }
+
+table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+tr { border-bottom: 1px solid var(--vscode-panel-border); }
+td { padding: 8px 4px; vertical-align: middle; }
+td.label { width: 100%; }
+td.status { white-space: nowrap; opacity: .7; font-size: 12px; padding-right: 12px; text-align: right; }
+td.act { width: 120px; text-align: right; }
+
+.dl {
+  padding: 5px 12px;
+  border: none;
+  border-radius: 6px;
+  background: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.dl:hover:not(:disabled) { background: var(--vscode-button-hoverBackground); }
+.dl:disabled { opacity: .5; cursor: default; }
+
+.del {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  opacity: .6;
+  font-size: 13px;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+.del:hover { opacity: 1; background: var(--vscode-toolbar-hoverBackground); }

@@ -16,4 +16,6 @@ export class ModelCardCache {
     try { return JSON.parse(fs.readFileSync(this.file(id), 'utf8')); } catch { return undefined; }
   }
   remove(id: string): void { try { fs.unlinkSync(this.file(id)); } catch { /* nada */ } }
+  /** Borra toda la caché de fichas. */
+  clear(): void { try { fs.rmSync(this.dir, { recursive: true, force: true }); } catch { /* nada */ } }
 }
