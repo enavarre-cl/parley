@@ -4,6 +4,8 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as cp from 'child_process';
+import * as http from 'http';
+import * as net from 'net';
 import { downloadFile, sha256File } from '../download';
 import { tr } from '../i18n';
 
@@ -79,6 +81,13 @@ export type Notify = (msg: string) => void;
 
 export class PiperManager {
   private setupPromise: Promise<string> | null = null; // guard de concurrencia del setup
+  // Daemon HTTP (modelo residente): se arranca al primer TTS y se auto-apaga por inactividad.
+  private serverProc: cp.ChildProcess | null = null;
+  private serverPort = 0;
+  private serverStarting: Promise<string> | null = null;
+  private idleTimer: ReturnType<typeof setTimeout> | null = null;
+  private httpDepsOk = false; // flask verificado/instalado en este venv
+  private static readonly SERVER_IDLE_MS = 5 * 60 * 1000;
 
   constructor(private readonly context: vscode.ExtensionContext) {}
 
@@ -198,7 +207,8 @@ export class PiperManager {
     fs.mkdirSync(this.context.globalStorageUri.fsPath, { recursive: true });
     await this.runCmd(py, ['-m', 'venv', venvDir]);
     await this.runCmd(pip, ['install', '--upgrade', 'pip']);
-    await this.runCmd(pip, ['install', `piper-tts==${PIPER_TTS_VERSION}`]);
+    // [http] incluye flask para el daemon HTTP (síntesis sin recargar el modelo cada vez).
+    await this.runCmd(pip, ['install', `piper-tts[http]==${PIPER_TTS_VERSION}`]);
     if (!fs.existsSync(piperBin)) throw new Error('piper not found after install');
     return piperBin;
   }
@@ -261,11 +271,151 @@ export class PiperManager {
     await this.resolveBin(vscode.workspace.getConfiguration('langChat'), notify);
   }
 
+  // ───────────────────────── Daemon HTTP (piper.http_server) ─────────────────────────
+
+  /** ¿El daemon está vivo? */
+  isServerRunning(): boolean { return !!this.serverProc; }
+
+  /** Ruta del `python` del venv. */
+  private venvPython(): string {
+    return path.join(this.dir('piper-venv'), process.platform === 'win32' ? 'Scripts' : 'bin', process.platform === 'win32' ? 'python.exe' : 'python');
+  }
+
+  /** Pide al SO un puerto TCP libre en 127.0.0.1. */
+  private freePort(): Promise<number> {
+    return new Promise((resolve, reject) => {
+      const srv = net.createServer();
+      srv.on('error', reject);
+      srv.listen(0, '127.0.0.1', () => {
+        const addr = srv.address();
+        const port = typeof addr === 'object' && addr ? addr.port : 0;
+        srv.close(() => (port ? resolve(port) : reject(new Error('no free port'))));
+      });
+    });
+  }
+
+  /** Reinicia el temporizador de inactividad: tras SERVER_IDLE_MS sin uso, apaga el daemon. */
+  private touchIdle(): void {
+    if (this.idleTimer) clearTimeout(this.idleTimer);
+    this.idleTimer = setTimeout(() => this.stopServer(), PiperManager.SERVER_IDLE_MS);
+  }
+
+  /** Asegura el daemon HTTP arrancado (apuntando a la carpeta de voces). Devuelve baseUrl.
+   *  `defaultModel` es una ruta .onnx requerida por el server (-m); las demás voces se
+   *  cargan on-demand por el campo `voice` del request. Lanza si no puede arrancar. */
+  async ensureServer(defaultModel: string, notify?: Notify): Promise<string> {
+    if (this.serverProc && this.serverPort) { this.touchIdle(); return `http://127.0.0.1:${this.serverPort}`; }
+    if (!this.serverStarting) {
+      this.serverStarting = this.startServer(defaultModel, notify).finally(() => { this.serverStarting = null; });
+    }
+    return this.serverStarting;
+  }
+
+  private async startServer(defaultModel: string, notify?: Notify): Promise<string> {
+    await this.ensurePiperVenv(notify);       // garantiza venv (con [http]→flask en instalaciones nuevas)
+    const python = this.venvPython();
+    if (!fs.existsSync(python)) throw new Error('python del venv no encontrado');
+    await this.ensureHttpDeps(python, notify); // instalaciones viejas: añade flask on-demand
+    const voicesDir = this.dir('piper-voices');
+    const port = await this.freePort();
+    const args = ['-m', 'piper.http_server', '-m', defaultModel, '--data-dir', voicesDir, '--host', '127.0.0.1', '--port', String(port)];
+    const proc = cp.spawn(python, args, { cwd: path.dirname(python) });
+    let stderr = '';
+    proc.stderr?.on('data', (d: any) => { stderr += d.toString(); });
+    proc.on('exit', () => {
+      if (this.serverProc === proc) { this.serverProc = null; this.serverPort = 0; }
+      if (this.idleTimer) { clearTimeout(this.idleTimer); this.idleTimer = null; }
+    });
+    try {
+      await this.waitForServer(port, 20000);
+    } catch (e: any) {
+      try { proc.kill(); } catch { /* nada */ }
+      throw new Error((stderr.trim().split('\n').slice(-3).join(' ') || e?.message) ?? 'piper http_server no respondió');
+    }
+    this.serverProc = proc;
+    this.serverPort = port;
+    this.touchIdle();
+    return `http://127.0.0.1:${port}`;
+  }
+
+  /** Asegura que flask (extra [http]) esté en el venv; instalaciones previas no lo traen. */
+  private async ensureHttpDeps(python: string, notify?: Notify): Promise<void> {
+    if (this.httpDepsOk) return;
+    const check = cp.spawnSync(python, ['-c', 'import flask']);
+    if (check.status === 0) { this.httpDepsOk = true; return; }
+    notify?.(tr('Setting up the Piper engine (one-time, ~1–2 min)…'));
+    const pip = path.join(path.dirname(python), process.platform === 'win32' ? 'pip.exe' : 'pip');
+    await this.runCmd(pip, ['install', `piper-tts[http]==${PIPER_TTS_VERSION}`]);
+    this.httpDepsOk = true;
+  }
+
+  /** Sondea GET /info hasta que el server responde (o expira). */
+  private waitForServer(port: number, timeoutMs: number): Promise<void> {
+    const deadline = Date.now() + timeoutMs;
+    const tryOnce = (): Promise<void> => new Promise((resolve, reject) => {
+      const req = http.get({ host: '127.0.0.1', port, path: '/', timeout: 1500 }, (res) => {
+        res.resume();
+        resolve();
+      });
+      req.on('timeout', () => req.destroy(new Error('timeout')));
+      req.on('error', reject);
+    });
+    const loop = async (): Promise<void> => {
+      for (;;) {
+        try { await tryOnce(); return; }
+        catch {
+          if (Date.now() > deadline) throw new Error('timeout esperando piper http_server');
+          await new Promise((r) => setTimeout(r, 300));
+        }
+      }
+    };
+    return loop();
+  }
+
+  /** Sintetiza vía el daemon: POST /synthesize → Buffer WAV. `voice` = id de voz curada. */
+  synthViaServer(baseUrl: string, text: string, voice: string, lengthScale: number, speakerId: number): Promise<Buffer> {
+    this.touchIdle();
+    const body = JSON.stringify({
+      text,
+      voice,
+      length_scale: lengthScale,
+      ...(speakerId >= 0 ? { speaker_id: speakerId } : {}),
+    });
+    const u = new URL('/synthesize', baseUrl);
+    return new Promise((resolve, reject) => {
+      const req = http.request(
+        { method: 'POST', host: u.hostname, port: Number(u.port), path: u.pathname,
+          headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) } },
+        (res) => {
+          const chunks: Buffer[] = [];
+          res.on('data', (d: Buffer) => chunks.push(d));
+          res.on('end', () => {
+            const buf = Buffer.concat(chunks);
+            if (res.statusCode === 200 && buf.length > 44 && buf.toString('ascii', 0, 4) === 'RIFF') resolve(buf);
+            else reject(new Error(`http_server ${res.statusCode}: ${buf.toString('utf8').slice(0, 200)}`));
+          });
+        }
+      );
+      req.on('error', reject);
+      req.write(body);
+      req.end();
+    });
+  }
+
+  /** Detiene el daemon (si corre). */
+  stopServer(): void {
+    if (this.idleTimer) { clearTimeout(this.idleTimer); this.idleTimer = null; }
+    if (this.serverProc) { try { this.serverProc.kill(); } catch { /* nada */ } this.serverProc = null; }
+    this.serverPort = 0;
+  }
+
   /** Actualiza el motor: venv pip → upgrade; standalone → re-descarga. */
   async update(notify?: Notify): Promise<void> {
+    this.stopServer(); // libera el venv antes de reinstalar
+    this.httpDepsOk = false;
     const pip = path.join(this.dir('piper-venv'), process.platform === 'win32' ? 'Scripts' : 'bin', process.platform === 'win32' ? 'pip.exe' : 'pip');
     if (fs.existsSync(pip)) {
-      await this.runCmd(pip, ['install', '--upgrade', `piper-tts==${PIPER_TTS_VERSION}`]);
+      await this.runCmd(pip, ['install', '--upgrade', `piper-tts[http]==${PIPER_TTS_VERSION}`]);
     } else {
       try { fs.rmSync(this.dir('piper-bin'), { recursive: true, force: true }); } catch { /* nada */ }
     }
@@ -274,9 +424,14 @@ export class PiperManager {
 
   /** Borra TODO el motor (venv + Python autocontenido + binario standalone) y sus voces descargadas. */
   delete(): void {
+    this.stopServer();
+    this.httpDepsOk = false;
     for (const d of ['piper-venv', 'piper-bin', 'python', 'piper-voices']) {
       try { fs.rmSync(this.dir(d), { recursive: true, force: true }); } catch { /* nada */ }
     }
     this.setupPromise = null;
   }
+
+  /** Apaga el daemon al desactivar la extensión (no dejar el proceso huérfano). */
+  dispose(): void { this.stopServer(); }
 }

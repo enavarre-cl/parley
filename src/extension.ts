@@ -168,6 +168,7 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     ollama,
     downloads,
+    piper, // dispose() apaga el daemon HTTP al desactivar la extensión
     vscode.window.registerTreeDataProvider('langChat.models', modelsTree),
     vscode.commands.registerCommand('langChat.models.add', () => ModelsPanel.show(context, ollama, downloads, cards, panelHooks)),
     vscode.commands.registerCommand('langChat.models.openModelFromDownload', (item: any) => {
@@ -372,6 +373,27 @@ class ChatEditorProvider implements vscode.CustomTextEditorProvider {
       const post = (m: any) => webview.postMessage({ ...m, id: reqId });
       const notice = (m: string) => webview.postMessage({ type: 'notice', message: m });
       const cfg = vscode.workspace.getConfiguration('langChat');
+      const speaker = cfg.get<number>('tts.piperSpeaker', -1);
+      const isCurated = !!voice && /^[a-z]{2}_[A-Z]{2}-/.test(voice);
+      // Vía DAEMON (modelo residente, rápido): solo voces curadas. Cualquier fallo cae al
+      // spawn-por-trozo de abajo, así que no hay regresión si el server no arranca.
+      if (isCurated) {
+        try {
+          const modelPath = await this.piper.ensureVoice(voice, notice);
+          if (cancelled()) return;
+          const baseUrl = await this.piper.ensureServer(modelPath, notice);
+          if (cancelled()) return;
+          const lscale = rate > 0 ? 1 / rate : 1;
+          const wav = await this.piper.synthViaServer(baseUrl, t, voice, lscale, typeof speaker === 'number' ? speaker : -1);
+          if (cancelled()) return;
+          tlog(`req#${reqId} OK vía daemon: WAV ${wav.length} bytes`);
+          post({ type: 'ttsAudio', data: wav.toString('base64'), last: true });
+          post({ type: 'ttsDone' });
+          return;
+        } catch (e: any) {
+          tlog(`req#${reqId} daemon falló (${e?.message ?? e}); fallback a spawn-por-trozo`);
+        }
+      }
       let bin: string;
       try {
         bin = await this.piper.resolveBin(cfg, notice);
@@ -398,7 +420,6 @@ class ChatEditorProvider implements vscode.CustomTextEditorProvider {
       if (cancelled()) return;
 
       const lengthScale = rate > 0 ? (1 / rate).toFixed(3) : '1';
-      const speaker = cfg.get<number>('tts.piperSpeaker', -1);
       const libDir = path.dirname(bin);
       const env: any = { ...process.env };
       if (process.platform === 'darwin') {
