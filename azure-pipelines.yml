@@ -1,17 +1,16 @@
-# CI/CD pipeline for Azure DevOps.
+# CI/CD pipeline for Azure DevOps — staged.
 # Branching model: work on `development`, release from `main`.
-#   - Push/PR to development or main: npm ci → lint → compile → tests → package .vsix → artifact.
-#   - Push to main with a NEW version in package.json: the above PLUS publish to the Marketplace.
-#     Guards keep ordinary main merges safe — publish runs ONLY when all of these hold:
-#       (a) the branch is main,
-#       (b) VSCE_PAT is configured (otherwise it just skips), and
-#       (c) package.json's version is not already on the Marketplace (no republish / no red build).
 #
-# To release: bump `version` in package.json (+ CHANGELOG) on development, then merge to main.
+# Stages: Compile → Test → Package (→ .vsix artifact) → Publish.
+#   - Compile / Test / Package run on every push & PR to development or main.
+#   - Publish runs ONLY on main and ONLY after MANUAL approval (ManualValidation pauses the run;
+#     approve it in the Azure DevOps UI / via the notification email), then `vsce publish`.
 #
 # VSCE_PAT must be set as a SECRET pipeline variable (Pipelines → Edit → Variables → New →
-# tick "Keep this value secret"). Use an Azure DevOps PAT with scope Marketplace → Manage.
-# It is consumed only via env mapping below and is never stored in this file.
+# tick "Keep this value secret"). Use an Azure DevOps PAT, scope Marketplace → Manage,
+# "All accessible organizations". It is consumed only via the env mapping in the publish job.
+# IMPORTANT: do NOT declare VSCE_PAT in a YAML `variables` block — that shadows the secret and
+# leaves it empty at runtime.
 
 trigger:
   branches:
@@ -25,78 +24,123 @@ pr:
       - main
       - development
 
-pool:
-  vmImage: ubuntu-latest
+stages:
+  - stage: Compile
+    displayName: 'Compile (lint + typecheck)'
+    jobs:
+      - job: compile
+        pool:
+          vmImage: ubuntu-latest
+        steps:
+          - task: UseNode@1
+            displayName: 'Install Node.js 20'
+            inputs:
+              version: '20.x'
+          - task: Cache@2
+            displayName: 'npm cache'
+            inputs:
+              key: 'npm | "$(Agent.OS)" | package-lock.json'
+              restoreKeys: |
+                npm | "$(Agent.OS)"
+              path: $(Pipeline.Workspace)/.npm
+          - script: npm config set cache "$(Pipeline.Workspace)/.npm" --global
+            displayName: 'Point npm to the cache'
+          - script: npm ci
+            displayName: 'Install dependencies (npm ci)'
+          - script: npm run lint
+            displayName: 'Lint (ESLint)'
+          - script: npm run compile
+            displayName: 'Compile (typecheck)'
 
-variables:
-  # Default empty so the publish guard can detect "PAT not configured". A SECRET pipeline
-  # variable named VSCE_PAT set in the UI overrides this at runtime.
-  VSCE_PAT: ''
+  - stage: Test
+    displayName: 'Test'
+    dependsOn: Compile
+    jobs:
+      - job: test
+        pool:
+          vmImage: ubuntu-latest
+        steps:
+          - task: UseNode@1
+            displayName: 'Install Node.js 20'
+            inputs:
+              version: '20.x'
+          - task: Cache@2
+            displayName: 'npm cache'
+            inputs:
+              key: 'npm | "$(Agent.OS)" | package-lock.json'
+              restoreKeys: |
+                npm | "$(Agent.OS)"
+              path: $(Pipeline.Workspace)/.npm
+          - script: npm config set cache "$(Pipeline.Workspace)/.npm" --global
+            displayName: 'Point npm to the cache'
+          - script: npm ci
+            displayName: 'Install dependencies (npm ci)'
+          - script: npm test
+            displayName: 'Tests (node:test)'
 
-steps:
-  - task: UseNode@1
-    displayName: 'Install Node.js 20'
-    inputs:
-      version: '20.x'
-
-  # Cache ~/.npm between runs (key = hash of package-lock.json).
-  - task: Cache@2
-    displayName: 'npm cache'
-    inputs:
-      key: 'npm | "$(Agent.OS)" | package-lock.json'
-      restoreKeys: |
-        npm | "$(Agent.OS)"
-      path: $(Pipeline.Workspace)/.npm
-
-  - script: npm config set cache "$(Pipeline.Workspace)/.npm" --global
-    displayName: 'Point npm to the cache'
-
-  - script: npm ci
-    displayName: 'Install dependencies (npm ci)'
-
-  - script: npm run lint
-    displayName: 'Lint (ESLint)'
-
-  - script: npm run compile
-    displayName: 'Compile (typecheck)'
-
-  - script: npm test
-    displayName: 'Tests (node:test)'
-
-  - script: npx --yes @vscode/vsce package -o lang-chat.vsix
+  - stage: Package
     displayName: 'Package (.vsix)'
+    dependsOn: Test
+    jobs:
+      - job: package
+        pool:
+          vmImage: ubuntu-latest
+        steps:
+          - task: UseNode@1
+            displayName: 'Install Node.js 20'
+            inputs:
+              version: '20.x'
+          - task: Cache@2
+            displayName: 'npm cache'
+            inputs:
+              key: 'npm | "$(Agent.OS)" | package-lock.json'
+              restoreKeys: |
+                npm | "$(Agent.OS)"
+              path: $(Pipeline.Workspace)/.npm
+          - script: npm config set cache "$(Pipeline.Workspace)/.npm" --global
+            displayName: 'Point npm to the cache'
+          - script: npm ci
+            displayName: 'Install dependencies (npm ci)'
+          - script: npx --yes @vscode/vsce package -o lang-chat.vsix
+            displayName: 'Package (.vsix)'
+          - task: PublishPipelineArtifact@1
+            displayName: 'Publish the .vsix artifact'
+            inputs:
+              targetPath: lang-chat.vsix
+              artifact: vsix
 
-  - task: PublishPipelineArtifact@1
-    displayName: 'Publish the .vsix'
-    inputs:
-      targetPath: lang-chat.vsix
-      artifact: vsix
-
-  # --- Marketplace release: ONLY from main, with a configured PAT, and a new version ---
-
-  - script: |
-      PKG_VERSION=$(node -p "require('./package.json').version")
-      if [ -z "$VSCE_PAT" ]; then
-        echo "VSCE_PAT is not configured — skipping Marketplace publish."
-        echo "##vso[task.setvariable variable=shouldPublish]false"
-        exit 0
-      fi
-      PUBLISHED=$(npx --yes @vscode/vsce show enavarre.lang-chat --json 2>/dev/null \
-        | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{try{const j=JSON.parse(d);process.stdout.write((j.versions&&j.versions[0]&&j.versions[0].version)||'');}catch(e){process.stdout.write('');}});" || true)
-      echo "package.json: $PKG_VERSION | marketplace: ${PUBLISHED:-<none>}"
-      if [ "$PKG_VERSION" = "$PUBLISHED" ]; then
-        echo "Version $PKG_VERSION is already published — skipping."
-        echo "##vso[task.setvariable variable=shouldPublish]false"
-      else
-        echo "##vso[task.setvariable variable=shouldPublish]true"
-      fi
-    displayName: 'Decide whether to publish'
+  - stage: Publish
+    displayName: 'Publish to Marketplace (manual approval)'
+    dependsOn: Package
     condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
-    env:
-      VSCE_PAT: $(VSCE_PAT)
-
-  - script: npx --yes @vscode/vsce publish --packagePath lang-chat.vsix
-    displayName: 'Publish to VS Code Marketplace'
-    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'), eq(variables['shouldPublish'], 'true'))
-    env:
-      VSCE_PAT: $(VSCE_PAT)
+    jobs:
+      - job: waitForApproval
+        displayName: 'Wait for manual approval'
+        pool: server
+        timeoutInMinutes: 4320 # up to 3 days to approve
+        steps:
+          - task: ManualValidation@0
+            displayName: 'Manual approval to publish'
+            inputs:
+              notifyUsers: 'enavarre@enpro.cl'
+              instructions: 'Approve to publish Lang Chat to the VS Code Marketplace (uses the version in package.json). Reject to skip.'
+              onTimeout: 'reject'
+      - job: publish
+        displayName: 'vsce publish'
+        dependsOn: waitForApproval
+        pool:
+          vmImage: ubuntu-latest
+        steps:
+          - task: UseNode@1
+            displayName: 'Install Node.js 20'
+            inputs:
+              version: '20.x'
+          - task: DownloadPipelineArtifact@2
+            displayName: 'Download the .vsix artifact'
+            inputs:
+              artifact: vsix
+              path: $(Pipeline.Workspace)/vsix
+          - script: npx --yes @vscode/vsce publish --packagePath "$(Pipeline.Workspace)/vsix/lang-chat.vsix"
+            displayName: 'Publish to VS Code Marketplace'
+            env:
+              VSCE_PAT: $(VSCE_PAT)
