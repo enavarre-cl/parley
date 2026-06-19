@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert';
 import { ollamaAsset, assetFormat, ollamaAssetUrl, ollamaBinName, OLLAMA_ASSET_SHA256, OLLAMA_VERSION } from '../ollama/assets';
 import {
-  parseQuant, heuristicCapabilities, hfPullRef, formatBytes, isAuxiliaryGguf, isOllamaPullable,
+  parseQuant, heuristicCapabilities, hfPullRef, formatBytes, isAuxiliaryGguf, isOllamaPullable, shardInfo,
   parseParamCount, formatParams, domainFromPipeline, isOfficialOrg,
 } from '../ollama/parse';
 
@@ -73,6 +73,20 @@ test('isOllamaPullable: standard (1 quant) yes, non-standard (multiple/none) no'
   assert.strictEqual(isOllamaPullable('gemma-4-31B_q4_0-it.gguf'), false);
   // No recognisable quant token.
   assert.strictEqual(isOllamaPullable('plain-model.gguf'), false);
+});
+
+test('shardInfo parses split GGUF parts and ignores single files', () => {
+  assert.deepStrictEqual(shardInfo('Qwen3-235B-Q4_K_M-00001-of-00003.gguf'), { base: 'Qwen3-235B-Q4_K_M', index: 1, total: 3 });
+  assert.deepStrictEqual(shardInfo('Q4_K_M/model-00002-of-00010.gguf'), { base: 'Q4_K_M/model', index: 2, total: 10 });
+  // Single-file models are not shards.
+  assert.strictEqual(shardInfo('Qwen3.5-9B-UD-IQ2_M.gguf'), null);
+  assert.strictEqual(shardInfo('model-Q4_K_M.gguf'), null);
+  // Malformed / nonsensical part numbers → treated as standalone (null), never a 1-of-1 group.
+  assert.strictEqual(shardInfo('model-00001-of-00001.gguf'), null);
+  assert.strictEqual(shardInfo('model-00004-of-00003.gguf'), null);
+  // parseQuant/isOllamaPullable still work on a shard name (quant lives in the base).
+  assert.strictEqual(parseQuant('Qwen3-235B-Q4_K_M-00001-of-00003.gguf'), 'Q4_K_M');
+  assert.strictEqual(isOllamaPullable('Qwen3-235B-Q4_K_M-00001-of-00003.gguf'), true);
 });
 
 test('isAuxiliaryGguf detects projectors (mmproj) and MTP drafts', () => {

@@ -234,6 +234,8 @@
   "Piper updated.": "Piper actualizado.",
   "Previous match (Shift+Enter)": "Anterior (Shift+Enter)",
   "Previous variant": "Variante anterior",
+  "Ollama pull failed; importing the .gguf directly…": "Falló la descarga de Ollama; importando el .gguf directamente…",
+  "parts": "partes",
   "quantizations": "cuantizaciones",
   "queued": "en cola",
   "Queued": "En cola",

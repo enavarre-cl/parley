@@ -70,6 +70,22 @@ export function isOllamaPullable(filePath: string): boolean {
   return quantTokenCount(filePath) === 1;
 }
 
+/**
+ * Parses a split/sharded GGUF path into its group base + position, or null if it is not a shard.
+ * Big models are published in parts named `…-00001-of-00003.gguf`; all parts share one base and
+ * must be downloaded together (Ollama loads the siblings of part 1 automatically). The base keeps
+ * the directory so shards in a subfolder group correctly.
+ *   "Qwen3-235B-Q4_K_M-00001-of-00003.gguf" → { base: "Qwen3-235B-Q4_K_M", index: 1, total: 3 }
+ */
+export function shardInfo(filePath: string): { base: string; index: number; total: number } | null {
+  const m = filePath.match(/^(.*)-(\d{4,5})-of-(\d{4,5})\.gguf$/i);
+  if (!m) return null;
+  const index = parseInt(m[2], 10);
+  const total = parseInt(m[3], 10);
+  if (total < 2 || index < 1 || index > total) return null; // malformed → treat as standalone
+  return { base: m[1], index, total };
+}
+
 /** Extracts the quantisation level from a .gguf filename (Q4_K_M, IQ3_XS, F16, BF16…). */
 export function parseQuant(filename: string): string {
   const base = filename.split('/').pop() || filename;

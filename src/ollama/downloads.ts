@@ -3,6 +3,7 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 import { pull } from './registry';
+import { hfFileUrl, projectorFile } from './catalog';
 import { downloadFile } from '../download';
 import { tr } from '../i18n';
 
@@ -20,15 +21,18 @@ export interface DownloadItem {
   received: number;
   total: number;
   error?: string;
-  // "import" mode (repos the pull cannot resolve): downloads the .gguf and imports with `ollama create`.
-  importModel?: string; // URL of the .gguf to download
-  importProj?: string;  // URL of the mmproj (vision), optional
-  name?: string;        // Ollama model name for `ollama create`
+  // 'pull' = native Ollama pull; 'import' = download the .gguf(s) and `ollama create`. A 'pull' item
+  // also carries import* data: the runtime fallback flips it to 'import' if the pull fails with a 400
+  // (HF serves a broken manifest descriptor for some quants). The mmproj projector is resolved at
+  // import time from modelId, so it is not stored here.
+  mode: 'pull' | 'import';
+  importPaths?: string[]; // repo-relative .gguf path(s); >1 means a split/sharded model
+  name?: string;          // Ollama model name for `ollama create`
 }
 
 export interface StartOpts {
   ref: string; label: string; size: number; modelId: string; quant: string;
-  importModel?: string; importProj?: string; name?: string;
+  mode: 'pull' | 'import'; importPaths?: string[]; name?: string;
 }
 
 const STORAGE_KEY = 'langChat.downloads';
@@ -63,6 +67,15 @@ export class DownloadManager {
     // Restores downloads from previous sessions. Those that were "in progress" are marked as
     // interrupted (the process died when VS Code was closed) → the user can retry (Ollama resumes).
     for (const it of this.storage.get<DownloadItem[]>(STORAGE_KEY, [])) {
+      if (!it.mode) {
+        // Migrate items persisted before the pull/import refactor (had a single `importModel` URL).
+        const legacy = (it as any).importModel as string | undefined;
+        it.mode = legacy ? 'import' : 'pull';
+        if (legacy && !it.importPaths) {
+          const m = legacy.match(/\/resolve\/main\/(.+)$/);
+          it.importPaths = m ? [decodeURIComponent(m[1])] : [];
+        }
+      }
       if (it.state === 'downloading') { it.state = 'interrupted'; it.error = tr('interrupted (VS Code was closed)'); }
       else if (it.state === 'queued') { it.state = 'cancelled'; } // were queued but never started
       this.items.set(it.id, it);
@@ -96,7 +109,7 @@ export class DownloadManager {
     const item: DownloadItem = {
       id, ref: opts.ref, label: opts.label, modelId: opts.modelId, quant: opts.quant, size: opts.size,
       state: 'queued', status: '', received: 0, total: opts.size,
-      importModel: opts.importModel, importProj: opts.importProj, name: opts.name,
+      mode: opts.mode, importPaths: opts.importPaths, name: opts.name,
     };
     this.items.set(id, item);
     this.fireState();
@@ -125,8 +138,21 @@ export class DownloadManager {
     const ac = new AbortController();
     this.aborts.set(item.id, ac);
     try {
-      if (item.importModel) await this.doImport(item, ac.signal);
-      else await this.doPull(item, ac.signal);
+      if (item.mode === 'import') {
+        await this.doImport(item, ac.signal);
+      } else {
+        try {
+          await this.doPull(item, ac.signal);
+        } catch (e: any) {
+          // HF serves a broken manifest descriptor for some quants → the pull dies with "400:" after
+          // downloading the layers. Fall back to a direct .gguf import (which we have the paths for).
+          if (ac.signal.aborted || !this.isTagError(e) || !item.importPaths?.length) throw e;
+          item.mode = 'import'; item.received = 0; item.total = item.size;
+          item.status = tr('Ollama pull failed; importing the .gguf directly…');
+          this.fireState();
+          await this.doImport(item, ac.signal);
+        }
+      }
       // `reader.cancel()`/abort can complete without throwing: detect the abort here too.
       if (ac.signal.aborted) item.state = 'cancelled';
       else { item.state = 'done'; this.onComplete(); }
@@ -138,6 +164,12 @@ export class DownloadManager {
       this.fireState();
       this.processNext(); // starts the next item in the queue
     }
+  }
+
+  /** Does this error look like an HF tag/manifest 400 (so an import fallback is worth trying)? */
+  private isTagError(e: any): boolean {
+    const m = String(e?.message || e);
+    return /(?:^|\D)400(?:\D|$)/.test(m) || /tag .*not .*available/i.test(m);
   }
 
   /** Pull mode: downloads via Ollama (native resume). */
@@ -153,28 +185,48 @@ export class DownloadManager {
     }, signal);
   }
 
-  /** Import mode: downloads the .gguf (and mmproj) and imports with `ollama create`. No resume. */
+  /**
+   * Import mode: downloads the .gguf (all shards, preserving names so Ollama loads part 1's siblings)
+   * plus the mmproj, and imports with `ollama create`. No resume.
+   */
   private async doImport(item: DownloadItem, signal: AbortSignal): Promise<void> {
     await this.ensureServer(); // required for `ollama create`
     fs.mkdirSync(this.importDir, { recursive: true });
-    const safe = (item.name || item.ref).replace(/[^a-z0-9._-]/gi, '_');
-    const modelTmp = path.join(this.importDir, safe + '.gguf');
-    const projTmp = path.join(this.importDir, safe + '.mmproj.gguf');
+    const paths = item.importPaths || [];
+    if (!paths.length) throw new Error('no .gguf to import');
+    const tmpFiles: string[] = [];
     try {
-      item.status = tr('downloading model'); this._onChange.fire();
-      await downloadFile(item.importModel!, modelTmp, {
-        signal,
-        onProgress: (r, t) => { item.received = r; item.total = t || item.size; this.maybePersist(); this._onChange.fire(); },
-      });
-      if (item.importProj) {
+      // Keep each shard's ORIGINAL basename: Ollama loads the siblings of `…-00001-of-000NN.gguf`
+      // by name, so renaming would break a split model. The sanitiser only touches non-shard chars.
+      let done = 0;
+      for (let i = 0; i < paths.length; i++) {
+        const base = (paths[i].split('/').pop() || `model${i}.gguf`).replace(/[^a-z0-9._-]/gi, '_');
+        const dest = path.join(this.importDir, base);
+        tmpFiles.push(dest);
+        item.status = paths.length > 1
+          ? `${tr('downloading model')} (${i + 1}/${paths.length})`
+          : tr('downloading model');
+        this._onChange.fire();
+        let last = 0;
+        await downloadFile(hfFileUrl(item.modelId, paths[i]), dest, {
+          signal,
+          onProgress: (r, t) => { last = r; item.received = done + r; item.total = item.size || t; this.maybePersist(); this._onChange.fire(); },
+        });
+        done += last;
+      }
+      // Vision projector (mmproj), if the repo has one → second FROM in the Modelfile enables vision.
+      let projTmp: string | undefined;
+      const proj = await projectorFile(item.modelId, signal).catch(() => undefined);
+      if (proj) {
+        projTmp = path.join(this.importDir, ((item.name || 'model').replace(/[^a-z0-9._-]/gi, '_')) + '.mmproj.gguf');
         item.status = tr('downloading projector (vision)'); this._onChange.fire();
-        await downloadFile(item.importProj, projTmp, { signal });
+        await downloadFile(hfFileUrl(item.modelId, proj), projTmp, { signal });
+        tmpFiles.push(projTmp);
       }
       item.status = tr('registering in Ollama'); this._onChange.fire();
-      await this.createModel(item.name || item.ref, modelTmp, item.importProj ? projTmp : undefined);
+      await this.createModel(item.name || item.ref, tmpFiles[0], projTmp); // tmpFiles[0] = first shard
     } finally {
-      try { fs.unlinkSync(modelTmp); } catch { /* ignore */ }
-      try { fs.unlinkSync(projTmp); } catch { /* ignore */ }
+      for (const f of tmpFiles) { try { fs.unlinkSync(f); } catch { /* ignore */ } }
     }
   }
 

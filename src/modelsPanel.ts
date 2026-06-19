@@ -2,7 +2,7 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import { OllamaManager } from './ollama/manager';
-import { searchHF, modelFiles, readme, modelInfo, fetchModel, hfFileUrl, projectorFile, OFFICIAL_ORG_NAMES } from './ollama/catalog';
+import { searchHF, modelFiles, readme, modelInfo, fetchModel, ollamaPullViable, OFFICIAL_ORG_NAMES } from './ollama/catalog';
 import { hfPullRef, formatBytes } from './ollama/parse';
 import { DownloadManager } from './ollama/downloads';
 import { ModelCardCache } from './ollama/cards';
@@ -133,7 +133,7 @@ export class ModelsPanel {
           this.post({ type: 'detail', id: msg.id, ...payload });
           break;
         }
-        case 'pull': await this.doPull(msg.id, msg.quant, msg.size || 0, msg.pullable !== false, msg.path || ''); break;
+        case 'pull': await this.doPull(msg.id, msg.quant, msg.size || 0, msg.pullable !== false, msg.path || '', Array.isArray(msg.shards) ? msg.shards : []); break;
         case 'cancelDownload': if (msg.id) { const d = this.downloads.get(msg.id); if (d) this.cards.remove(d.modelId); this.downloads.cancel(msg.id); } break;
         case 'retryDownload': if (msg.id) this.downloads.retry(msg.id); break;
         case 'useModel': await this.useModel(msg.name); break;
@@ -143,7 +143,7 @@ export class ModelsPanel {
     }
   }
 
-  private async doPull(id: string, quant: string, size: number, pullable: boolean, filePath: string): Promise<void> {
+  private async doPull(id: string, quant: string, size: number, pullable: boolean, filePath: string, shards: string[]): Promise<void> {
     // D4: show modal only when free space is clearly insufficient (the size is already visible in the UI).
     const free = freeSpace(this.context.globalStorageUri.fsPath);
     if (free && size && free < size * 1.1) {
@@ -153,20 +153,21 @@ export class ModelsPanel {
       );
       if (go !== tr('Download anyway')) return;
     }
-    if (!pullable && filePath) {
-      // Non-standard repo: Ollama cannot resolve the tag → download the .gguf and import with `ollama create`.
-      // Goes through the SAME Download manager (same sidebar/cancel/retry as a pull).
-      const name = `${(id.split('/').pop() || id)}:${quant}`.toLowerCase().replace(/[^a-z0-9._:-]/g, '-');
-      const projPath = await projectorFile(id).catch(() => undefined);
-      this.downloads.start({
-        ref: name, label: `${id}:${quant}`, size, modelId: id, quant, name,
-        importModel: hfFileUrl(id, filePath),
-        importProj: projPath ? hfFileUrl(id, projPath) : undefined,
-      });
+    const importPaths = shards.length ? shards : (filePath ? [filePath] : []);
+    const name = `${(id.split('/').pop() || id)}:${quant}`.toLowerCase().replace(/[^a-z0-9._:-]/g, '-');
+    const label = `${id}:${quant}`;
+    // Import the .gguf(s) directly instead of letting Ollama pull when EITHER:
+    //  1. Non-standard filename: Ollama cannot resolve `:{quant}` (the `pullable` heuristic), OR
+    //  2. Standard name but HF serves a broken manifest descriptor for this quant → the pull would
+    //     die with "400:" after downloading the layers. We anticipate it (probe the descriptor).
+    const importInstead = importPaths.length > 0 && (!pullable || !(await ollamaPullViable(id, quant)));
+    if (importInstead) {
+      this.downloads.start({ mode: 'import', ref: name, label, size, modelId: id, quant, name, importPaths });
       return;
     }
-    // Standard repo: native Ollama pull (serialised queue; starts the server if needed).
-    this.downloads.start({ ref: hfPullRef(id, quant), label: `${id}:${quant}`, size, modelId: id, quant });
+    // Native Ollama pull, but carry the import paths so the manager can fall back to a direct import
+    // if the pull still fails with a 400 mid-stream (backstop for what the pre-flight probe missed).
+    this.downloads.start({ mode: 'pull', ref: hfPullRef(id, quant), label, size, modelId: id, quant, name, importPaths });
   }
 
   private async useModel(name: string): Promise<void> {

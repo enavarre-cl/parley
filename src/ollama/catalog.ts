@@ -2,7 +2,7 @@
 import { httpFetch } from '../http';
 import type { ModelCapabilities } from './registry';
 import {
-  heuristicCapabilities, parseQuant, hfPullRef, isAuxiliaryGguf, isOllamaPullable,
+  heuristicCapabilities, parseQuant, hfPullRef, isAuxiliaryGguf, isOllamaPullable, shardInfo,
   parseParamCount, formatParams, domainFromPipeline, isOfficialOrg, OFFICIAL_ORG_NAMES,
 } from './parse';
 
@@ -29,10 +29,11 @@ export interface ModelInfo {
 }
 
 export interface ModelFile {
-  path: string;        // path of the .gguf in the repo
-  size: number;        // bytes
+  path: string;        // path of the .gguf in the repo (the first part, when sharded)
+  size: number;        // bytes (TOTAL across all shards)
   quant: string;       // e.g. "Q4_K_M"
   pullable: boolean;   // can Ollama resolve `:{quant}`? (standard names)
+  shards?: string[];   // all shard paths in order, only when the model is split (>1 part)
 }
 
 const HF = 'https://huggingface.co';
@@ -111,16 +112,71 @@ export async function modelFiles(id: string, signal?: AbortSignal): Promise<Mode
   const res = await httpFetch(url, { signal });
   if (!res.ok) throw new Error(`HF tree HTTP ${res.status}`);
   const arr = (await res.json()) as any[];
-  return (arr || [])
+  const ggufs = (arr || [])
     .filter((e) => e?.type === 'file' && typeof e.path === 'string' && /\.gguf$/i.test(e.path))
     .filter((e) => !isAuxiliaryGguf(e.path)) // excludes mmproj/projectors: not standalone models
-    .map((e): ModelFile => ({
-      path: e.path,
-      size: e.size || e.lfs?.size || 0,
-      quant: parseQuant(e.path),
-      pullable: isOllamaPullable(e.path),
-    }))
-    .sort((a, b) => a.size - b.size);
+    .map((e) => ({ path: e.path as string, size: (e.size || e.lfs?.size || 0) as number }));
+
+  // Collapse split models (`…-00001-of-00003.gguf`) into ONE entry: a single shard is not usable
+  // on its own. Standalone files keep one entry each. Grouped by shard base (which includes any
+  // subfolder), so different quants in their own folders never mix.
+  const groups = new Map<string, { paths: { path: string; size: number; index: number }[] }>();
+  const out: ModelFile[] = [];
+  for (const f of ggufs) {
+    const sh = shardInfo(f.path);
+    if (!sh) {
+      out.push({ path: f.path, size: f.size, quant: parseQuant(f.path), pullable: isOllamaPullable(f.path) });
+      continue;
+    }
+    const g = groups.get(sh.base) || { paths: [] };
+    g.paths.push({ ...f, index: sh.index });
+    groups.set(sh.base, g);
+  }
+  for (const g of groups.values()) {
+    g.paths.sort((a, b) => a.index - b.index);
+    const first = g.paths[0].path;
+    out.push({
+      path: first,
+      size: g.paths.reduce((n, p) => n + p.size, 0),
+      quant: parseQuant(first),
+      pullable: isOllamaPullable(first),
+      shards: g.paths.map((p) => p.path),
+    });
+  }
+  return out.sort((a, b) => a.size - b.size);
+}
+
+/**
+ * Pre-flight: will an Ollama `hf.co/{id}:{quant}` pull actually succeed?
+ *
+ * Ollama builds the model from an Ollama-style manifest that HF generates on the fly at
+ * `/v2/{id}/manifests/{quant}`, then fetches the manifest's CONFIG descriptor blob. For some
+ * quants HF serves a broken/hanging config descriptor, so the pull dies with "400:" AFTER having
+ * already downloaded the (multi-GB) layers. We probe that exact descriptor up front — the same
+ * path Ollama walks — so the caller can fall back to a direct .gguf import instead of wasting the
+ * download. Returns false on any non-OK response or timeout (the import path still works).
+ */
+export async function ollamaPullViable(id: string, quant: string, timeoutMs = 6000): Promise<boolean> {
+  const ac = new AbortController();
+  const timer = setTimeout(() => ac.abort(), timeoutMs);
+  try {
+    const accept = 'application/vnd.docker.distribution.manifest.v2+json';
+    const man = await httpFetch(`${HF}/v2/${id}/manifests/${encodeURIComponent(quant)}`, {
+      headers: { Accept: accept }, signal: ac.signal,
+    });
+    if (!man.ok) return false;
+    const digest = ((await man.json()) as any)?.config?.digest;
+    if (!digest) return false;
+    // Range 0-0: confirm the descriptor is actually retrievable without downloading it whole.
+    const blob = await httpFetch(`${HF}/v2/${id}/blobs/${digest}`, {
+      headers: { Range: 'bytes=0-0' }, signal: ac.signal,
+    });
+    return blob.ok; // 200 (full) or 206 (partial) → Ollama will be able to finish the pull
+  } catch {
+    return false; // network error or 6s timeout → treat as not pullable, import the .gguf directly
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 /** Extra model info (architecture and exact params) from the individual HF endpoint. */
