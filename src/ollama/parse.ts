@@ -73,8 +73,8 @@ export function isOllamaPullable(filePath: string): boolean {
 /**
  * Parses a split/sharded GGUF path into its group base + position, or null if it is not a shard.
  * Big models are published in parts named `…-00001-of-00003.gguf`; all parts share one base and
- * must be downloaded together (Ollama loads the siblings of part 1 automatically). The base keeps
- * the directory so shards in a subfolder group correctly.
+ * must be downloaded together and all referenced when importing. The base keeps the directory so
+ * shards in a subfolder group correctly.
  *   "Qwen3-235B-Q4_K_M-00001-of-00003.gguf" → { base: "Qwen3-235B-Q4_K_M", index: 1, total: 3 }
  */
 export function shardInfo(filePath: string): { base: string; index: number; total: number } | null {

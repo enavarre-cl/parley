@@ -125,7 +125,7 @@ export function activate(context: vscode.ExtensionContext) {
   // Persistent downloads (survive restarts) that auto-start the server on (re)attempt.
   const downloads = new DownloadManager(
     () => needServer(),
-    (name, modelPath, projPath) => ollama.create(name, modelPath, projPath),
+    (name, modelPaths, projPath) => ollama.create(name, modelPaths, projPath),
     () => refreshTrees(),
     context.globalState,
     path.join(context.globalStorageUri.fsPath, 'imports')

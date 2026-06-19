@@ -161,14 +161,16 @@ export class OllamaManager {
   }
 
   /**
-   * Imports a local .gguf as an Ollama model (`ollama create … -f Modelfile`).
-   * If `projectorPath` (mmproj) is provided, it is added as a second FROM to enable vision.
+   * Imports local .gguf file(s) as an Ollama model (`ollama create … -f Modelfile`).
+   * A split model is passed as several `ggufPaths` (one FROM line each — Ollama merges them; pointing
+   * at only part 1 fails with "has 1 shards, expected N"). If `projectorPath` (mmproj) is provided,
+   * it is added as a final FROM to enable vision.
    */
-  async create(name: string, ggufPath: string, projectorPath?: string): Promise<void> {
+  async create(name: string, ggufPaths: string[], projectorPath?: string): Promise<void> {
     const baseUrl = await this.start();
     const bin = await this.ensureBinary();
-    const modelfile = ggufPath + '.Modelfile';
-    const lines = [`FROM ${ggufPath}`];
+    const modelfile = ggufPaths[0] + '.Modelfile';
+    const lines = ggufPaths.map((p) => `FROM ${p}`);
     if (projectorPath) lines.push(`FROM ${projectorPath}`);
     fs.writeFileSync(modelfile, lines.join('\n') + '\n');
     try {

@@ -59,7 +59,7 @@ export class DownloadManager {
    */
   constructor(
     private readonly ensureServer: () => Promise<string | undefined>,
-    private readonly createModel: (name: string, modelPath: string, projPath?: string) => Promise<void>,
+    private readonly createModel: (name: string, modelPaths: string[], projPath?: string) => Promise<void>,
     private readonly onComplete: () => void,
     private readonly storage: vscode.Memento,
     private readonly importDir: string
@@ -186,23 +186,24 @@ export class DownloadManager {
   }
 
   /**
-   * Import mode: downloads the .gguf (all shards, preserving names so Ollama loads part 1's siblings)
-   * plus the mmproj, and imports with `ollama create`. No resume.
+   * Import mode: downloads the .gguf (every shard) plus the mmproj, and imports with `ollama create`
+   * (all shards referenced in the Modelfile, since Ollama will not auto-find them). No resume.
    */
   private async doImport(item: DownloadItem, signal: AbortSignal): Promise<void> {
     await this.ensureServer(); // required for `ollama create`
     fs.mkdirSync(this.importDir, { recursive: true });
     const paths = item.importPaths || [];
     if (!paths.length) throw new Error('no .gguf to import');
-    const tmpFiles: string[] = [];
+    const tmpFiles: string[] = [];   // everything to clean up
+    const modelParts: string[] = []; // the model shards, in order → one FROM line each
     try {
-      // Keep each shard's ORIGINAL basename: Ollama loads the siblings of `…-00001-of-000NN.gguf`
-      // by name, so renaming would break a split model. The sanitiser only touches non-shard chars.
+      // A split model needs ALL parts present and ALL referenced in the Modelfile: pointing Ollama at
+      // only part 1 fails with "has 1 shards, expected N". The sanitiser keeps the shard suffix intact.
       let done = 0;
       for (let i = 0; i < paths.length; i++) {
         const base = (paths[i].split('/').pop() || `model${i}.gguf`).replace(/[^a-z0-9._-]/gi, '_');
         const dest = path.join(this.importDir, base);
-        tmpFiles.push(dest);
+        tmpFiles.push(dest); modelParts.push(dest);
         item.status = paths.length > 1
           ? `${tr('downloading model')} (${i + 1}/${paths.length})`
           : tr('downloading model');
@@ -214,7 +215,7 @@ export class DownloadManager {
         });
         done += last;
       }
-      // Vision projector (mmproj), if the repo has one → second FROM in the Modelfile enables vision.
+      // Vision projector (mmproj), if the repo has one → final FROM in the Modelfile enables vision.
       let projTmp: string | undefined;
       const proj = await projectorFile(item.modelId, signal).catch(() => undefined);
       if (proj) {
@@ -224,7 +225,7 @@ export class DownloadManager {
         tmpFiles.push(projTmp);
       }
       item.status = tr('registering in Ollama'); this._onChange.fire();
-      await this.createModel(item.name || item.ref, tmpFiles[0], projTmp); // tmpFiles[0] = first shard
+      await this.createModel(item.name || item.ref, modelParts, projTmp);
     } finally {
       for (const f of tmpFiles) { try { fs.unlinkSync(f); } catch { /* ignore */ } }
     }
