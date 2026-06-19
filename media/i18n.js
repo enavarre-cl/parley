@@ -1,7 +1,7 @@
 // Webview i18n. "English as key" strategy: the source text (in code and HTML) is English and IS
-// the key. The Spanish bundle is the single source of truth in l10n/es.json, injected into the
-// webview HTML as `window.I18N_ES`. t() returns English as-is for 'en', or its Spanish translation
-// for 'es' (with fallback to English when an entry is missing).
+// the key. The Spanish bundle is the single source of truth in package.nls.es.json, injected into
+// the webview HTML as `window.I18N_ES`. t() returns English as-is for 'en', or its Spanish
+// translation for 'es' (with fallback to English when an entry is missing).
 (function () {
   const ES = (typeof window !== 'undefined' && window.I18N_ES) || {};
 

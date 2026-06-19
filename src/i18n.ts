@@ -1,5 +1,6 @@
 /** Backend i18n (extension host). English is the key; the Spanish bundle is the single source of
- *  truth in l10n/es.json (the same file is injected into the webviews). */
+ *  truth in package.nls.es.json — the VS Code-mandated manifest bundle, reused at runtime so there
+ *  is ONE language file. The same bundle is injected into the webviews. */
 import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
@@ -11,11 +12,13 @@ export function resolvedLang(): 'en' | 'es' {
   return vscode.env.language.toLowerCase().startsWith('es') ? 'es' : 'en';
 }
 
-/** Spanish bundle (English key → Spanish), loaded once. From out/i18n.js, ../l10n/es.json
- *  resolves to <extension>/l10n/es.json (shipped in the .vsix). Falls back to English on error. */
+/** Spanish bundle (English key → Spanish), loaded once. From out/i18n.js, ../package.nls.es.json
+ *  resolves to <extension>/package.nls.es.json (shipped in the .vsix; also read natively by VS Code
+ *  for the manifest). Manifest keys (dotted) coexist harmlessly with runtime keys (English text).
+ *  Falls back to English on error. */
 export const ES_BUNDLE: Record<string, string> = (() => {
   try {
-    return JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'l10n', 'es.json'), 'utf8'));
+    return JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.nls.es.json'), 'utf8'));
   } catch {
     return {};
   }

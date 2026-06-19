@@ -18,7 +18,7 @@
   "capabilities": {
     "untrustedWorkspaces": {
       "supported": "limited",
-      "description": "En un workspace no confiable se desactivan los servidores MCP (.mcp) y la escritura de archivos (fs_write); el resto funciona."
+      "description": "%capabilities.untrustedWorkspaces.desc%"
     }
   },
   "contributes": {
