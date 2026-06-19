@@ -1,0 +1,106 @@
+# CI/CD for GitHub Actions — equivalent to the old azure-pipelines.yml.
+# Jobs: compile → test → package (→ .vsix artifact) → publish.
+#   - push & PR to master: compile / test / package.
+#   - push to master: also publish to the VS Code Marketplace, gated by MANUAL APPROVAL.
+#
+# Manual approval: the `publish` job targets the `marketplace` environment. Configure it once in
+#   Settings → Environments → New environment → "marketplace" → enable "Required reviewers" and add
+#   yourself. The job then pauses until you approve. (Free on public repos.)
+# Secret: add VSCE_PAT in Settings → Secrets and variables → Actions (Azure DevOps PAT,
+#   scope Marketplace → Manage, "All accessible organizations").
+# Versioning: major.minor come from package.json; patch = github.run_number (auto-increments), so
+#   every publish gets a unique version. The publish is idempotent: if the version already exists,
+#   it skips instead of failing.
+
+name: Release
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  compile:
+    name: Compile (lint + typecheck)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run compile
+
+  test:
+    name: Test
+    needs: compile
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm test
+
+  package:
+    name: Package (.vsix)
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Stamp auto-incremented version (major.minor.${{ github.run_number }})
+        run: |
+          node -e "const fs=require('fs');const p=JSON.parse(fs.readFileSync('package.json','utf8'));const [maj,min]=p.version.split('.');p.version=maj+'.'+min+'.'+process.env.GITHUB_RUN_NUMBER;fs.writeFileSync('package.json',JSON.stringify(p,null,2)+'\n');console.log('Packaging version '+p.version);"
+      - run: npx --yes @vscode/vsce package -o lang-chat.vsix
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vsix
+          path: lang-chat.vsix
+
+  publish:
+    name: Publish to VS Code Marketplace
+    needs: package
+    if: github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    environment: marketplace # manual approval gate (required reviewers)
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: actions/download-artifact@v4
+        with:
+          name: vsix
+          path: .
+      - name: Publish (idempotent)
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+        run: |
+          set +e
+          OUT=$(npx --yes @vscode/vsce publish --packagePath lang-chat.vsix 2>&1)
+          CODE=$?
+          echo "$OUT"
+          if [ $CODE -ne 0 ]; then
+            if echo "$OUT" | grep -qi "already exists"; then
+              echo "This version is already on the Marketplace — nothing to publish (idempotent)."
+              exit 0
+            fi
+            exit $CODE
+          fi
