@@ -22,7 +22,7 @@ import {
 import { ToolHub } from './tools';
 import { wavData, concatWavs, splitForTTS } from './audio';
 import { initProxy } from './http';
-import { tr, resolvedLang } from './i18n';
+import { tr, resolvedLang, ES_BUNDLE } from './i18n';
 import { registerCompare } from './compareView';
 import { SpellWordsStore, SpellLang } from './spellWords';
 import { openDictionaryPanel } from './dictionaryPanel';
@@ -1601,7 +1601,8 @@ class ChatEditorProvider implements vscode.CustomTextEditorProvider {
     en: { aff: '${uri('dict/en.aff')}', dic: '${uri('dict/en.dic')}' }
   };
   window.DOWNLOADED_VOICES = ${JSON.stringify(this.downloadedVoiceIds())};
-  window.PIPER_CUSTOM_SET = ${JSON.stringify(!!vscode.workspace.getConfiguration('langChat').get<string>('tts.piperModel', ''))};</script>
+  window.PIPER_CUSTOM_SET = ${JSON.stringify(!!vscode.workspace.getConfiguration('langChat').get<string>('tts.piperModel', ''))};
+  window.I18N_ES = ${JSON.stringify(ES_BUNDLE)};</script>
   <script nonce="${nonce}" src="${uri('zoom.js')}"></script>
   <script nonce="${nonce}" src="${uri('i18n.js')}"></script>
   <script nonce="${nonce}" src="${uri('spell-engine.js')}"></script>

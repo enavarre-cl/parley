@@ -6,7 +6,7 @@ import { searchHF, modelFiles, readme, modelInfo, fetchModel, hfFileUrl, project
 import { hfPullRef, formatBytes } from './ollama/parse';
 import { DownloadManager } from './ollama/downloads';
 import { ModelCardCache } from './ollama/cards';
-import { tr, resolvedLang } from './i18n';
+import { tr, resolvedLang, ES_BUNDLE } from './i18n';
 
 export interface ModelsPanelHooks {
   /** Refreshes the sidebar after a download. */
@@ -213,6 +213,7 @@ export class ModelsPanel {
       <div id="mb-detail" class="empty">${tr('Search and select a model.')}</div>
     </div>
   </div>
+  <script nonce="${n}">window.I18N_ES = ${JSON.stringify(ES_BUNDLE)};</script>
   <script nonce="${n}" src="${uri('i18n.js')}"></script>
   <script nonce="${n}" src="${uri('models.js')}"></script>
 </body>

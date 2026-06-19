@@ -55,7 +55,7 @@ export function openVoicesPanel(
   <script nonce="${nonce}">window.VOICES_T = ${JSON.stringify({
     download: tr('Download'),
     delete: tr('Delete voice'),
-    downloaded: tr('Downloaded'),
+    downloaded: tr('Downloaded voice'),
     downloading: tr('Downloading…'),
   })};</script>
   <script nonce="${nonce}" src="${media('voices.js')}"></script>
