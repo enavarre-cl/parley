@@ -142,4 +142,4 @@ Lang Chat is **MIT** licensed. It bundles or downloads third‑party components 
 
 ## License
 
-MIT — the full text ships in the extension's `LICENSE` file (see the License tab above).
+Released under the MIT License.
