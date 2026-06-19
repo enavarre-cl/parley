@@ -5,6 +5,8 @@ All notable changes to Lang Chat. Format based on
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-06-18
+
 ### Added
 - **Voices manager**: download/remove neural Piper voices from a panel (**＋** in the sidebar),
   verified against a pinned checksum. The chat voice picker lists only downloaded voices.

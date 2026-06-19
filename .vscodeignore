@@ -5,6 +5,7 @@ out/test/**
 tsconfig.json
 .gitignore
 .eslintrc*
+eslint.config.js
 .claude/**
 resumen.md
 plan-*.md
