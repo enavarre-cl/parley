@@ -24,6 +24,12 @@ pr:
     include:
       - main
 
+variables:
+  # Auto-incrementing patch: every build gets a unique version (major.minor come from package.json,
+  # patch from this counter) so `vsce publish` never fails with "version already exists". The
+  # counter persists across runs and increments each time. NOTE: do NOT add VSCE_PAT here.
+  patch: $[counter('langchat-patch', 1)]
+
 stages:
   - stage: Compile
     displayName: 'Compile (lint + typecheck)'
@@ -101,6 +107,9 @@ stages:
             displayName: 'Point npm to the cache'
           - script: npm ci
             displayName: 'Install dependencies (npm ci)'
+          - script: |
+              node -e "const fs=require('fs');const p=JSON.parse(fs.readFileSync('package.json','utf8'));const [maj,min]=p.version.split('.');p.version=maj+'.'+min+'.'+'$(patch)';fs.writeFileSync('package.json',JSON.stringify(p,null,2)+'\n');console.log('Packaging version '+p.version);"
+            displayName: 'Stamp auto-incremented version (major.minor.$(patch))'
           - script: npx --yes @vscode/vsce package -o lang-chat.vsix
             displayName: 'Package (.vsix)'
           - task: PublishPipelineArtifact@1
