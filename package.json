@@ -2,7 +2,7 @@
   "name": "lang-chat",
   "displayName": "Lang Chat",
   "description": "%ext.description%",
-  "version": "1.0.15",
+  "version": "1.0.16",
   "publisher": "enavarre",
   "license": "MIT",
   "engines": {

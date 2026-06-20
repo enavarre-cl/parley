@@ -1494,11 +1494,26 @@ class ChatEditorProvider implements vscode.CustomTextEditorProvider {
       }
     });
 
-    // Syncs external document changes (manual JSON editing, undo/redo)
-    // without overwriting the in-progress streaming (which we ourselves triggered).
+    // Syncs external document changes (manual JSON editing) without overwriting the in-progress
+    // streaming (which we ourselves triggered).
     const onChange = vscode.workspace.onDidChangeTextDocument((e) => {
       if (e.document.uri.toString() !== document.uri.toString()) return;
       if (document.getText() === lastWritten) return; // our own edit: already reflected in the webview
+      // The .chat is a TextDocument, but the chat owns its history (delete/edit/regenerate/fork).
+      // VS Code's text undo/redo steps through the many internal writes of a turn, erratically
+      // reverting or duplicating messages. Neutralize it: snap the document back to the last state
+      // we wrote. (The webview keeps native undo inside its own input fields via execCommand.)
+      if (lastWritten !== null &&
+          (e.reason === vscode.TextDocumentChangeReason.Undo || e.reason === vscode.TextDocumentChangeReason.Redo)) {
+        const edit = new vscode.WorkspaceEdit();
+        edit.replace(
+          document.uri,
+          new vscode.Range(document.positionAt(0), document.positionAt(document.getText().length)),
+          lastWritten
+        );
+        void vscode.workspace.applyEdit(edit);
+        return;
+      }
       pushDoc();
     });
 
