@@ -496,20 +496,35 @@ class ChatEditorProvider implements vscode.CustomTextEditorProvider {
       post({ type: 'ttsDone' });
     };
 
-    // Effective system prompt: from the referenced .md file if it exists; otherwise the inline one.
+    // Roots a systemPromptFile may live in: the .chat's own folder + any workspace folder. Project
+    // files are fine; a shared .chat still cannot pull arbitrary files (e.g. ../../etc/passwd) into
+    // the prompt and exfiltrate them to the model.
+    const sysPromptRoots = (): string[] => [
+      path.dirname(document.uri.fsPath),
+      ...(vscode.workspace.workspaceFolders || []).map((f) => f.uri.fsPath),
+    ];
+    const sysPromptPathAllowed = (resolved: string): boolean =>
+      sysPromptRoots().some((root) => resolved === root || resolved.startsWith(root + path.sep));
+
+    let sysPromptWarned = ''; // debounce: warn once per broken file, not on every send
+
+    // Effective system prompt: from the referenced file if usable; otherwise the inline one.
     const resolveSystemPrompt = (doc: ChatDoc): string => {
       if (doc.systemPromptFile) {
-        try {
-          const dir = path.dirname(document.uri.fsPath);
-          const resolved = path.resolve(dir, doc.systemPromptFile);
-          // Confines to the .chat directory: the file cannot point outside (e.g. ../../etc/passwd).
-          if (resolved !== dir && !resolved.startsWith(dir + path.sep)) {
-            throw new Error('systemPromptFile outside the .chat directory');
-          }
-          const text = fs.readFileSync(resolved, 'utf8');
-          if (text.trim()) return text;
-        } catch {
-          /* absent or out of bounds: falls through to inline */
+        const resolved = path.resolve(path.dirname(document.uri.fsPath), doc.systemPromptFile);
+        if (sysPromptPathAllowed(resolved)) {
+          try {
+            const text = fs.readFileSync(resolved, 'utf8');
+            if (text.trim()) { sysPromptWarned = ''; return text; }
+          } catch { /* missing/unreadable: fall through to the warning + inline */ }
+        }
+        // Missing, empty, or outside the workspace → tell the user (once per file) instead of silently
+        // using the inline prompt, which makes it look like the system prompt is being ignored.
+        if (sysPromptWarned !== doc.systemPromptFile) {
+          sysPromptWarned = doc.systemPromptFile;
+          void vscode.window.showWarningMessage(
+            `${tr('System prompt file not used (missing, empty, or outside the workspace); using the inline prompt instead:')} ${doc.systemPromptFile}`
+          );
         }
       }
       return doc.systemPrompt || '';
@@ -1395,16 +1410,21 @@ class ChatEditorProvider implements vscode.CustomTextEditorProvider {
           doc.systemPromptFile = path.relative(dir.fsPath, picked[0].fsPath);
           await writeDoc(doc);
           pushDoc();
+          // Warn at pick time if it lives outside the workspace: it would be ignored at send time.
+          if (!sysPromptPathAllowed(picked[0].fsPath)) {
+            void vscode.window.showWarningMessage(
+              tr('This file is outside the workspace, so it will not be used as the system prompt. Move it inside the project folder.')
+            );
+          }
           break;
         }
         case 'openSysPrompt': {
           const doc = getDoc();
           if (!doc || !doc.systemPromptFile) break;
-          // Confines to the .chat directory (same guard as resolveSystemPrompt): a
-          // manually edited systemPromptFile cannot open files outside (../../etc/passwd).
-          const dir = path.dirname(document.uri.fsPath);
-          const resolved = path.resolve(dir, doc.systemPromptFile);
-          if (resolved !== dir && !resolved.startsWith(dir + path.sep)) break;
+          // Same allow-list as resolveSystemPrompt (.chat folder + workspace): a manually edited
+          // systemPromptFile cannot open files outside (e.g. ../../etc/passwd).
+          const resolved = path.resolve(path.dirname(document.uri.fsPath), doc.systemPromptFile);
+          if (!sysPromptPathAllowed(resolved)) break;
           await vscode.commands.executeCommand('vscode.open', vscode.Uri.file(resolved));
           break;
         }
