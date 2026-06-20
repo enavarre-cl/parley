@@ -742,8 +742,8 @@ mark.find-hit.current {
 .msg-attachments img { max-width: 220px; max-height: 220px; border-radius: 8px; border: 1px solid var(--vscode-panel-border); cursor: zoom-in; }
 /* Generated images (assistant) ARE the content, not a thumbnail: show them large. */
 .msg.assistant .msg-attachments img { max-width: min(100%, 512px); max-height: 70vh; }
-/* Click to toggle full size (any image). */
-.msg-attachments img.zoomed { max-width: 100%; max-height: none; cursor: zoom-out; }
+/* Click to toggle full size (any image). !important to beat the per-role rule above (more classes). */
+.msg-attachments img.zoomed { max-width: 100% !important; max-height: 90vh !important; cursor: zoom-out; }
 .file-chip { font-size: 11px; background: var(--vscode-textCodeBlock-background, rgba(127,127,127,.15)); padding: 3px 7px; border-radius: 10px; }
 
 /* ---- Tools ---- */
