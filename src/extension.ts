@@ -508,26 +508,38 @@ class ChatEditorProvider implements vscode.CustomTextEditorProvider {
 
     let sysPromptWarned = ''; // debounce: warn once per broken file, not on every send
 
-    // Effective system prompt: from the referenced file if usable; otherwise the inline one.
-    const resolveSystemPrompt = (doc: ChatDoc): string => {
+    // Reads the EFFECTIVE system prompt (file if usable, else inline). No side effects.
+    // `fileFailed` = a systemPromptFile was set but is missing/empty/outside the workspace.
+    const readSystemPrompt = (doc: ChatDoc): { text: string; fileFailed: boolean } => {
       if (doc.systemPromptFile) {
         const resolved = path.resolve(path.dirname(document.uri.fsPath), doc.systemPromptFile);
         if (sysPromptPathAllowed(resolved)) {
           try {
             const text = fs.readFileSync(resolved, 'utf8');
-            if (text.trim()) { sysPromptWarned = ''; return text; }
-          } catch { /* missing/unreadable: fall through to the warning + inline */ }
+            if (text.trim()) return { text, fileFailed: false };
+          } catch { /* missing/unreadable */ }
         }
-        // Missing, empty, or outside the workspace → tell the user (once per file) instead of silently
-        // using the inline prompt, which makes it look like the system prompt is being ignored.
-        if (sysPromptWarned !== doc.systemPromptFile) {
-          sysPromptWarned = doc.systemPromptFile;
+        return { text: doc.systemPrompt || '', fileFailed: true };
+      }
+      return { text: doc.systemPrompt || '', fileFailed: false };
+    };
+
+    // Effective system prompt for sending; warns once (visibly) if a referenced file couldn't be
+    // used, instead of silently using the inline prompt (which looks like the prompt is ignored).
+    const resolveSystemPrompt = (doc: ChatDoc): string => {
+      const { text, fileFailed } = readSystemPrompt(doc);
+      if (fileFailed) {
+        const file = doc.systemPromptFile || '';
+        if (sysPromptWarned !== file) {
+          sysPromptWarned = file;
           void vscode.window.showWarningMessage(
-            `${tr('System prompt file not used (missing, empty, or outside the workspace); using the inline prompt instead:')} ${doc.systemPromptFile}`
+            `${tr('System prompt file not used (missing, empty, or outside the workspace); using the inline prompt instead:')} ${file}`
           );
         }
+      } else {
+        sysPromptWarned = '';
       }
-      return doc.systemPrompt || '';
+      return text;
     };
 
     // ---- Attachment sidecar (.attach): blobs live here, the .chat only holds references ----
@@ -589,8 +601,11 @@ class ChatEditorProvider implements vscode.CustomTextEditorProvider {
     };
 
     // Copy of the doc with resolved attachments (for the webview), without touching the persisted doc.
-    const resolveDocForView = (doc: ChatDoc): ChatDoc => ({
+    // `sysPromptTokens` = tokens of the EFFECTIVE system prompt (file content included): the webview
+    // only has the inline `systemPrompt`, so without this its context bar undercounts when a file is used.
+    const resolveDocForView = (doc: ChatDoc): ChatDoc & { sysPromptTokens: number } => ({
       ...doc,
+      sysPromptTokens: estTokens(readSystemPrompt(doc).text),
       messages: doc.messages.map((m) =>
         m.attachments ? { ...m, attachments: m.attachments.map(resolveAtt) } : m
       ),
@@ -723,6 +738,9 @@ class ChatEditorProvider implements vscode.CustomTextEditorProvider {
     ): Promise<{ answer: string; thinking: string; failed: boolean; usage?: any }> => {
       let history = context;
       let summaryText = '';
+      // Resolve ONCE: used both to budget the trimming below and as the system message sent. Must be
+      // the effective prompt (file content included) or the budget under-counts and can overflow the window.
+      const sysPrompt = resolveSystemPrompt(doc);
 
       const cmCfg = doc.params.contextMessages;
       const lastNActive = cmCfg.enabled && cmCfg.value > 0;
@@ -732,7 +750,7 @@ class ChatEditorProvider implements vscode.CustomTextEditorProvider {
         // (to avoid blowing the window).
         const modelCtx = modelContexts[doc.model];
         const budget = modelCtx ? Math.floor(modelCtx * 0.75) : 16000;
-        let acc = estTokens(doc.systemPrompt);
+        let acc = estTokens(sysPrompt);
         let start = history.length;
         for (let i = history.length - 1; i >= 0; i--) {
           if (history.length - i > cmCfg.value) break;            // cap: N messages
@@ -751,7 +769,7 @@ class ChatEditorProvider implements vscode.CustomTextEditorProvider {
         let upTo = doc.summary ? doc.summary.upTo : 0;
         summaryText = doc.summary?.text ?? '';
 
-        const fixed = estTokens(doc.systemPrompt) + estTokens(summaryText);
+        const fixed = estTokens(sysPrompt) + estTokens(summaryText);
         let total = fixed;
         for (let i = upTo; i < history.length; i++) total += msgTokens(history[i]);
 
@@ -786,7 +804,6 @@ class ChatEditorProvider implements vscode.CustomTextEditorProvider {
       }
 
       const wire: ChatMessage[] = [];
-      const sysPrompt = resolveSystemPrompt(doc);
       if (sysPrompt.trim()) wire.push({ role: 'system', content: sysPrompt });
       if (summaryText) {
         wire.push({ role: 'system', content: `Summary of the previous conversation (compacted context):\n${summaryText}` });

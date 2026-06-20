@@ -1596,11 +1596,17 @@
     const modelCtx = modelContext[modelSelect.value];
     return modelCtx ? Math.floor(modelCtx * 0.75) : 16000;
   }
+  // Tokens of the EFFECTIVE system prompt. The backend sends sysPromptTokens (file content included);
+  // fall back to estimating the inline prompt if it's an older payload without that field.
+  function sysPromptTokens() {
+    if (!doc) return 0;
+    return typeof doc.sysPromptTokens === 'number' ? doc.sysPromptTokens : estTokens(doc.systemPrompt || '');
+  }
   // Effective start index for "last N": the NEAREST cut wins (N messages vs token budget).
   // Exact replica of the backend's trimming so the divider matches what is actually sent.
   function lastNStart(msgs, n) {
     const budget = ctxBudget();
-    let acc = estTokens(doc ? doc.systemPrompt : '');
+    let acc = sysPromptTokens();
     let start = msgs.length;
     for (let i = msgs.length - 1; i >= 0; i--) {
       if (msgs.length - i > n) break;                       // cap: N messages
@@ -1637,7 +1643,7 @@
     if (!lastN && !doc.params.autoSummary) { ctxBar.classList.add('hidden'); return; }
     const budget = ctxBudget();
     const msgs = doc.messages || [];
-    let total = estTokens(doc.systemPrompt);
+    let total = sysPromptTokens();
     if (lastN) {
       // Only the effective "last N" window (bounded by the budget; no summary).
       for (let i = lastNStart(msgs, lastN); i < msgs.length; i++) total += msgTokens(msgs[i]);
