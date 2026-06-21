@@ -1100,9 +1100,16 @@
     if (suppressScroll || !stickToBottom) return; // if the user scrolled up, don't drag them to the bottom
     messagesEl.scrollTop = messagesEl.scrollHeight;
   }
-  // The user is in control: near the bottom → stick to it; if they scroll up to read → pause auto-scroll.
+  // The user is in control. A wheel/trackpad scroll-up detaches IMMEDIATELY and synchronously — this
+  // beats the per-token auto-scroll, so an arriving character can't yank you back down. (The old code
+  // only recomputed on the 'scroll' event with an 80px band, which lost this race → the "tug of war".)
+  messagesEl.addEventListener('wheel', (e) => {
+    if (e.deltaY < 0) stickToBottom = false; // scrolling up to read → stop following the stream
+  }, { passive: true });
+  // Re-attach only once scrolled (back) to the very bottom. The tiny threshold means any scroll-up
+  // stays detached instead of fighting inside a dead-zone band.
   messagesEl.addEventListener('scroll', () => {
-    stickToBottom = messagesEl.scrollHeight - messagesEl.scrollTop - messagesEl.clientHeight < 80;
+    stickToBottom = (messagesEl.scrollHeight - messagesEl.scrollTop - messagesEl.clientHeight) < 4;
   });
 
   // Persistent notices (errors, summaries): NOT cleared when the history is re-rendered.

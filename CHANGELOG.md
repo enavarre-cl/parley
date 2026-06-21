@@ -5,6 +5,14 @@ All notable changes to Parley. Format based on
 
 ## [Unreleased]
 
+## [1.2.4] - 2026-06-21
+
+### Fixed
+- **Scroll “tug of war” during streaming.** Scrolling up to read while a response streamed in kept
+  yanking you back to the bottom on every token. A wheel/trackpad scroll-up now detaches from the
+  bottom **immediately and synchronously** (beating the per-token auto-scroll), and following only
+  re-engages once you return to the very bottom — no more dead-zone fight.
+
 ## [1.2.3] - 2026-06-21
 
 ### Added
