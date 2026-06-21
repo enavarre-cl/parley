@@ -41,7 +41,7 @@ function collectUris(arg: any): vscode.Uri[] {
 }
 
 export function registerCompare(context: vscode.ExtensionContext): void {
-  const cmd = vscode.commands.registerCommand('langChat.compareVersion', async (arg: any) => {
+  const cmd = vscode.commands.registerCommand('parley.compareVersion', async (arg: any) => {
     // 1) Resolve the "past" and "current" versions.
     let pastUri: vscode.Uri | undefined;
     let currentUri: vscode.Uri | undefined;
@@ -64,7 +64,7 @@ export function registerCompare(context: vscode.ExtensionContext): void {
     if (!pastUri) {
       const picked = await vscode.window.showOpenDialog({
         title: tr('Pick a .chat version to compare'),
-        filters: { 'Lang Chat': ['chat'] },
+        filters: { 'Parley': ['chat'] },
         canSelectMany: false,
       });
       if (!picked || !picked.length) return;
@@ -87,7 +87,7 @@ export function registerCompare(context: vscode.ExtensionContext): void {
     // 3) Open the two-column webview.
     const name = path.basename(currentUri.fsPath);
     const panel = vscode.window.createWebviewPanel(
-      'langChat.compare',
+      'parley.compare',
       tr('Compare: ') + name,
       vscode.ViewColumn.Active,
       { enableScripts: true, localResourceRoots: [vscode.Uri.joinPath(context.extensionUri, 'media')] }

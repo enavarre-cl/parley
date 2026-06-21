@@ -1,4 +1,4 @@
-/** Sidebar views (TreeView) for Lang Chat. One view per section (Engines, Local models,
+/** Sidebar views (TreeView) for Parley. One view per section (Engines, Local models,
  *  Downloads, Voices, Dictionary): VS Code provides the native shaded heading. The same
  *  provider is instantiated per `section` and directly serves the items for that section. */
 import * as vscode from 'vscode';
@@ -136,7 +136,7 @@ export class ModelsTreeProvider implements vscode.TreeDataProvider<ModelsTreeIte
       it.tooltip = `${m.name}\n${formatBytes(m.size)}${m.family ? '\n' + m.family : ''}`;
       it.contextValue = 'ollamaModel';
       it.iconPath = new vscode.ThemeIcon('database');
-      it.command = { command: 'langChat.models.openLocalModel', title: tr('Local models'), arguments: [it] };
+      it.command = { command: 'parley.models.openLocalModel', title: tr('Local models'), arguments: [it] };
       return it;
     });
   }
@@ -151,7 +151,7 @@ export class ModelsTreeProvider implements vscode.TreeDataProvider<ModelsTreeIte
     }
     return pending.map((d) => {
       const it = new ModelsTreeItem('download', d.label, undefined, d);
-      it.command = { command: 'langChat.models.openModelFromDownload', title: tr('Local models'), arguments: [it] };
+      it.command = { command: 'parley.models.openModelFromDownload', title: tr('Local models'), arguments: [it] };
       if (d.state === 'queued') {
         it.description = tr('queued');
         it.iconPath = new vscode.ThemeIcon('clock');
@@ -209,7 +209,7 @@ export class ModelsTreeProvider implements vscode.TreeDataProvider<ModelsTreeIte
     const it = new ModelsTreeItem('dict-lang', count ? `${label} (${count})` : label, undefined, undefined, lang);
     it.contextValue = 'spellDictLang';
     it.iconPath = new vscode.ThemeIcon('book');
-    it.command = { command: 'langChat.spell.openDictionary', title: tr('Dictionary'), arguments: [it] };
+    it.command = { command: 'parley.spell.openDictionary', title: tr('Dictionary'), arguments: [it] };
     return it;
   }
 }

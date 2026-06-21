@@ -33,7 +33,7 @@ import { PiperManager } from './piper/manager';
 // Tools hub (native filesystem + MCP servers), shared by all chats.
 const toolHub = new ToolHub();
 
-// Backends that use an API key (Ollama does not). The secret is stored as `langChat.<id>.apiKey`.
+// Backends that use an API key (Ollama does not). The secret is stored as `parley.<id>.apiKey`.
 const KEY_PROVIDERS: { id: ProviderId; label: string }[] = [
   { id: 'openai', label: 'LM Studio / OpenAI' },
   { id: 'gemini', label: 'Google Gemini' },
@@ -44,7 +44,7 @@ const KEY_PROVIDERS: { id: ProviderId; label: string }[] = [
 /** Loads API keys from SecretStorage (encrypted) into the provider overrides. */
 async function loadApiKeys(context: vscode.ExtensionContext): Promise<void> {
   for (const { id } of KEY_PROVIDERS) {
-    const k = await context.secrets.get(`langChat.${id}.apiKey`);
+    const k = await context.secrets.get(`parley.${id}.apiKey`);
     setApiKeyOverride(id, k || undefined);
   }
 }
@@ -64,7 +64,7 @@ export function activate(context: vscode.ExtensionContext) {
   // the chat's voice selector only shows downloaded ones.
   const voicesChanged = new vscode.EventEmitter<void>();
   context.subscriptions.push(voicesChanged);
-  // Notifies open chats when langChat.language changes, so the UI re-translates live (no reload).
+  // Notifies open chats when parley.language changes, so the UI re-translates live (no reload).
   const langChanged = new vscode.EventEmitter<void>();
   context.subscriptions.push(langChanged);
   const provider = new ChatEditorProvider(context, spellWords, piper, voicesChanged.event, langChanged.event);
@@ -75,24 +75,24 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.workspace.onDidChangeConfiguration((e) => {
       if (e.affectsConfiguration('http')) initProxy();
-      if (e.affectsConfiguration('langChat.language')) langChanged.fire();
+      if (e.affectsConfiguration('parley.language')) langChanged.fire();
     })
   );
   void loadApiKeys(context); // populate overrides from SecretStorage on startup
   // If secrets change (another window, or the command), reload.
-  context.secrets.onDidChange((e) => { if (e.key.startsWith('langChat.') && e.key.endsWith('.apiKey')) void loadApiKeys(context); });
+  context.secrets.onDidChange((e) => { if (e.key.startsWith('parley.') && e.key.endsWith('.apiKey')) void loadApiKeys(context); });
 
   context.subscriptions.push(
     vscode.window.registerCustomEditorProvider(ChatEditorProvider.viewType, provider, {
       webviewOptions: { retainContextWhenHidden: true },
       supportsMultipleEditorsPerDocument: false,
     }),
-    vscode.commands.registerCommand('langChat.new', () => createNewChat()),
-    vscode.commands.registerCommand('langChat.spell.openDictionary', (item: any) => {
+    vscode.commands.registerCommand('parley.new', () => createNewChat()),
+    vscode.commands.registerCommand('parley.spell.openDictionary', (item: any) => {
       const lang = item?.word === 'en' ? 'en' : 'es'; // the node carries the language in `word`
       openDictionaryPanel(context, spellWords, lang);
     }),
-    vscode.commands.registerCommand('langChat.setApiKey', async () => {
+    vscode.commands.registerCommand('parley.setApiKey', async () => {
       const pick = await vscode.window.showQuickPick(
         KEY_PROVIDERS.map((p) => ({ label: p.label, id: p.id })),
         { placeHolder: tr('Backend for the API key') }
@@ -104,7 +104,7 @@ export function activate(context: vscode.ExtensionContext) {
         placeHolder: '••••••••',
       });
       if (key === undefined) return; // cancelled
-      const secretKey = `langChat.${pick.id}.apiKey`;
+      const secretKey = `parley.${pick.id}.apiKey`;
       if (key) await context.secrets.store(secretKey, key);
       else await context.secrets.delete(secretKey);
       setApiKeyOverride(pick.id, key || undefined);
@@ -114,7 +114,7 @@ export function activate(context: vscode.ExtensionContext) {
 
   // ---- Local models (managed Ollama + explorer) ----
   const ollama = new OllamaManager(context, (s) => {
-    if (vscode.workspace.getConfiguration('langChat').get<boolean>('tts.debug', false)) console.log(s);
+    if (vscode.workspace.getConfiguration('parley').get<boolean>('tts.debug', false)) console.log(s);
   });
   // Publishes the managed baseUrl so the Ollama provider can use it when ready.
   ollama.onDidChangeStatus(() => setManagedOllamaBaseUrl(ollama.status === 'ready' ? ollama.baseUrl() : undefined));
@@ -175,32 +175,32 @@ export function activate(context: vscode.ExtensionContext) {
     ollama,
     downloads,
     piper, // dispose() shuts down the HTTP daemon when the extension deactivates
-    vscode.window.registerTreeDataProvider('langChat.engines', treeEngines),
-    vscode.window.registerTreeDataProvider('langChat.models', treeModels),
-    vscode.window.registerTreeDataProvider('langChat.voices', treeVoices),
-    vscode.window.registerTreeDataProvider('langChat.dictionary', treeDict),
-    vscode.commands.registerCommand('langChat.models.add', () => ModelsPanel.show(context, ollama, downloads, cards, panelHooks)),
-    vscode.commands.registerCommand('langChat.models.openModelFromDownload', (item: any) => {
+    vscode.window.registerTreeDataProvider('parley.engines', treeEngines),
+    vscode.window.registerTreeDataProvider('parley.models', treeModels),
+    vscode.window.registerTreeDataProvider('parley.voices', treeVoices),
+    vscode.window.registerTreeDataProvider('parley.dictionary', treeDict),
+    vscode.commands.registerCommand('parley.models.add', () => ModelsPanel.show(context, ollama, downloads, cards, panelHooks)),
+    vscode.commands.registerCommand('parley.models.openModelFromDownload', (item: any) => {
       const modelId = item?.download?.modelId;
       if (!modelId) return;
       ModelsPanel.show(context, ollama, downloads, cards, panelHooks);
       ModelsPanel.revealModel(modelId);
     }),
-    vscode.commands.registerCommand('langChat.models.cancelDownload', (item: any) => {
+    vscode.commands.registerCommand('parley.models.cancelDownload', (item: any) => {
       if (item?.download) { cards.remove(item.download.modelId); downloads.cancel(item.download.id); }
     }),
-    vscode.commands.registerCommand('langChat.models.retryDownload', (item: any) => {
+    vscode.commands.registerCommand('parley.models.retryDownload', (item: any) => {
       if (item?.download?.id) downloads.retry(item.download.id);
     }),
-    vscode.commands.registerCommand('langChat.models.removeDownload', (item: any) => {
+    vscode.commands.registerCommand('parley.models.removeDownload', (item: any) => {
       if (item?.download) { cards.remove(item.download.modelId); downloads.remove(item.download.id); }
     }),
-    vscode.commands.registerCommand('langChat.models.clearDownloads', () => downloads.clearFinished()),
-    vscode.commands.registerCommand('langChat.models.refresh', () => refreshTrees()),
-    vscode.commands.registerCommand('langChat.tts.openVoices', () => {
+    vscode.commands.registerCommand('parley.models.clearDownloads', () => downloads.clearFinished()),
+    vscode.commands.registerCommand('parley.models.refresh', () => refreshTrees()),
+    vscode.commands.registerCommand('parley.tts.openVoices', () => {
       openVoicesPanel(context, piper, piperVoicesDir, () => { refreshTrees(); voicesChanged.fire(); });
     }),
-    vscode.commands.registerCommand('langChat.tts.startServer', async () => {
+    vscode.commands.registerCommand('parley.tts.startServer', async () => {
       const model = piper.firstVoiceModel();
       if (!model) { vscode.window.showInformationMessage(tr('Download a voice first from the Voices section.')); return; }
       try {
@@ -210,8 +210,8 @@ export function activate(context: vscode.ExtensionContext) {
         );
       } catch (e: any) { vscode.window.showErrorMessage(`Piper: ${e?.message ?? e}`); }
     }),
-    vscode.commands.registerCommand('langChat.tts.stopServer', () => piper.stopServer()),
-    vscode.commands.registerCommand('langChat.tts.removeVoice', async (item: any) => {
+    vscode.commands.registerCommand('parley.tts.stopServer', () => piper.stopServer()),
+    vscode.commands.registerCommand('parley.tts.removeVoice', async (item: any) => {
       const id = item?.word; // the voice node carries its id in `word`
       if (typeof id !== 'string') return;
       const yes = tr('Delete');
@@ -221,8 +221,8 @@ export function activate(context: vscode.ExtensionContext) {
       refreshTrees();
       voicesChanged.fire();
     }),
-    vscode.commands.registerCommand('langChat.engine.install', (item: any) => runEngineTask(item?.word)),
-    vscode.commands.registerCommand('langChat.engine.delete', async (item: any) => {
+    vscode.commands.registerCommand('parley.engine.install', (item: any) => runEngineTask(item?.word)),
+    vscode.commands.registerCommand('parley.engine.delete', async (item: any) => {
       const which = item?.word;
       if (which !== 'ollama' && which !== 'piper') return;
       const name = which === 'ollama' ? 'Ollama' : 'Piper';
@@ -231,9 +231,9 @@ export function activate(context: vscode.ExtensionContext) {
       if (which === 'ollama') { ollama.deleteBinary(); cards.clear(); } else { piper.delete(); voicesChanged.fire(); }
       refreshTrees();
     }),
-    vscode.commands.registerCommand('langChat.models.startServer', async () => { await needServer(); }),
-    vscode.commands.registerCommand('langChat.models.stopServer', () => { ollama.stop(); }),
-    vscode.commands.registerCommand('langChat.models.deleteModel', async (item: any) => {
+    vscode.commands.registerCommand('parley.models.startServer', async () => { await needServer(); }),
+    vscode.commands.registerCommand('parley.models.stopServer', () => { ollama.stop(); }),
+    vscode.commands.registerCommand('parley.models.deleteModel', async (item: any) => {
       const name = item?.model?.name; const baseUrl = ollama.baseUrl();
       if (!name || !baseUrl) return;
       const ok = await vscode.window.showWarningMessage(`${tr('Delete the model')} ${name}?`, { modal: true }, tr('Delete'));
@@ -241,7 +241,7 @@ export function activate(context: vscode.ExtensionContext) {
       try { await removeModel(baseUrl, name); refreshTrees(); }
       catch (e: any) { vscode.window.showErrorMessage(`${tr('Could not delete: ')}${e?.message || e}`); }
     }),
-    vscode.commands.registerCommand('langChat.models.openLocalModel', (item: any) => {
+    vscode.commands.registerCommand('parley.models.openLocalModel', (item: any) => {
       const id = localModelHfId(item?.model?.name);
       if (!id) { vscode.window.showInformationMessage(tr('This model is not from Hugging Face.')); return; }
       ModelsPanel.show(context, ollama, downloads, cards, panelHooks);
@@ -264,7 +264,7 @@ async function createNewChat(): Promise<void> {
   const target = await vscode.window.showSaveDialog({
     defaultUri,
     saveLabel: tr('Create chat'),
-    filters: { 'Lang Chat': ['chat'] },
+    filters: { 'Parley': ['chat'] },
   });
   if (!target) return;
 
@@ -274,7 +274,7 @@ async function createNewChat(): Promise<void> {
 }
 
 class ChatEditorProvider implements vscode.CustomTextEditorProvider {
-  static readonly viewType = 'langChat.editor';
+  static readonly viewType = 'parley.editor';
   /** Applier for the focused chat: the models view uses it to "use this model". */
   static activeApply: ((patch: any) => Promise<void>) | undefined;
 
@@ -312,9 +312,9 @@ class ChatEditorProvider implements vscode.CustomTextEditorProvider {
     // TTS trace to file (for debugging without relying on the webview console).
     const tlog = (s: string) => {
       // Only traces if the user enables debug (off by default).
-      if (!vscode.workspace.getConfiguration('langChat').get<boolean>('tts.debug', false)) return;
+      if (!vscode.workspace.getConfiguration('parley').get<boolean>('tts.debug', false)) return;
       try { console.log('[TTS]', s); } catch { /* nothing */ }
-      try { fs.appendFileSync(path.join(os.tmpdir(), 'langchat-tts.log'), new Date().toISOString() + ' ' + s + '\n'); } catch { /* nothing */ }
+      try { fs.appendFileSync(path.join(os.tmpdir(), 'parley-tts.log'), new Date().toISOString() + ' ' + s + '\n'); } catch { /* nothing */ }
     };
     let modelContexts: Record<string, number> = {}; // model id -> context tokens
     // Cache of document parsing by version: parseDoc validates/normalises on every call and
@@ -416,7 +416,7 @@ class ChatEditorProvider implements vscode.CustomTextEditorProvider {
       // All TTS messages carry the request id so the webview can filter stale ones.
       const post = (m: any) => webview.postMessage({ ...m, id: reqId });
       const notice = (m: string) => webview.postMessage({ type: 'notice', message: m });
-      const cfg = vscode.workspace.getConfiguration('langChat');
+      const cfg = vscode.workspace.getConfiguration('parley');
       const speaker = cfg.get<number>('tts.piperSpeaker', -1);
       const isCurated = !!voice && /^[a-z]{2}_[A-Z]{2}-/.test(voice);
       // Via DAEMON (resident model, fast): curated voices only. Any failure falls through to
@@ -458,7 +458,7 @@ class ChatEditorProvider implements vscode.CustomTextEditorProvider {
         model = cfg.get<string>('tts.piperModel', '') || '';
       }
       if (!model) {
-        post({ type: 'ttsError', message: tr('No voice available. Download one from the Lang Chat panel (Voices ➕), or set a custom .onnx path in Settings (langChat.tts.piperModel).') });
+        post({ type: 'ttsError', message: tr('No voice available. Download one from the Parley panel (Voices ➕), or set a custom .onnx path in Settings (parley.tts.piperModel).') });
         return;
       }
       if (cancelled()) return;
@@ -475,7 +475,7 @@ class ChatEditorProvider implements vscode.CustomTextEditorProvider {
       // Synthesises a chunk and returns the WAV Buffer (or an error).
       const synthChunk = (chunk: string): Promise<{ ok: boolean; buf?: Buffer; err?: string }> =>
         new Promise((resolve) => {
-          const out = path.join(os.tmpdir(), `langchat-tts-${Date.now()}-${Math.floor(Math.random() * 1e6)}.wav`);
+          const out = path.join(os.tmpdir(), `parley-tts-${Date.now()}-${Math.floor(Math.random() * 1e6)}.wav`);
           const args = ['--model', model, '--output_file', out, '--length_scale', lengthScale];
           if (typeof speaker === 'number' && speaker >= 0) args.push('--speaker', String(speaker));
           let proc: any;
@@ -680,7 +680,7 @@ class ChatEditorProvider implements vscode.CustomTextEditorProvider {
         let models = await buildProvider(doc.provider).listModels();
         // Global OpenRouter vendor filter (prefix before '/').
         if (doc.provider === 'openrouter') {
-          const cfg = vscode.workspace.getConfiguration('langChat');
+          const cfg = vscode.workspace.getConfiguration('parley');
           const vendors = cfg.get<string[]>('openrouter.vendors', []);
           if (vendors.length) {
             models = models.filter((m) => vendors.includes(m.id.split('/')[0]));
@@ -1469,7 +1469,7 @@ class ChatEditorProvider implements vscode.CustomTextEditorProvider {
         case 'exportHtml': {
           // Writes a self-contained HTML file and opens it in the browser (which can print it → Save as PDF).
           const safe = String(msg.title || 'chat').replace(/[^\w\- ]+/g, '_').replace(/\s+/g, '_').slice(0, 40);
-          const file = vscode.Uri.file(path.join(os.tmpdir(), `langchat-${safe}-${Date.now()}.html`));
+          const file = vscode.Uri.file(path.join(os.tmpdir(), `parley-${safe}-${Date.now()}.html`));
           await vscode.workspace.fs.writeFile(file, Buffer.from(String(msg.html || ''), 'utf8'));
           await vscode.env.openExternal(file);
           // Deletes the temp file after giving the browser time to load it (otherwise they pile up in /tmp).
@@ -1477,7 +1477,7 @@ class ChatEditorProvider implements vscode.CustomTextEditorProvider {
           break;
         }
         case 'openSettings':
-          await vscode.commands.executeCommand('workbench.action.openSettings', 'langChat');
+          await vscode.commands.executeCommand('workbench.action.openSettings', 'parley');
           break;
         case 'createSysPrompt': {
           // Creates a .md file (with the current inline prompt) next to the .chat, references it and opens it.
@@ -1586,7 +1586,7 @@ class ChatEditorProvider implements vscode.CustomTextEditorProvider {
     const onSpell = this.spellWords.onDidChange(async () => webview.postMessage({ type: 'spellWords', words: await this.spellWords.all() }));
     // Change in downloaded voices (voices panel, tree) → re-filters the chat selector.
     const onVoices = this.onVoicesChanged(() => webview.postMessage({ type: 'piperVoices', ids: this.downloadedVoiceIds() }));
-    // langChat.language changed in settings → re-translate the UI live (no reload needed).
+    // parley.language changed in settings → re-translate the UI live (no reload needed).
     const onLang = this.onLangChanged(() => pushLang());
     panel.onDidDispose(() => {
       abort?.abort();
@@ -1621,7 +1621,7 @@ class ChatEditorProvider implements vscode.CustomTextEditorProvider {
   <meta http-equiv="Content-Security-Policy" content="${csp}" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link href="${uri('style.css')}" rel="stylesheet" />
-  <title>Lang Chat</title>
+  <title>Parley</title>
 </head>
 <body>
   <div id="app">
@@ -1748,7 +1748,7 @@ class ChatEditorProvider implements vscode.CustomTextEditorProvider {
     it: { aff: '${uri('dict/it.aff')}', dic: '${uri('dict/it.dic')}' }
   };
   window.DOWNLOADED_VOICES = ${JSON.stringify(this.downloadedVoiceIds())};
-  window.PIPER_CUSTOM_SET = ${JSON.stringify(!!vscode.workspace.getConfiguration('langChat').get<string>('tts.piperModel', ''))};
+  window.PIPER_CUSTOM_SET = ${JSON.stringify(!!vscode.workspace.getConfiguration('parley').get<string>('tts.piperModel', ''))};
   window.I18N_LANG = ${JSON.stringify(resolvedLang())};
   window.I18N_BUNDLE = ${JSON.stringify(activeBundle())};</script>
   <script nonce="${nonce}" src="${uri('zoom.js')}"></script>

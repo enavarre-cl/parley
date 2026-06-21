@@ -1,6 +1,6 @@
 {
-  "name": "lang-chat",
-  "displayName": "Lang Chat",
+  "name": "parley-ai",
+  "displayName": "Parley AI",
   "description": "%ext.description%",
   "version": "1.1.2",
   "publisher": "enavarre",
@@ -24,155 +24,155 @@
   "contributes": {
     "commands": [
       {
-        "command": "langChat.new",
+        "command": "parley.new",
         "title": "%cmd.new.title%",
         "icon": "$(add)"
       },
       {
-        "command": "langChat.setApiKey",
+        "command": "parley.setApiKey",
         "title": "%cmd.setApiKey.title%"
       },
       {
-        "command": "langChat.models.add",
+        "command": "parley.models.add",
         "title": "%cmd.models.add.title%",
-        "category": "Lang Chat",
+        "category": "Parley",
         "icon": "$(add)"
       },
       {
-        "command": "langChat.models.refresh",
+        "command": "parley.models.refresh",
         "title": "%cmd.models.refresh.title%",
-        "category": "Lang Chat",
+        "category": "Parley",
         "icon": "$(refresh)"
       },
       {
-        "command": "langChat.models.startServer",
+        "command": "parley.models.startServer",
         "title": "%cmd.models.startServer.title%",
-        "category": "Lang Chat",
+        "category": "Parley",
         "icon": "$(play)"
       },
       {
-        "command": "langChat.models.stopServer",
+        "command": "parley.models.stopServer",
         "title": "%cmd.models.stopServer.title%",
-        "category": "Lang Chat",
+        "category": "Parley",
         "icon": "$(debug-stop)"
       },
       {
-        "command": "langChat.models.deleteModel",
+        "command": "parley.models.deleteModel",
         "title": "%cmd.models.deleteModel.title%",
-        "category": "Lang Chat",
+        "category": "Parley",
         "icon": "$(close)"
       },
       {
-        "command": "langChat.models.cancelDownload",
+        "command": "parley.models.cancelDownload",
         "title": "%cmd.models.cancelDownload.title%",
-        "category": "Lang Chat",
+        "category": "Parley",
         "icon": "$(stop-circle)"
       },
       {
-        "command": "langChat.models.retryDownload",
+        "command": "parley.models.retryDownload",
         "title": "%cmd.models.retryDownload.title%",
-        "category": "Lang Chat",
+        "category": "Parley",
         "icon": "$(refresh)"
       },
       {
-        "command": "langChat.models.removeDownload",
+        "command": "parley.models.removeDownload",
         "title": "%cmd.models.removeDownload.title%",
-        "category": "Lang Chat",
+        "category": "Parley",
         "icon": "$(close)"
       },
       {
-        "command": "langChat.models.clearDownloads",
+        "command": "parley.models.clearDownloads",
         "title": "%cmd.models.clearDownloads.title%",
-        "category": "Lang Chat",
+        "category": "Parley",
         "icon": "$(clear-all)"
       },
       {
-        "command": "langChat.models.openModelFromDownload",
+        "command": "parley.models.openModelFromDownload",
         "title": "%cmd.models.openModelFromDownload.title%",
-        "category": "Lang Chat",
+        "category": "Parley",
         "icon": "$(go-to-file)"
       },
       {
-        "command": "langChat.models.openLocalModel",
+        "command": "parley.models.openLocalModel",
         "title": "%cmd.models.openLocalModel.title%",
-        "category": "Lang Chat"
+        "category": "Parley"
       },
       {
-        "command": "langChat.compareVersion",
+        "command": "parley.compareVersion",
         "title": "%cmd.compareVersion.title%",
-        "category": "Lang Chat",
+        "category": "Parley",
         "icon": "$(git-compare)"
       },
       {
-        "command": "langChat.spell.openDictionary",
+        "command": "parley.spell.openDictionary",
         "title": "%cmd.spell.openDictionary.title%",
-        "category": "Lang Chat"
+        "category": "Parley"
       },
       {
-        "command": "langChat.tts.openVoices",
+        "command": "parley.tts.openVoices",
         "title": "%cmd.tts.openVoices.title%",
-        "category": "Lang Chat",
+        "category": "Parley",
         "icon": "$(add)"
       },
       {
-        "command": "langChat.tts.startServer",
+        "command": "parley.tts.startServer",
         "title": "%cmd.tts.startServer.title%",
-        "category": "Lang Chat",
+        "category": "Parley",
         "icon": "$(play)"
       },
       {
-        "command": "langChat.tts.stopServer",
+        "command": "parley.tts.stopServer",
         "title": "%cmd.tts.stopServer.title%",
-        "category": "Lang Chat",
+        "category": "Parley",
         "icon": "$(debug-stop)"
       },
       {
-        "command": "langChat.tts.removeVoice",
+        "command": "parley.tts.removeVoice",
         "title": "%cmd.tts.removeVoice.title%",
-        "category": "Lang Chat",
+        "category": "Parley",
         "icon": "$(trash)"
       },
       {
-        "command": "langChat.engine.install",
+        "command": "parley.engine.install",
         "title": "%cmd.engine.install.title%",
-        "category": "Lang Chat",
+        "category": "Parley",
         "icon": "$(cloud-download)"
       },
       {
-        "command": "langChat.engine.delete",
+        "command": "parley.engine.delete",
         "title": "%cmd.engine.delete.title%",
-        "category": "Lang Chat",
+        "category": "Parley",
         "icon": "$(trash)"
       }
     ],
     "viewsContainers": {
       "activitybar": [
         {
-          "id": "langChat",
-          "title": "Lang Chat",
+          "id": "parley",
+          "title": "Parley",
           "icon": "media/icon.svg"
         }
       ]
     },
     "views": {
-      "langChat": [
+      "parley": [
         {
-          "id": "langChat.engines",
+          "id": "parley.engines",
           "name": "%view.engines.name%",
           "icon": "media/icon.svg"
         },
         {
-          "id": "langChat.models",
+          "id": "parley.models",
           "name": "%view.models.name%",
           "icon": "media/icon.svg"
         },
         {
-          "id": "langChat.voices",
+          "id": "parley.voices",
           "name": "%view.voices.name%",
           "icon": "media/icon.svg"
         },
         {
-          "id": "langChat.dictionary",
+          "id": "parley.dictionary",
           "name": "%view.dictionary.name%",
           "icon": "media/icon.svg"
         }
@@ -181,146 +181,146 @@
     "menus": {
       "view/title": [
         {
-          "command": "langChat.models.add",
-          "when": "view == langChat.models",
+          "command": "parley.models.add",
+          "when": "view == parley.models",
           "group": "navigation@1"
         },
         {
-          "command": "langChat.models.refresh",
-          "when": "view == langChat.models",
+          "command": "parley.models.refresh",
+          "when": "view == parley.models",
           "group": "navigation@2"
         },
         {
-          "command": "langChat.tts.openVoices",
-          "when": "view == langChat.voices",
+          "command": "parley.tts.openVoices",
+          "when": "view == parley.voices",
           "group": "navigation"
         }
       ],
       "view/item/context": [
         {
-          "command": "langChat.models.startServer",
-          "when": "view == langChat.engines && viewItem == engine.ollama.stopped",
+          "command": "parley.models.startServer",
+          "when": "view == parley.engines && viewItem == engine.ollama.stopped",
           "group": "inline@1"
         },
         {
-          "command": "langChat.models.stopServer",
-          "when": "view == langChat.engines && viewItem == engine.ollama.running",
+          "command": "parley.models.stopServer",
+          "when": "view == parley.engines && viewItem == engine.ollama.running",
           "group": "inline@1"
         },
         {
-          "command": "langChat.engine.install",
-          "when": "view == langChat.engines && viewItem =~ /engine\\.(ollama|piper)\\.notinstalled/",
+          "command": "parley.engine.install",
+          "when": "view == parley.engines && viewItem =~ /engine\\.(ollama|piper)\\.notinstalled/",
           "group": "inline@1"
         },
         {
-          "command": "langChat.tts.startServer",
-          "when": "view == langChat.engines && viewItem == engine.piper.stopped",
+          "command": "parley.tts.startServer",
+          "when": "view == parley.engines && viewItem == engine.piper.stopped",
           "group": "inline@1"
         },
         {
-          "command": "langChat.tts.stopServer",
-          "when": "view == langChat.engines && viewItem == engine.piper.running",
+          "command": "parley.tts.stopServer",
+          "when": "view == parley.engines && viewItem == engine.piper.running",
           "group": "inline@1"
         },
         {
-          "command": "langChat.engine.delete",
-          "when": "view == langChat.engines && viewItem =~ /engine\\.(ollama|piper)\\.(stopped|running)/",
+          "command": "parley.engine.delete",
+          "when": "view == parley.engines && viewItem =~ /engine\\.(ollama|piper)\\.(stopped|running)/",
           "group": "inline@3"
         },
         {
-          "command": "langChat.models.deleteModel",
-          "when": "view == langChat.models && viewItem == ollamaModel",
+          "command": "parley.models.deleteModel",
+          "when": "view == parley.models && viewItem == ollamaModel",
           "group": "inline"
         },
         {
-          "command": "langChat.models.clearDownloads",
-          "when": "view == langChat.models && viewItem == ollamaDownloads",
+          "command": "parley.models.clearDownloads",
+          "when": "view == parley.models && viewItem == ollamaDownloads",
           "group": "inline"
         },
         {
-          "command": "langChat.models.cancelDownload",
-          "when": "view == langChat.models && viewItem =~ /ollamaDownload\\.(downloading|queued)/",
+          "command": "parley.models.cancelDownload",
+          "when": "view == parley.models && viewItem =~ /ollamaDownload\\.(downloading|queued)/",
           "group": "inline"
         },
         {
-          "command": "langChat.models.retryDownload",
-          "when": "view == langChat.models && viewItem == ollamaDownload.failed",
+          "command": "parley.models.retryDownload",
+          "when": "view == parley.models && viewItem == ollamaDownload.failed",
           "group": "inline@1"
         },
         {
-          "command": "langChat.models.removeDownload",
-          "when": "view == langChat.models && viewItem == ollamaDownload.failed",
+          "command": "parley.models.removeDownload",
+          "when": "view == parley.models && viewItem == ollamaDownload.failed",
           "group": "inline@2"
         },
         {
-          "command": "langChat.models.openModelFromDownload",
-          "when": "view == langChat.models && viewItem =~ /ollamaDownload\\./",
+          "command": "parley.models.openModelFromDownload",
+          "when": "view == parley.models && viewItem =~ /ollamaDownload\\./",
           "group": "navigation"
         },
         {
-          "command": "langChat.spell.openDictionary",
-          "when": "view == langChat.dictionary && viewItem == spellDictLang",
+          "command": "parley.spell.openDictionary",
+          "when": "view == parley.dictionary && viewItem == spellDictLang",
           "group": "inline"
         },
         {
-          "command": "langChat.tts.removeVoice",
-          "when": "view == langChat.voices && viewItem == piperVoice",
+          "command": "parley.tts.removeVoice",
+          "when": "view == parley.voices && viewItem == piperVoice",
           "group": "inline"
         }
       ],
       "timeline/item/context": [
         {
-          "command": "langChat.compareVersion",
+          "command": "parley.compareVersion",
           "when": "timelineItem =~ /localHistory/ && resourceExtname == .chat",
           "group": "1_actions"
         }
       ],
       "editor/title": [
         {
-          "command": "langChat.compareVersion",
-          "when": "activeCustomEditorId == langChat.editor",
+          "command": "parley.compareVersion",
+          "when": "activeCustomEditorId == parley.editor",
           "group": "navigation"
         }
       ],
       "commandPalette": [
         {
-          "command": "langChat.compareVersion",
+          "command": "parley.compareVersion",
           "when": "resourceExtname == .chat"
         },
         {
-          "command": "langChat.spell.openDictionary",
+          "command": "parley.spell.openDictionary",
           "when": "false"
         },
         {
-          "command": "langChat.tts.openVoices",
+          "command": "parley.tts.openVoices",
           "when": "false"
         },
         {
-          "command": "langChat.tts.startServer",
+          "command": "parley.tts.startServer",
           "when": "false"
         },
         {
-          "command": "langChat.tts.stopServer",
+          "command": "parley.tts.stopServer",
           "when": "false"
         },
         {
-          "command": "langChat.tts.removeVoice",
+          "command": "parley.tts.removeVoice",
           "when": "false"
         },
         {
-          "command": "langChat.engine.install",
+          "command": "parley.engine.install",
           "when": "false"
         },
         {
-          "command": "langChat.engine.delete",
+          "command": "parley.engine.delete",
           "when": "false"
         }
       ]
     },
     "customEditors": [
       {
-        "viewType": "langChat.editor",
-        "displayName": "Lang Chat",
+        "viewType": "parley.editor",
+        "displayName": "Parley",
         "selector": [
           {
             "filenamePattern": "*.chat"
@@ -334,7 +334,7 @@
         "title": "%config.title.general%",
         "order": 1,
         "properties": {
-          "langChat.language": {
+          "parley.language": {
             "type": "string",
             "enum": [
               "auto",
@@ -357,7 +357,7 @@
             "default": "auto",
             "description": "%config.language.desc%"
           },
-          "langChat.provider": {
+          "parley.provider": {
             "type": "string",
             "enum": [
               "openai",
@@ -376,14 +376,14 @@
             "default": "openai",
             "description": "%config.provider.desc%"
           },
-          "langChat.temperature": {
+          "parley.temperature": {
             "type": "number",
             "default": 0.7,
             "minimum": 0,
             "maximum": 2,
             "description": "%config.temperature.desc%"
           },
-          "langChat.maxTokens": {
+          "parley.maxTokens": {
             "type": "number",
             "default": 2048,
             "description": "%config.maxTokens.desc%"
@@ -394,12 +394,12 @@
         "title": "LM Studio / OpenAI",
         "order": 2,
         "properties": {
-          "langChat.openai.baseUrl": {
+          "parley.openai.baseUrl": {
             "type": "string",
             "default": "http://localhost:1234/v1",
             "description": "%config.openai.baseUrl.desc%"
           },
-          "langChat.openai.apiKey": {
+          "parley.openai.apiKey": {
             "type": "string",
             "default": "",
             "description": "%config.openai.apiKey.desc%"
@@ -410,29 +410,29 @@
         "title": "Ollama",
         "order": 3,
         "properties": {
-          "langChat.ollama.managed": {
+          "parley.ollama.managed": {
             "type": "boolean",
             "default": true,
             "description": "%config.ollama.managed.desc%"
           },
-          "langChat.ollama.port": {
+          "parley.ollama.port": {
             "type": "number",
             "default": 0,
             "markdownDescription": "%config.ollama.port.desc%"
           },
-          "langChat.ollama.modelsPath": {
+          "parley.ollama.modelsPath": {
             "type": "string",
             "default": "",
             "markdownDescription": "%config.ollama.modelsPath.desc%"
           },
-          "langChat.ollama.maxConcurrentDownloads": {
+          "parley.ollama.maxConcurrentDownloads": {
             "type": "number",
             "default": 2,
             "minimum": 1,
             "maximum": 6,
             "markdownDescription": "%config.ollama.maxConcurrentDownloads.desc%"
           },
-          "langChat.ollama.baseUrl": {
+          "parley.ollama.baseUrl": {
             "type": "string",
             "default": "http://localhost:11434",
             "markdownDescription": "%config.ollama.baseUrl.desc%"
@@ -443,12 +443,12 @@
         "title": "Google Gemini",
         "order": 4,
         "properties": {
-          "langChat.gemini.apiKey": {
+          "parley.gemini.apiKey": {
             "type": "string",
             "default": "",
             "description": "%config.gemini.apiKey.desc%"
           },
-          "langChat.gemini.baseUrl": {
+          "parley.gemini.baseUrl": {
             "type": "string",
             "default": "https://generativelanguage.googleapis.com/v1beta",
             "description": "%config.gemini.baseUrl.desc%"
@@ -459,12 +459,12 @@
         "title": "Anthropic",
         "order": 5,
         "properties": {
-          "langChat.anthropic.apiKey": {
+          "parley.anthropic.apiKey": {
             "type": "string",
             "default": "",
             "description": "%config.anthropic.apiKey.desc%"
           },
-          "langChat.anthropic.baseUrl": {
+          "parley.anthropic.baseUrl": {
             "type": "string",
             "default": "https://api.anthropic.com/v1",
             "description": "%config.anthropic.baseUrl.desc%"
@@ -475,17 +475,17 @@
         "title": "OpenRouter",
         "order": 6,
         "properties": {
-          "langChat.openrouter.apiKey": {
+          "parley.openrouter.apiKey": {
             "type": "string",
             "default": "",
             "description": "%config.openrouter.apiKey.desc%"
           },
-          "langChat.openrouter.baseUrl": {
+          "parley.openrouter.baseUrl": {
             "type": "string",
             "default": "https://openrouter.ai/api/v1",
             "description": "%config.openrouter.baseUrl.desc%"
           },
-          "langChat.openrouter.vendors": {
+          "parley.openrouter.vendors": {
             "type": "array",
             "items": {
               "type": "string"
@@ -493,7 +493,7 @@
             "default": [],
             "markdownDescription": "%config.openrouter.vendors.desc%"
           },
-          "langChat.openrouter.customModels": {
+          "parley.openrouter.customModels": {
             "type": "array",
             "items": {
               "type": "string"
@@ -501,7 +501,7 @@
             "default": [],
             "markdownDescription": "%config.openrouter.customModels.desc%"
           },
-          "langChat.openrouter.sort": {
+          "parley.openrouter.sort": {
             "type": "string",
             "enum": [
               "",
@@ -524,7 +524,7 @@
         "title": "%config.title.tools%",
         "order": 7,
         "properties": {
-          "langChat.tools.maxReadBytes": {
+          "parley.tools.maxReadBytes": {
             "type": "number",
             "default": 100000,
             "minimum": 1000,
@@ -536,22 +536,22 @@
         "title": "%config.title.tts%",
         "order": 8,
         "properties": {
-          "langChat.tts.piperPath": {
+          "parley.tts.piperPath": {
             "type": "string",
             "default": "piper",
             "markdownDescription": "%config.tts.piperPath.desc%"
           },
-          "langChat.tts.piperModel": {
+          "parley.tts.piperModel": {
             "type": "string",
             "default": "",
             "markdownDescription": "%config.tts.piperModel.desc%"
           },
-          "langChat.tts.piperSpeaker": {
+          "parley.tts.piperSpeaker": {
             "type": "number",
             "default": -1,
             "markdownDescription": "%config.tts.piperSpeaker.desc%"
           },
-          "langChat.tts.debug": {
+          "parley.tts.debug": {
             "type": "boolean",
             "default": false,
             "description": "%config.tts.debug.desc%"
@@ -607,12 +607,12 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/enavarre-cl/langchat"
+    "url": "https://github.com/enavarre-cl/parley"
   },
   "bugs": {
-    "url": "https://github.com/enavarre-cl/langchat/issues"
+    "url": "https://github.com/enavarre-cl/parley/issues"
   },
-  "homepage": "https://github.com/enavarre-cl/langchat#readme",
+  "homepage": "https://github.com/enavarre-cl/parley#readme",
   "dependencies": {
     "undici": "^6.26.0"
   }

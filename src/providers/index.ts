@@ -33,7 +33,7 @@ export function setApiKeyOverride(id: ProviderId, key: string | undefined): void
 }
 /** Resolves the API key for a backend: SecretStorage first, settings value as fallback. */
 export function resolveApiKey(id: ProviderId): string {
-  const cfg = vscode.workspace.getConfiguration('langChat');
+  const cfg = vscode.workspace.getConfiguration('parley');
   return keyOverrides[id] || cfg.get<string>(`${id}.apiKey`, '') || '';
 }
 
@@ -47,7 +47,7 @@ function ollamaBaseUrl(cfg: vscode.WorkspaceConfiguration): string {
 }
 
 export function buildProvider(providerId: ProviderId): LLMProvider {
-  const cfg = vscode.workspace.getConfiguration('langChat');
+  const cfg = vscode.workspace.getConfiguration('parley');
   if (providerId === 'ollama') {
     return new OllamaProvider(ollamaBaseUrl(cfg));
   }
@@ -88,7 +88,7 @@ export interface ProviderInfo {
 
 /** Describes the active backend: human-readable label, endpoint, and API key status. */
 export function providerInfo(id: ProviderId): ProviderInfo {
-  const cfg = vscode.workspace.getConfiguration('langChat');
+  const cfg = vscode.workspace.getConfiguration('parley');
   if (id === 'ollama') {
     return {
       id,
@@ -136,7 +136,7 @@ export function providerInfo(id: ProviderId): ProviderInfo {
 
 /** Default values for new `.chat` files. */
 export function chatDefaults() {
-  const cfg = vscode.workspace.getConfiguration('langChat');
+  const cfg = vscode.workspace.getConfiguration('parley');
   return {
     provider: cfg.get<ProviderId>('provider', 'openai'),
     temperature: cfg.get<number>('temperature', 0.7),

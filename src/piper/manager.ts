@@ -281,7 +281,7 @@ export class PiperManager {
 
   /** Installs the engine (if missing). */
   async install(notify?: Notify): Promise<void> {
-    await this.resolveBin(vscode.workspace.getConfiguration('langChat'), notify);
+    await this.resolveBin(vscode.workspace.getConfiguration('parley'), notify);
   }
 
   // ───────────────────────── Daemon HTTP (piper.http_server) ─────────────────────────

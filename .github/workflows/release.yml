@@ -48,11 +48,11 @@ jobs:
       - run: npm run lint
       - run: npm run compile
       - run: npm test
-      - run: npx --yes @vscode/vsce package -o lang-chat.vsix
+      - run: npx --yes @vscode/vsce package -o parley.vsix
       - uses: actions/upload-artifact@v7
         with:
           name: vsix
-          path: lang-chat.vsix
+          path: parley.vsix
 
   # The two publishes are SEPARATE, PARALLEL jobs (both `needs: build`), each behind its OWN
   # environment gate and its OWN token. If one fails, re-run just that job — no re-approval, and the
@@ -76,7 +76,7 @@ jobs:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
         run: |
           set +e
-          OUT=$(npx --yes @vscode/vsce publish --packagePath lang-chat.vsix 2>&1)
+          OUT=$(npx --yes @vscode/vsce publish --packagePath parley.vsix 2>&1)
           CODE=$?
           echo "$OUT"
           if [ $CODE -ne 0 ]; then
@@ -111,7 +111,7 @@ jobs:
           OVSX_PAT: ${{ secrets.OVSX_PAT }}
         run: |
           set +e
-          OUT=$(npx --yes ovsx publish lang-chat.vsix -p "$OVSX_PAT" 2>&1)
+          OUT=$(npx --yes ovsx publish parley.vsix -p "$OVSX_PAT" 2>&1)
           CODE=$?
           echo "$OUT"
           if [ $CODE -ne 0 ]; then

@@ -28,7 +28,7 @@ export function downloadFile(url: string, destPath: string, opts: DownloadOpts =
       hostname: u.hostname,
       port: u.port || undefined,
       path: u.pathname + u.search,
-      headers: { 'User-Agent': 'lang-chat', Accept: '*/*' },
+      headers: { 'User-Agent': 'parley', Accept: '*/*' },
     };
     const req = https
       .get(reqOpts, (res: any) => {

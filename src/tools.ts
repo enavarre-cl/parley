@@ -90,7 +90,7 @@ const DEFAULT_MAX_READ = 100_000; // bytes
 
 /** Read limit for fs_read (global setting, with a robust fallback if broken). */
 function maxReadBytes(): number {
-  const v = vscode.workspace.getConfiguration('langChat').get<number>('tools.maxReadBytes', DEFAULT_MAX_READ);
+  const v = vscode.workspace.getConfiguration('parley').get<number>('tools.maxReadBytes', DEFAULT_MAX_READ);
   return typeof v === 'number' && Number.isFinite(v) && v > 0 ? Math.floor(v) : DEFAULT_MAX_READ;
 }
 
@@ -248,7 +248,7 @@ const BUILTIN: { schema: ToolSchema; run: (args: any) => Promise<string> }[] = [
           if (u.protocol !== 'http:' && u.protocol !== 'https:') throw new Error('Only http/https URLs are allowed.');
           await assertSafeHost(u.hostname);
           res = await httpFetch(url, {
-            headers: { 'User-Agent': 'Mozilla/5.0 (LangChat)', Accept: '*/*' },
+            headers: { 'User-Agent': 'Mozilla/5.0 (Parley)', Accept: '*/*' },
             signal: controller.signal,
             redirect: 'manual',
           });

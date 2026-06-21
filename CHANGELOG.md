@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to Lang Chat. Format based on
+All notable changes to Parley. Format based on
 [Keep a Changelog](https://keepachangelog.com/); versioning follows [SemVer](https://semver.org/).
 
 ## [Unreleased]
@@ -23,7 +23,7 @@ All notable changes to Lang Chat. Format based on
 
 ### Added
 - **`@file` mentions** in the composer: type `@`, pick a workspace file, insert its full path.
-- **`langChat.openrouter.customModels`** — add model ids the API doesn't list (e.g. new / preview
+- **`parley.openrouter.customModels`** — add model ids the API doesn't list (e.g. new / preview
   models like `sourceful/riverflow-v2.5-fast`); merged into the model list.
 
 ### Changed

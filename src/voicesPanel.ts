@@ -28,7 +28,7 @@ export function openVoicesPanel(
   if (openPanel) { openPanel.reveal(); return; }
 
   const panel = vscode.window.createWebviewPanel(
-    'langChat.voices',
+    'parley.voices',
     tr('Voices'),
     vscode.ViewColumn.Active,
     { enableScripts: true, localResourceRoots: [vscode.Uri.joinPath(context.extensionUri, 'media')] }

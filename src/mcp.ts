@@ -50,7 +50,7 @@ class McpClient {
     await this.request('initialize', {
       protocolVersion: '2024-11-05',
       capabilities: {},
-      clientInfo: { name: 'lang-chat', version: '0.1.0' },
+      clientInfo: { name: 'parley', version: '0.1.0' },
     });
     this.notify('notifications/initialized', {});
     const list = await this.request('tools/list', {});

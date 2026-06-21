@@ -1,4 +1,4 @@
-# Lang Chat — Architecture
+# Parley — Architecture
 
 A VS Code extension that turns a `.chat` file into a full chat editor for LLMs, with
 pluggable backends (LM Studio / OpenAI-compatible, Ollama, Google Gemini, Anthropic,
@@ -319,7 +319,7 @@ graph LR
   KEY["English string (key in code/HTML)"] --> TR["tr() / LangI18n.t()"]
   BUNDLE["package.nls.&lt;lang&gt;.json<br/>(active bundle)"] --> TR
   TR --> OUT["translated text"]
-  SET["langChat.language change"] -- "langChanged event → pushLang" --> BUNDLE
+  SET["parley.language change"] -- "langChanged event → pushLang" --> BUNDLE
 ```
 
 ---

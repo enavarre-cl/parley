@@ -3,3 +3,10 @@ out/
 *.vsix
 .vscode-test/
 .claude/
+.DS_Store
+plan-*.md
+media/*.ps.png
+media/icon-parley-full*.png
+# secretos locales (API keys) — NUNCA commitear
+parley-settings.local.json
+*.local.json

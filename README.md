@@ -1,12 +1,12 @@
-# Lang Chat
+# Parley
 
 **Chat with local (and remote) LLMs right inside VS Code — LM Studio style.** Bring your own
 models and keys, keep every conversation as a versionable file, and use tools, embedded model
 management and neural text‑to‑speech without leaving the editor.
 
-![Lang Chat in action](https://raw.githubusercontent.com/enavarre-cl/langchat/master/media/vid1.gif)
+![Parley in action](https://raw.githubusercontent.com/enavarre-cl/parley/master/media/vid1.gif)
 
-## Why Lang Chat
+## Why Parley
 
 - 🔒 **Local‑first & private** — runs against your own LLM (LM Studio, Ollama…), your keys live in
   VS Code SecretStorage, the managed server binds to `127.0.0.1`, and there is **no telemetry**.
@@ -23,9 +23,9 @@ management and neural text‑to‑speech without leaving the editor.
 
 | Sidebar — Engines · Models · Voices · Dictionary, with a `.chat` open | Chat with the **Reasoning** & **Tools** panels |
 |:---:|:---:|
-| ![Lang Chat sidebar](https://raw.githubusercontent.com/enavarre-cl/langchat/master/media/img3.png) | ![Reasoning and Tools panels](https://raw.githubusercontent.com/enavarre-cl/langchat/master/media/img2.png) |
-| **Per‑conversation settings (⚙)** — backend, model, sampling, read‑aloud | **Lang Chat settings** in VS Code |
-| ![Per-conversation settings panel](https://raw.githubusercontent.com/enavarre-cl/langchat/master/media/img1.png) | ![Lang Chat settings in VS Code](https://raw.githubusercontent.com/enavarre-cl/langchat/master/media/img4.png) |
+| ![Parley sidebar](https://raw.githubusercontent.com/enavarre-cl/parley/master/media/img3.png) | ![Reasoning and Tools panels](https://raw.githubusercontent.com/enavarre-cl/parley/master/media/img2.png) |
+| **Per‑conversation settings (⚙)** — backend, model, sampling, read‑aloud | **Parley settings** in VS Code |
+| ![Per-conversation settings panel](https://raw.githubusercontent.com/enavarre-cl/parley/master/media/img1.png) | ![Parley settings in VS Code](https://raw.githubusercontent.com/enavarre-cl/parley/master/media/img4.png) |
 
 - 💬 **Streaming** responses, token by token, with a **Stop** button and auto‑save after each turn.
 - 🧠 **Reasoning / thinking** panel for models that expose it.
@@ -58,27 +58,27 @@ Configure any of these per conversation (in the ⚙ panel) or as the default in 
 
 ## Quick start
 
-1. Install **Lang Chat** from the Marketplace.
-2. Command palette (`Cmd/Ctrl+Shift+P`) → **“Lang Chat: New chat”** → choose where to save the
+1. Install **Parley** from the Marketplace.
+2. Command palette (`Cmd/Ctrl+Shift+P`) → **“Parley: New chat”** → choose where to save the
    `.chat` file.
 3. Pick a backend in the ⚙ panel and start chatting.
 
 > Have **LM Studio** (local server enabled) or **Ollama** running first — or use a hosted backend
 > (OpenRouter / Gemini / Anthropic) with an API key.
 >
-> API keys are best stored securely: run **“Lang Chat: Set API Key (secure)”** to keep them in VS
+> API keys are best stored securely: run **“Parley: Set API Key (secure)”** to keep them in VS
 > Code SecretStorage instead of plain settings.
 
 ## Local models (embedded Ollama)
 
-Lang Chat can manage its **own Ollama server** without you installing anything:
+Parley can manage its **own Ollama server** without you installing anything:
 
-- The **Lang Chat** sidebar groups everything into sections: **Engines** (Ollama / Piper, with
+- The **Parley** sidebar groups everything into sections: **Engines** (Ollama / Piper, with
   run/stop/install), **Models** (local models + downloads), **Voices** and **Dictionary**.
 - The **＋** button opens an **LM Studio‑style explorer**: searches **GGUF** models on Hugging
   Face, shows capability badges and quantization options, and **downloads with progress**.
 - On first use it downloads the Ollama binary (SHA256‑verified, fail‑closed) into your global
-  storage; the server runs only on `127.0.0.1`. Configure under *Settings → Lang Chat → Ollama*.
+  storage; the server runs only on `127.0.0.1`. Configure under *Settings → Parley → Ollama*.
 
 ## `.chat` files
 
@@ -103,39 +103,39 @@ With **Tools** on (⚙, available on every backend), the model can call tools in
 
 - Your **API keys** can be stored in VS Code **SecretStorage** (not plain settings).
 - The managed Ollama server and the Piper TTS daemon bind to **`127.0.0.1`** only.
-- **No telemetry** — Lang Chat does not phone home. Network traffic goes only to the LLM backend
+- **No telemetry** — Parley does not phone home. Network traffic goes only to the LLM backend
   you configure and, on demand, to Hugging Face / PyPI to download models and the TTS engine.
 
 ## Configuration
 
-Settings under `Settings → Lang Chat`:
+Settings under `Settings → Parley`:
 
 | Setting | Default | Description |
 | --- | --- | --- |
-| `langChat.provider` | `openai` | Default backend: `openai`, `ollama`, `openrouter`, `gemini` or `anthropic` |
-| `langChat.language` | `auto` | UI language: `auto`, `en`, `es`, `pt`, `fr`, `de`, `it` |
-| `langChat.openai.baseUrl` | `http://localhost:1234/v1` | OpenAI‑compatible endpoint |
-| `langChat.openai.apiKey` | _(empty)_ | Optional API key |
-| `langChat.ollama.baseUrl` | `http://localhost:11434` | Ollama server URL (used when `managed` is off) |
-| `langChat.ollama.managed` | `true` | Use the extension's own downloaded Ollama server |
-| `langChat.ollama.port` | `0` | Managed server port (`0` = pick a free one) |
-| `langChat.ollama.modelsPath` | _(empty)_ | Optional `OLLAMA_MODELS` path |
-| `langChat.ollama.maxConcurrentDownloads` | `2` | Parallel model downloads |
-| `langChat.openrouter.baseUrl` | `https://openrouter.ai/api/v1` | OpenRouter endpoint |
-| `langChat.openrouter.apiKey` | _(empty)_ | OpenRouter API key |
-| `langChat.openrouter.vendors` | _(empty)_ | Filter OpenRouter models by vendor (prefix before `/`) |
-| `langChat.openrouter.customModels` | _(empty)_ | Extra model ids to add even if the API doesn't list them |
-| `langChat.openrouter.sort` | _(default)_ | Provider routing preference (`throughput` / `latency` / `price`) |
-| `langChat.gemini.apiKey` | _(empty)_ | Google Gemini API key (Google AI Studio) |
-| `langChat.gemini.baseUrl` | `https://generativelanguage.googleapis.com/v1beta` | Generative Language API endpoint |
-| `langChat.anthropic.apiKey` | _(empty)_ | Anthropic Claude API key (console.anthropic.com) |
-| `langChat.anthropic.baseUrl` | `https://api.anthropic.com/v1` | Anthropic Messages API endpoint |
-| `langChat.temperature` | `0.7` | Sampling temperature |
-| `langChat.maxTokens` | `2048` | Max tokens (`-1` = unlimited) |
+| `parley.provider` | `openai` | Default backend: `openai`, `ollama`, `openrouter`, `gemini` or `anthropic` |
+| `parley.language` | `auto` | UI language: `auto`, `en`, `es`, `pt`, `fr`, `de`, `it` |
+| `parley.openai.baseUrl` | `http://localhost:1234/v1` | OpenAI‑compatible endpoint |
+| `parley.openai.apiKey` | _(empty)_ | Optional API key |
+| `parley.ollama.baseUrl` | `http://localhost:11434` | Ollama server URL (used when `managed` is off) |
+| `parley.ollama.managed` | `true` | Use the extension's own downloaded Ollama server |
+| `parley.ollama.port` | `0` | Managed server port (`0` = pick a free one) |
+| `parley.ollama.modelsPath` | _(empty)_ | Optional `OLLAMA_MODELS` path |
+| `parley.ollama.maxConcurrentDownloads` | `2` | Parallel model downloads |
+| `parley.openrouter.baseUrl` | `https://openrouter.ai/api/v1` | OpenRouter endpoint |
+| `parley.openrouter.apiKey` | _(empty)_ | OpenRouter API key |
+| `parley.openrouter.vendors` | _(empty)_ | Filter OpenRouter models by vendor (prefix before `/`) |
+| `parley.openrouter.customModels` | _(empty)_ | Extra model ids to add even if the API doesn't list them |
+| `parley.openrouter.sort` | _(default)_ | Provider routing preference (`throughput` / `latency` / `price`) |
+| `parley.gemini.apiKey` | _(empty)_ | Google Gemini API key (Google AI Studio) |
+| `parley.gemini.baseUrl` | `https://generativelanguage.googleapis.com/v1beta` | Generative Language API endpoint |
+| `parley.anthropic.apiKey` | _(empty)_ | Anthropic Claude API key (console.anthropic.com) |
+| `parley.anthropic.baseUrl` | `https://api.anthropic.com/v1` | Anthropic Messages API endpoint |
+| `parley.temperature` | `0.7` | Sampling temperature |
+| `parley.maxTokens` | `2048` | Max tokens (`-1` = unlimited) |
 
 ## Third‑party components & licenses
 
-Lang Chat is **MIT** licensed. It bundles or downloads third‑party components under their own terms:
+Parley is **MIT** licensed. It bundles or downloads third‑party components under their own terms:
 
 | Component | When | License |
 | --- | --- | --- |
