@@ -5,6 +5,14 @@ All notable changes to Parley. Format based on
 
 ## [Unreleased]
 
+## [1.2.3] - 2026-06-21
+
+### Added
+- **Proactive Workspace Trust prompt.** Turning **Tools** on (⚙) in an untrusted workspace now shows
+  a warning with a **Manage Trust** button (opens VS Code's `workbench.trust.manage`), so the
+  filesystem tools / MCP servers don't fail mid-turn. Fired only on the off→on edge; trust is still
+  granted exclusively through VS Code's own UI. Localized in all six languages.
+
 ## [1.2.2] - 2026-06-21
 
 ### Changed

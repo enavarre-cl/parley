@@ -103,7 +103,8 @@ With **Tools** on (⚙, available on every backend), the model can call tools in
 The loop runs up to `parley.tools.maxIterations` rounds per turn (default **8**; **`0` = unlimited**,
 ending only when the model stops requesting tools or you press Stop).
 
-> MCP servers and `fs_write` only run in a **trusted workspace**.
+> MCP servers and `fs_write` only run in a **trusted workspace**. Enabling **Tools** (⚙) in an
+> untrusted folder prompts you to **Manage Trust** up front, so tools don't fail mid-turn.
 
 ## Privacy
 

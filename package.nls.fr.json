@@ -298,6 +298,8 @@
   "The model probably did not fit in your GPU/RAM. Try a smaller quantization or model, or force CPU by setting the environment variable OLLAMA_NUM_GPU=0.": "Le modèle n'est probablement pas entré dans votre GPU/RAM. Essayez une quantification ou un modèle plus petit, ou forcez le CPU en définissant la variable d'environnement OLLAMA_NUM_GPU=0.",
   "The model put the whole response in its reasoning 🧠 — turn off «Reasoning / thinking» in ⚙ to see it here.": "Le modèle a mis toute la réponse dans son raisonnement 🧠 — désactivez « Raisonnement / thinking » dans ⚙ pour la voir ici.",
   "The model returned no content. Try another model; on OpenRouter, check the key's credits/limits.": "Le modèle n'a renvoyé aucun contenu. Essayez un autre modèle ; sur OpenRouter, vérifiez les crédits/limites de la clé.",
+  "Parley tools (workspace files + MCP servers) need a trusted workspace to run.": "Les outils de Parley (fichiers du workspace + serveurs MCP) nécessitent un workspace de confiance pour s'exécuter.",
+  "Manage Trust": "Gérer la confiance",
   "The model's reasoning will appear here.": "Le raisonnement du modèle apparaîtra ici.",
   "This chat's settings": "Configuration de ce chat",
   "This file is outside the workspace, so it will not be used as the system prompt. Move it inside the project folder.": "Ce fichier est hors de l'espace de travail, il ne sera donc pas utilisé comme system prompt. Déplacez-le dans le dossier du projet.",

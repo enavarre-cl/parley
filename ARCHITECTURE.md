@@ -327,7 +327,9 @@ graph LR
 ## 10. Security
 
 - **Workspace Trust** is the gate for code execution: MCP servers and `fs_write` are disabled
-  in untrusted workspaces (`untrustedWorkspaces: limited`).
+  in untrusted workspaces (`untrustedWorkspaces: limited`). Enabling **Tools** in an untrusted
+  workspace nudges the user (warning + **Manage Trust** → `workbench.trust.manage`) up front, so
+  tools don't fail mid-turn — trust itself is still granted only through VS Code's own UI.
 - **Path confinement**: filesystem tools resolve and `realpath`-check every path against the
   workspace roots (blocks `../` and symlink escape).
 - **API keys** live in **SecretStorage** (encrypted), entered via a masked input command, not

@@ -1303,9 +1303,22 @@ class ChatEditorProvider implements vscode.CustomTextEditorProvider {
           const doc = getDoc();
           if (!doc) break;
           const before = doc.provider;
+          const toolsBefore = doc.params.tools;
           applyPatch(doc, msg.patch);
           await writeDoc(doc);
           if (doc.provider !== before) await loadModels();
+          // Tools just turned ON in an untrusted workspace: nudge the user to grant Workspace Trust
+          // now (up front) so filesystem tools / MCP servers won't fail mid-turn. `requestWorkspaceTrust`
+          // is a proposed (non-publishable) API, so we surface a notice + open the Trust editor instead.
+          // Only on the off→on edge, so it never nags on unrelated config changes.
+          if (doc.params.tools && !toolsBefore && !vscode.workspace.isTrusted) {
+            const manage = tr('Manage Trust');
+            const pick = await vscode.window.showWarningMessage(
+              tr('Parley tools (workspace files + MCP servers) need a trusted workspace to run.'),
+              manage,
+            );
+            if (pick === manage) await vscode.commands.executeCommand('workbench.trust.manage');
+          }
           break;
         }
         case 'deleteMessage': {
