@@ -5,6 +5,8 @@ All notable changes to Lang Chat. Format based on
 
 ## [Unreleased]
 
+## [1.1.2] - 2026-06-20
+
 ### Docs
 - **`ARCHITECTURE.md`** — codebase tour (extension host ↔ webviews, providers, the agentic loop,
   local engines, i18n, security) with Mermaid diagrams.
@@ -14,6 +16,8 @@ All notable changes to Lang Chat. Format based on
 ### Build
 - `npm run build:spell` regenerates **all six** dictionaries + the `nspell` engine
   (`scripts/build-spell.js`).
+- **Release workflow also publishes to Open VSX** (VSCodium / Cursor / Gitpod / Windsurf…) as a
+  separate, parallel job behind its own approval gate; both publishes are idempotent.
 
 ## [1.1.1] - 2026-06-20
 
