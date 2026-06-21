@@ -21,3 +21,4 @@ media/vid*.gif
 **/*.chat
 **/*.attach
 **/*.sysprompt
+scripts/**

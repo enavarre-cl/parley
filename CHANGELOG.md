@@ -5,6 +5,77 @@ All notable changes to Lang Chat. Format based on
 
 ## [Unreleased]
 
+### Docs
+- **`ARCHITECTURE.md`** — codebase tour (extension host ↔ webviews, providers, the agentic loop,
+  local engines, i18n, security) with Mermaid diagrams.
+- README / SECURITY / CONTRIBUTING updated: 6 languages, image generation, the full built-in tool
+  list, GitHub Actions publishing, an **"adding a backend (provider)"** guide.
+
+### Build
+- `npm run build:spell` regenerates **all six** dictionaries + the `nspell` engine
+  (`scripts/build-spell.js`).
+
+## [1.1.1] - 2026-06-20
+
+### Added
+- **`@file` mentions** in the composer: type `@`, pick a workspace file, insert its full path.
+- **`langChat.openrouter.customModels`** — add model ids the API doesn't list (e.g. new / preview
+  models like `sourceful/riverflow-v2.5-fast`); merged into the model list.
+
+### Changed
+- **Full-width message bubbles** — differentiated only by background colour + the role title.
+- **Two-step delete** — the first click arms the trash (turns red), the second confirms; clicking
+  away / Escape / a re-render cancels it. **Shift** still deletes immediately, **Alt** = this and all
+  below. The confirmation modal is gone.
+- **Floating tooltips** on every control (topbar + bubble actions) — the native `title` does not
+  render reliably in webviews; the delete tip documents the click + modifier combos.
+
+## [1.1.0] - 2026-06-20
+
+### Added
+- **Multi-language support — 6 languages** (English, Spanish, Portuguese, French, German, Italian)
+  across the **UI**, **spell-check** (bundled hunspell dictionaries) and **Piper TTS** voices,
+  switchable **live** without reloading.
+- **Image generation**: image-output models such as Gemini *flash-image* ("nano-banana") on Gemini
+  and OpenRouter render their images **inline** — copy to clipboard or save to disk; click to zoom.
+
+### Changed
+- The context bar and the trim budget now count the **effective** system prompt (the referenced
+  file's content included, not just the inline text).
+- A **`systemPromptFile`** may live anywhere in the **workspace** (not only the `.chat`'s folder);
+  a missing / out-of-bounds reference **warns visibly** instead of silently using the inline prompt.
+- **Regenerate** lives only on the user bubble now (it was duplicated on the assistant bubble).
+
+### Fixed
+- **Erratic `Cmd/Ctrl+Z`** that reverted or duplicated messages — document undo/redo is now
+  neutralized for `.chat` (the chat owns its own delete/edit/regenerate/fork history).
+- **OpenRouter reasoning** is parsed from `reasoning_details` too, so Gemini "thinking" now shows.
+- The **global language change applies live** (no reload was needed but nothing reacted before).
+- Spell-check underline stays **aligned** with the textarea on every line (line-height fix).
+
+## [1.0.8] - 2026-06-19
+
+### Added
+- **Split / sharded GGUF** support: multi-part models (`…-00001-of-000NN.gguf`) are grouped into a
+  single entry and imported with **all** shards referenced.
+
+### Changed
+- Bundled **Ollama** updated to **v0.30.10** (newer `llama.cpp`: broader model support, offload fixes).
+- A **friendly hint** when Ollama's `llama-server` crashes (model didn't fit in GPU/RAM → try a
+  smaller quant or force CPU) instead of a raw stacktrace.
+
+### Fixed
+- **Piper bootstrap**: pip is upgraded via `python -m pip` (not the `pip` script), so the venv setup
+  no longer fails (Windows `WinError 5`, or an outdated bundled pip).
+- HF's **broken manifest descriptor** for some quants made an Ollama pull die with `400:` after
+  downloading the layers — a pre-flight probe + a runtime fallback now route those to a direct
+  `.gguf` import automatically.
+
+### Build
+- CI migrated to **GitHub Actions** (`.github/workflows/release.yml`): compile → test → package →
+  **manual-approval publish**. `azure-pipelines.yml` removed; `package.json` is the single source of
+  the published version (idempotent re-publish).
+
 ## [1.0.0] - 2026-06-18
 
 ### Added

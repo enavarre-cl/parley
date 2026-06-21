@@ -35,10 +35,14 @@ management and neural text‑to‑speech without leaving the editor.
 - 🗣️ **Read aloud (TTS)**: system voices (Web Speech) or neural **Piper** (local, managed daemon).
 - 🔎 **Search in chat** (`Ctrl/Cmd+F`), 🔍 **zoom** (`Alt`/`Option` + wheel), 🌳 **fork**,
   🕓 **compare versions**, ♻️ **regenerate / continue / merge / edit / delete** messages.
-- 🖼️ **Attachments** (images & documents), 🧾 **export** to standalone HTML / PDF.
+- 🖼️ **Attachments** (images & documents) and **image generation** — image‑output models like
+  Gemini *flash‑image* ("nano‑banana") render their images inline (copy / save to disk).
+- 📎 **`@file` mentions** in the composer: type `@`, pick a workspace file, insert its full path.
+- 🧾 **Export** to standalone HTML / PDF.
 - 🧮 **Context management**: auto‑summarize when context fills up, or send only the last *N*
   messages — both shown visually in the chat.
-- 🔤 **Spell‑check** with a personal dictionary, and **internationalization** (English / Spanish).
+- 🌍 **6 languages** (UI, spell‑check and TTS): English, Spanish, Portuguese, French, German,
+  Italian — switchable live, with a personal spell‑check dictionary per language.
 
 ## Backends
 
@@ -87,8 +91,9 @@ git‑versionable. A `.chat` may reference its system prompt from an external **
 
 With **Tools** on (⚙, available on every backend), the model can call tools in an agentic loop:
 
-- **Workspace filesystem** (native, no setup): `fs_list`, `fs_read`, `fs_write`, scoped to the
-  workspace folder.
+- **Workspace filesystem & helpers** (native, no setup): `fs_list`, `fs_read`, `fs_write`,
+  `fs_glob`, `fs_search`, plus `editor_context`, `web_fetch` and `get_datetime`. File tools are
+  **confined to the workspace folder** (resolved + `realpath`‑checked against symlink escape).
 - **MCP servers**: define them in a **`.mcp/`** folder (one `*.json` per server) or a **`.mcp.json`**
   at the workspace root. Each server's tools are exposed as `server__tool`.
 
@@ -108,6 +113,7 @@ Settings under `Settings → Lang Chat`:
 | Setting | Default | Description |
 | --- | --- | --- |
 | `langChat.provider` | `openai` | Default backend: `openai`, `ollama`, `openrouter`, `gemini` or `anthropic` |
+| `langChat.language` | `auto` | UI language: `auto`, `en`, `es`, `pt`, `fr`, `de`, `it` |
 | `langChat.openai.baseUrl` | `http://localhost:1234/v1` | OpenAI‑compatible endpoint |
 | `langChat.openai.apiKey` | _(empty)_ | Optional API key |
 | `langChat.ollama.baseUrl` | `http://localhost:11434` | Ollama server URL (used when `managed` is off) |
@@ -117,6 +123,9 @@ Settings under `Settings → Lang Chat`:
 | `langChat.ollama.maxConcurrentDownloads` | `2` | Parallel model downloads |
 | `langChat.openrouter.baseUrl` | `https://openrouter.ai/api/v1` | OpenRouter endpoint |
 | `langChat.openrouter.apiKey` | _(empty)_ | OpenRouter API key |
+| `langChat.openrouter.vendors` | _(empty)_ | Filter OpenRouter models by vendor (prefix before `/`) |
+| `langChat.openrouter.customModels` | _(empty)_ | Extra model ids to add even if the API doesn't list them |
+| `langChat.openrouter.sort` | _(default)_ | Provider routing preference (`throughput` / `latency` / `price`) |
 | `langChat.gemini.apiKey` | _(empty)_ | Google Gemini API key (Google AI Studio) |
 | `langChat.gemini.baseUrl` | `https://generativelanguage.googleapis.com/v1beta` | Generative Language API endpoint |
 | `langChat.anthropic.apiKey` | _(empty)_ | Anthropic Claude API key (console.anthropic.com) |
@@ -130,8 +139,7 @@ Lang Chat is **MIT** licensed. It bundles or downloads third‑party components 
 
 | Component | When | License |
 | --- | --- | --- |
-| Spanish Hunspell dictionary (`media/dict/es.*`) | bundled | tri‑licensed; used here under **MPL 1.1+** (see `media/dict/es.LICENSE`) |
-| English Hunspell dictionary (`media/dict/en.*`) | bundled | Hunspell dictionary license (see `media/dict/en.LICENSE`) |
+| Hunspell dictionaries (`media/dict/{en,es,pt,fr,de,it}.*`) | bundled | each under its own license (see the matching `media/dict/<lang>.LICENSE`) |
 | [`nspell`](https://github.com/wooorm/nspell) | bundled (spell engine) | MIT |
 | [Piper](https://github.com/OHF-Voice/piper1-gpl) (`piper-tts`) | **downloaded at runtime** for neural TTS | **GPL** |
 | [Ollama](https://ollama.com) | **downloaded at runtime** (managed server) | MIT |
@@ -139,6 +147,11 @@ Lang Chat is **MIT** licensed. It bundles or downloads third‑party components 
 
 > The neural TTS engine (Piper) is GPL and is fetched on demand from PyPI; it is **not** shipped
 > inside the extension package.
+
+## Contributing
+
+See [ARCHITECTURE.md](ARCHITECTURE.md) for a tour of the codebase (extension host ↔ webviews,
+providers, the agentic loop, local engines, i18n and security) with diagrams.
 
 ## License
 

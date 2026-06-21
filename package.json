@@ -567,7 +567,7 @@
     "test": "npm run compile && node --test out/test/*.test.js",
     "lint": "eslint src",
     "package": "vsce package",
-    "build:spell": "node -e \"const fs=require('fs');fs.mkdirSync('media/dict',{recursive:true});for(const [l,p] of [['es','dictionary-es'],['en','dictionary-en']]){fs.copyFileSync(require.resolve(p+'/index.aff'),'media/dict/'+l+'.aff');fs.copyFileSync(require.resolve(p+'/index.dic'),'media/dict/'+l+'.dic');}fs.writeFileSync('media/_spell-entry.js','const nspell=require(\\'nspell\\');if(typeof window!==\\'undefined\\')window.nspell=nspell;');\" && esbuild media/_spell-entry.js --bundle --format=iife --outfile=media/spell-engine.js && node -e \"require('fs').unlinkSync('media/_spell-entry.js')\""
+    "build:spell": "node scripts/build-spell.js"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
