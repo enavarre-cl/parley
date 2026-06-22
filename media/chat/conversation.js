@@ -469,6 +469,8 @@ export function toolResult(name, content) {
   showTools(toolsLive);
 }
 export function showCurrentTools() { showTools(toolsLive); }
+// Clears the current turn's live tool activity (and the panel) when a new action starts.
+export function resetTools() { toolsLive = []; showTools(toolsLive); }
 
 export function resetScroll() { stickToBottom = true; }
 export { showThinking, showTools, openThink, openTools, updateSide, scrollDown };

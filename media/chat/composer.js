@@ -8,7 +8,7 @@ import { $ } from '../core/dom.js';
 import { getDoc } from '../ui/store.js';
 import { notice, clearNotices } from '../ui/notifications.js';
 import { addMessage } from './message.js';
-import { resetScroll } from './conversation.js';
+import { resetScroll, resetTools } from './conversation.js';
 import { renderSpell, scheduleSpell } from '../features/spell.js';
 import { handleFileKeydown, handleSuggestKeydown } from '../features/autocomplete.js';
 
@@ -114,6 +114,7 @@ function send() {
   const text = inputEl.value.trim();
   if (!text && pending.length === 0) return;
   clearNotices();
+  resetTools(); // a new turn begins: drop the previous turn's live tool activity
   resetScroll(); // on send, stick to the bottom again
   const attachments = pending.slice();
   addMessage('user', text, { attachments });

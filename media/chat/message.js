@@ -12,7 +12,7 @@ import { getDoc } from '../ui/store.js';
 import { clearNotices } from '../ui/notifications.js';
 import { tts } from '../features/tts.js';
 import { handleFileKeydown, handleSuggestKeydown, setupEmojiAutocomplete } from '../features/autocomplete.js';
-import { openThink, openTools, showThinking, showTools, scrollDown } from './conversation.js';
+import { openThink, openTools, showThinking, showTools, scrollDown, resetTools } from './conversation.js';
 
 const messagesEl = $('messages');
 
@@ -128,18 +128,18 @@ export function addMessage(role, content, opts) {
         // Regenerate lives on the USER bubble ("regenerate the response to this message"): it re-rolls
         // the answer to a prompt, so it belongs with the prompt — not duplicated here. Continue stays.
         actions.appendChild(iconButton(ICONS.forward, t('Continue / keep developing this response'),
-          () => { clearNotices(); vscode.postMessage({ type: 'continue' }); }));
+          () => { clearNotices(); resetTools(); vscode.postMessage({ type: 'continue' }); }));
       }
       if (opts.canGenerate) {
         // Regenerates the response to this prompt: truncates anything dangling after it (partial tool-calls, etc.) and re-infers.
         actions.appendChild(iconButton(ICONS.retry, t('Generate a response to this message'),
-          () => { clearNotices(); vscode.postMessage({ type: 'regenerateFrom', index: opts.index }); }));
+          () => { clearNotices(); resetTools(); vscode.postMessage({ type: 'regenerateFrom', index: opts.index }); }));
       }
       if (opts.canRegenFromPrompt) {
         // Re-rolls the response to this prompt (assistant variant) without deleting anything.
         actions.appendChild(iconButton(ICONS.retry, t('Regenerate the response to this message'),
           () => {
-            clearNotices();
+            clearNotices(); resetTools();
             const last = messagesEl.querySelector('.msg.assistant:last-child');
             if (last) last.remove();
             vscode.postMessage({ type: 'regenerate' });
@@ -152,7 +152,7 @@ export function addMessage(role, content, opts) {
       // Summarize the context up to here (same limit as the "up to here" fork). Only with auto-summary.
       if (doc && doc.params && doc.params.autoSummary && !opts.preSummary && opts.index > 0) {
         actions.appendChild(iconButton(ICONS.summarize, t('Summarize the conversation up to here'),
-          () => { clearNotices(); vscode.postMessage({ type: 'summarizeUpTo', index: opts.index }); }));
+          () => { clearNotices(); resetTools(); vscode.postMessage({ type: 'summarizeUpTo', index: opts.index }); }));
       }
       actions.appendChild(iconButton(ICONS.branch,
         t('Fork: clone the conversation up to here into a new .chat') + ` · ${t('⌥/Alt: fork from here to the end')}`,

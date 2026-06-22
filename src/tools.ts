@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as dns from 'dns';
+import { StringDecoder } from 'string_decoder';
 import { McpManager } from './mcp';
 import { ToolSchema } from './providers';
 import { ipIsPrivate } from './net';
@@ -117,15 +118,21 @@ const BUILTIN: { schema: ToolSchema; run: (args: any, signal?: AbortSignal) => P
     },
     run: async (a) => {
       const file = resolveInWorkspace(a?.path ?? '');
+      const st = fs.statSync(file);
+      if (st.isDirectory()) throw new Error('Path is a directory — use fs_list.');
       const limit = maxReadBytes();
-      const size = fs.statSync(file).size;
+      const size = st.size;
       // Read at most `limit` bytes: never loads a giant file entirely into memory.
       const toRead = Math.min(size, limit);
       const fd = fs.openSync(file, 'r');
       try {
         const buf = Buffer.alloc(toRead);
         const read = fs.readSync(fd, buf, 0, toRead, 0); // may be < toRead; decode only what we got
-        const text = buf.subarray(0, read).toString('utf8');
+        const slice = buf.subarray(0, read);
+        if (slice.includes(0)) throw new Error('Binary file (contains NUL bytes) — not a text file.');
+        // StringDecoder buffers a trailing partial multibyte char instead of emitting U+FFFD, so a
+        // mid-character truncation at the byte limit doesn't append a stray replacement glyph.
+        const text = new StringDecoder('utf8').write(slice);
         return size > limit ? text + `\n… (truncated, ${size} bytes)` : text;
       } finally {
         fs.closeSync(fd);
