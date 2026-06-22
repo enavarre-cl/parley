@@ -117,6 +117,23 @@ import { t } from '../core/i18n.js';
     const canvas = document.createElement('div');
     canvas.className = 'mermaid-canvas';
     canvas.innerHTML = svg;
+    // Scale proportionally to the bubble width: a leftover height attribute (or a missing viewBox)
+    // makes CSS width:100% stretch the SVG horizontally → vertical squish. Anchor the aspect ratio
+    // to the viewBox and drop the intrinsic width/height so height:auto follows it.
+    const svgEl = canvas.querySelector('svg');
+    if (svgEl) {
+      if (!svgEl.getAttribute('viewBox')) {
+        const w = parseFloat(svgEl.getAttribute('width') || '') || 0;
+        const h = parseFloat(svgEl.getAttribute('height') || '') || 0;
+        if (w && h) svgEl.setAttribute('viewBox', `0 0 ${w} ${h}`);
+      }
+      svgEl.removeAttribute('width');
+      svgEl.removeAttribute('height');
+      svgEl.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+      svgEl.style.removeProperty('max-width'); // Mermaid pins a tiny intrinsic max-width inline
+      svgEl.style.removeProperty('width');
+      svgEl.style.removeProperty('height');
+    }
     viewport.appendChild(canvas);
     const pz = makePanZoom(viewport, canvas);
     const top = document.createElement('div');
