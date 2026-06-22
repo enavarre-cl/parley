@@ -371,7 +371,7 @@ export function renderConversation() {
       messagesEl.scrollTop = prevTop;
     }
     // If the search bar is open, re-highlight over the freshly rebuilt DOM.
-    if (window.PFind) window.PFind.refresh();
+    refreshFind();
     // Show the reasoning of the last message in the panel.
     showThinking(lastThinking);
   }
