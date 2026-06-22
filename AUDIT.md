@@ -40,7 +40,7 @@ Tres cosas que dije en auditorías previas de esta sesión estaban **mal**. Las 
 
 ## 🔴 Críticos — seguridad y pérdida de datos
 
-> **Progreso de correcciones: 5 / 10 del Top 10 (faltan 5).** Marcados con ✅ los corregidos.
+> **Progreso de correcciones: 6 / 10 del Top 10 (faltan 4).** Marcados con ✅ los corregidos.
 
 | Id | archivo:línea | Problema |
 |----|---------------|----------|
@@ -58,7 +58,7 @@ Tres cosas que dije en auditorías previas de esta sesión estaban **mal**. Las 
 
 ## 🟠 Providers (`src/providers/**`)
 
-- **[Alta] BUG `stream.ts:32-44`** — `readLines` **no hace flush del buffer final** tras `done`. Si el backend cierra sin `\n` final (Ollama termina con `{"done":true}` sin newline), **se pierde la última línea → el `usage`/tokens nunca se asigna**.
+- **✅ [Alta] BUG `stream.ts:32-44` — CORREGIDO** — `readLines` ahora hace flush del buffer final tras `done` (emite la última línea sin `\n`); el chunk `{"done":true}` de Ollama con el `usage` ya no se pierde. Test #41 (que asertaba el bug) reescrito + test guard de no-emisión-vacía. (49/49)
 - **[Alta] BUG `stream.ts:26-44`** — `readLines` **nunca libera el reader** (`reader.cancel()`/`releaseLock()`). Si `onLine` lanza o se aborta, la conexión HTTP queda colgada hasta GC. Viola K4.
 - **[Alta] BUG `stream.ts` + `request.ts:15`** — El `AbortSignal` **no se comprueba dentro del bucle de lectura**; con el wrapper de proxy undici el abort puede no cortar el stream → sigue llamando `cb.onDelta` tras Stop.
 - **[Media] BUG `request.ts:15` + `listModels` (todos)** — **Sin timeout en I/O de red** (K6): un backend que acepta conexión y no responde headers cuelga la UI indefinidamente.
@@ -152,7 +152,7 @@ Tres cosas que dije en auditorías previas de esta sesión estaban **mal**. Las 
 3. ✅ **C2** `fs_search`/`fs_glob` sin `assertRealWithin` (symlink traversal) — **HECHO**.
 4. ✅ **C7** `inference.ts:165` descarta la respuesta parcial en error — **HECHO**.
 5. ✅ **C4** `</script>` sin escapar en script inline (webviewHtml.ts) — **HECHO**.
-6. **stream.ts:32** sin flush final → se pierde el chunk de usage/done.
+6. ✅ **stream.ts:32** sin flush final → se pierde el chunk de usage/done — **HECHO**.
 7. **stream.ts:26** reader nunca liberado + abort no corta el stream.
 8. **extension.ts:313** floating promise del router sin try/catch.
 9. **Zombies** Ollama/Piper en Windows (`shell:true` + sin SIGKILL).

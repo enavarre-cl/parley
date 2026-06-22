@@ -29,10 +29,18 @@ test('readLines preserves empty lines between newlines', async () => {
   assert.deepEqual(lines, ['a', '', 'b']);
 });
 
-test('readLines does not emit trailing content without a final newline', async () => {
+test('readLines emits the trailing line without a final newline', async () => {
+  // Ollama ends its NDJSON with the {"done":true,…} object (token usage) and not always a
+  // closing \n; the flush must emit it instead of dropping it silently.
   const lines: string[] = [];
   await readLines(reader('uno\ndos', 100), (l) => lines.push(l));
-  assert.deepEqual(lines, ['uno']); // "dos" stays in the buffer (no \n)
+  assert.deepEqual(lines, ['uno', 'dos']);
+});
+
+test('readLines does not emit an empty trailing line on a final newline', async () => {
+  const lines: string[] = [];
+  await readLines(reader('uno\ndos\n', 100), (l) => lines.push(l));
+  assert.deepEqual(lines, ['uno', 'dos']); // no spurious '' from the flush
 });
 
 test('readLines propagates if onLine throws (error embedded in stream)', async () => {

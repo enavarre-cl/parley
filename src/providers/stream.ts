@@ -41,4 +41,10 @@ export async function readLines(
       onLine(line);
     }
   }
+  // Flush the trailing line that arrived without a final newline. Ollama ends its NDJSON with the
+  // {"done":true,…} object — which carries the token usage — and does not always append a closing
+  // \n, so skipping this would silently drop that final chunk (and the usage with it).
+  buffer += decoder.decode(); // flush any pending multibyte remainder
+  const tail = buffer.trim();
+  if (tail) onLine(tail);
 }
