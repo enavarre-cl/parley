@@ -40,7 +40,7 @@ Tres cosas que dije en auditorías previas de esta sesión estaban **mal**. Las 
 
 ## 🔴 Críticos — seguridad y pérdida de datos
 
-> **Progreso de correcciones: 6 / 10 del Top 10 (faltan 4).** Marcados con ✅ los corregidos.
+> **Progreso de correcciones: 7 / 10 del Top 10 (faltan 3).** Marcados con ✅ los corregidos.
 
 | Id | archivo:línea | Problema |
 |----|---------------|----------|
@@ -59,7 +59,7 @@ Tres cosas que dije en auditorías previas de esta sesión estaban **mal**. Las 
 ## 🟠 Providers (`src/providers/**`)
 
 - **✅ [Alta] BUG `stream.ts:32-44` — CORREGIDO** — `readLines` ahora hace flush del buffer final tras `done` (emite la última línea sin `\n`); el chunk `{"done":true}` de Ollama con el `usage` ya no se pierde. Test #41 (que asertaba el bug) reescrito + test guard de no-emisión-vacía. (49/49)
-- **[Alta] BUG `stream.ts:26-44`** — `readLines` **nunca libera el reader** (`reader.cancel()`/`releaseLock()`). Si `onLine` lanza o se aborta, la conexión HTTP queda colgada hasta GC. Viola K4.
+- **✅ [Alta] BUG `stream.ts:26-44` — CORREGIDO** — `readLines` envuelto en `try/finally` que llama `reader.cancel()` siempre (cierre normal, throw de `onLine`, abort) → libera la conexión y señala cancelación. 2 tests nuevos verifican que `cancel()` se llama en ambas rutas. (51/51)
 - **[Alta] BUG `stream.ts` + `request.ts:15`** — El `AbortSignal` **no se comprueba dentro del bucle de lectura**; con el wrapper de proxy undici el abort puede no cortar el stream → sigue llamando `cb.onDelta` tras Stop.
 - **[Media] BUG `request.ts:15` + `listModels` (todos)** — **Sin timeout en I/O de red** (K6): un backend que acepta conexión y no responde headers cuelga la UI indefinidamente.
 - **[Media] BUG `openai.ts:229`** — IDs de tool-call sintéticos **sin índice** (`call_${name}`): dos llamadas a la misma tool sin `id` colisionan → tool results mal enrutados. Ollama/Gemini sí añaden índice; OpenAI no (inconsistencia).
@@ -153,7 +153,7 @@ Tres cosas que dije en auditorías previas de esta sesión estaban **mal**. Las 
 4. ✅ **C7** `inference.ts:165` descarta la respuesta parcial en error — **HECHO**.
 5. ✅ **C4** `</script>` sin escapar en script inline (webviewHtml.ts) — **HECHO**.
 6. ✅ **stream.ts:32** sin flush final → se pierde el chunk de usage/done — **HECHO**.
-7. **stream.ts:26** reader nunca liberado + abort no corta el stream.
+7. ✅ **stream.ts:26** reader nunca liberado + abort no corta el stream — **HECHO**.
 8. **extension.ts:313** floating promise del router sin try/catch.
 9. **Zombies** Ollama/Piper en Windows (`shell:true` + sin SIGKILL).
 10. **C6** redirects de `downloadFile` sin validación SSRF.

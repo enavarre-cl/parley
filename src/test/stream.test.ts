@@ -49,3 +49,28 @@ test('readLines propagates if onLine throws (error embedded in stream)', async (
     /boom/,
   );
 });
+
+/** Wraps a reader to record whether cancel() was called (reader-release check). */
+function cancelSpy(text: string): { reader: ReadableStreamDefaultReader<Uint8Array>; cancelled: () => boolean } {
+  const r = reader(text, 4);
+  let cancelled = false;
+  const wrapped = {
+    read: () => r.read(),
+    cancel: (reason?: unknown) => { cancelled = true; return r.cancel(reason); },
+    releaseLock: () => r.releaseLock(),
+    get closed() { return r.closed; },
+  } as unknown as ReadableStreamDefaultReader<Uint8Array>;
+  return { reader: wrapped, cancelled: () => cancelled };
+}
+
+test('readLines releases the reader on normal completion', async () => {
+  const s = cancelSpy('a\nb\n');
+  await readLines(s.reader, () => {});
+  assert.equal(s.cancelled(), true);
+});
+
+test('readLines releases the reader when onLine throws', async () => {
+  const s = cancelSpy('a\nBOOM\n');
+  await assert.rejects(readLines(s.reader, (l) => { if (l === 'BOOM') throw new Error('x'); }), /x/);
+  assert.equal(s.cancelled(), true);
+});

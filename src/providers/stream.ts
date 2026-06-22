@@ -29,22 +29,29 @@ export async function readLines(
 ): Promise<void> {
   const decoder = new TextDecoder();
   let buffer = '';
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    if (buffer.length > MAX_LINE_BUFFER) buffer = buffer.slice(-MAX_LINE_BUFFER); // defensive cap
-    let idx: number;
-    while ((idx = buffer.indexOf('\n')) !== -1) {
-      const line = buffer.slice(0, idx).trim();
-      buffer = buffer.slice(idx + 1);
-      onLine(line);
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      if (buffer.length > MAX_LINE_BUFFER) buffer = buffer.slice(-MAX_LINE_BUFFER); // defensive cap
+      let idx: number;
+      while ((idx = buffer.indexOf('\n')) !== -1) {
+        const line = buffer.slice(0, idx).trim();
+        buffer = buffer.slice(idx + 1);
+        onLine(line);
+      }
     }
+    // Flush the trailing line that arrived without a final newline. Ollama ends its NDJSON with the
+    // {"done":true,…} object — which carries the token usage — and does not always append a closing
+    // \n, so skipping this would silently drop that final chunk (and the usage with it).
+    buffer += decoder.decode(); // flush any pending multibyte remainder
+    const tail = buffer.trim();
+    if (tail) onLine(tail);
+  } finally {
+    // Always release the reader — on normal completion, on an onLine throw (errors embedded in the
+    // stream), or on abort. Without this the underlying HTTP connection lingers until GC, and an
+    // aborted stream is never told to stop. cancel() releases the lock and signals cancellation.
+    try { await reader.cancel(); } catch { /* stream already closed */ }
   }
-  // Flush the trailing line that arrived without a final newline. Ollama ends its NDJSON with the
-  // {"done":true,…} object — which carries the token usage — and does not always append a closing
-  // \n, so skipping this would silently drop that final chunk (and the usage with it).
-  buffer += decoder.decode(); // flush any pending multibyte remainder
-  const tail = buffer.trim();
-  if (tail) onLine(tail);
 }
