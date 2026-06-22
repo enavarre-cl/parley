@@ -5,6 +5,16 @@ All notable changes to Parley. Format based on
 
 ## [Unreleased]
 
+## [1.5.6] - 2026-06-22
+
+### Fixed
+- **Tools panel no longer shows the previous turn's activity.** Starting a new turn
+  (send / continue / regenerate / summarize) now resets the live tool activity, not only the
+  notices — closing a behavior gap from the webview modularization.
+- **`fs_read` hardening:** rejects directories with a clear error (instead of a raw `EISDIR`),
+  rejects binary files (NUL bytes) instead of returning mojibake, and decodes via `StringDecoder`
+  so a byte-limit truncation can't append a stray replacement glyph from a split multibyte char.
+
 ## [1.5.5] - 2026-06-22
 
 ### Fixed
