@@ -5,6 +5,14 @@ All notable changes to Parley. Format based on
 
 ## [Unreleased]
 
+## [1.3.3] - 2026-06-22
+
+### Internal
+- **Webview modularization (toward ≤500 lines/file).** Extracted two more self-contained subsystems
+  from `main.js` into their own nonce-loaded scripts: the **Mermaid viewer** (`media/mermaid-view.js`,
+  `window.PMermaid`) and **find & replace** (`media/find.js`, `window.PFind`, vscode API injected via
+  `setApi`). `main.js` 2985 → 2373; new files 281 / 216 lines. Behavior unchanged.
+
 ## [1.3.2] - 2026-06-22
 
 ### Internal

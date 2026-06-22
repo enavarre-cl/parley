@@ -1849,6 +1849,8 @@ class ChatEditorProvider implements vscode.CustomTextEditorProvider {
   <script nonce="${nonce}" src="${uri('spell-engine.js')}"></script>
   <script nonce="${nonce}" src="${uri('spell.js')}"></script>
   <script nonce="${nonce}" src="${uri('markdown.js')}"></script>
+  <script nonce="${nonce}" src="${uri('mermaid-view.js')}"></script>
+  <script nonce="${nonce}" src="${uri('find.js')}"></script>
   <script nonce="${nonce}" src="${uri('main.js')}"></script>
 </body>
 </html>`;
