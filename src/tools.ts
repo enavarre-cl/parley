@@ -36,6 +36,14 @@ function assertRealWithin(abs: string, root: string): void {
   }
 }
 
+/** True if `abs` resolves (via realpath) inside SOME workspace folder — i.e. not a symlink escape. */
+function withinAnyFolder(abs: string): boolean {
+  for (const f of vscode.workspace.workspaceFolders ?? []) {
+    try { assertRealWithin(abs, f.uri.fsPath); return true; } catch { /* try next folder */ }
+  }
+  return false;
+}
+
 /**
  * Resolves a path within ANY workspace folder (multi-root): tries each folder and uses the one
  * where the resolved path exists; if none exists, uses the first valid folder (e.g. for fs_write).
@@ -190,7 +198,7 @@ const BUILTIN: { schema: ToolSchema; run: (args: any, signal?: AbortSignal) => P
     run: async (a) => {
       const root = workspaceRoot();
       const uris = await vscode.workspace.findFiles(a?.pattern || '**/*', EXCLUDE, 500);
-      const list = uris.map((u) => path.relative(root, u.fsPath)).sort();
+      const list = uris.filter((u) => withinAnyFolder(u.fsPath)).map((u) => path.relative(root, u.fsPath)).sort();
       return list.length ? list.join('\n') : 'No files.';
     },
   },
@@ -221,6 +229,7 @@ const BUILTIN: { schema: ToolSchema; run: (args: any, signal?: AbortSignal) => P
       const matches: string[] = [];
       for (const uri of uris) {
         if (matches.length >= max) break;
+        if (!withinAnyFolder(uri.fsPath)) continue; // skip symlinks escaping the workspace (no content leak)
         try { if (fs.statSync(uri.fsPath).size > 2_000_000) continue; } catch { continue; } // skip huge files without reading them
         let buf: Buffer;
         try { buf = fs.readFileSync(uri.fsPath); } catch { continue; }

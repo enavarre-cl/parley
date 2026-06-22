@@ -40,12 +40,12 @@ Tres cosas que dije en auditorías previas de esta sesión estaban **mal**. Las 
 
 ## 🔴 Críticos — seguridad y pérdida de datos
 
-> **Progreso de correcciones: 2 / 10 del Top 10 (faltan 8).** Marcados con ✅ los corregidos.
+> **Progreso de correcciones: 3 / 10 del Top 10 (faltan 7).** Marcados con ✅ los corregidos.
 
 | Id | archivo:línea | Problema |
 |----|---------------|----------|
 | ✅ C1 | `media/render/markdown.js:41` | **CORREGIDO** — **XSS**: control-char inicial bypassa el allowlist de esquema → `javascript:` ejecutable desde un link del modelo. (verificado y testeado) |
-| C2 | `src/tools.ts:206-221` | **`fs_search`/`fs_glob` NO aplican `assertRealWithin`**: un symlink dentro del repo apuntando a `/etc/…` se lee y se devuelve al modelo. `fs_read` sí valida; estas no. |
+| ✅ C2 | `src/tools.ts:206-221` | **CORREGIDO** — `fs_search`/`fs_glob` ahora filtran con `withinAnyFolder` (realpath dentro de algún folder); un symlink que escapa el workspace se omite. (verificado con symlink real) |
 | ✅ C3 | `src/tools.ts:60-74` | **CORREGIDO** — `assertWritable` ahora bloquea `.mcp.json` y `.mcp/` (además de `.git`/`.vscode`), contra cada folder en multi-root → cierra el RCE diferido vía `loadServerConfigs`. |
 | C4 | `src/webviewHtml.ts:200-203` | `JSON.stringify(bundle/voices)` interpolado en un `<script>` inline **sin escapar `</script>`**. Un voice id (de nombre de archivo en `globalStorage`) con `</script><script>` → XSS dentro del webview. |
 | C5 | `src/messageRouter.ts:133` | **Path traversal**: el regex de validación de `voice` no está anclado al final → `en_US-../../../etc` pasa el `test` y llega a `removePiperVoice`. |
@@ -147,7 +147,7 @@ Tres cosas que dije en auditorías previas de esta sesión estaban **mal**. Las 
 
 1. ✅ **C1** XSS de control-char en links (markdown.js:41) — **HECHO**.
 2. ✅ **C3** `fs_write` puede sobrescribir `.mcp.json` → RCE diferido — **HECHO**.
-3. **C2** `fs_search`/`fs_glob` sin `assertRealWithin` (symlink traversal).
+3. ✅ **C2** `fs_search`/`fs_glob` sin `assertRealWithin` (symlink traversal) — **HECHO**.
 4. **C7** `inference.ts:165` descarta la respuesta parcial en error.
 5. **C4** `</script>` sin escapar en script inline (webviewHtml.ts).
 6. **stream.ts:32** sin flush final → se pierde el chunk de usage/done.
