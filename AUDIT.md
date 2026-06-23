@@ -49,7 +49,7 @@
 - ✅ L5 🟡 piper startServer con on('error') · ✅ L6 🟡 abort listener removido · 🔎 L7 revisado: riesgo teórico (PATH no es del workspace) · ✅ L8 ⚪ synthViaServer con timeout
 
 **i18n / CSS / transversal**
-- ⬜ I1 🟡 21 claves sin traducir · ⬜ I2 ⚪ inglés británico/americano · ⬜ I3 ⚪ 2 claves sin uso
+- ✅ I1 🟡 claves UI traducidas (24×5) · ✅ I2 ⚪ Reset / center (americano) · ✅ I3 ⚪ 2 claves muertas eliminadas
 - ⬜ S1 ⚪ verde/ámbar hardcodeados · ⬜ S2 ⚪ badges duplicados · ⬜ S3 ⚪ outline:none foco débil · ⬜ S4 ⚪ overrides que deshacen
 - ⬜ X1 🟡 ~185 `any` internos · ⬜ X2 🟡 6 archivos 400–500 · ⬜ X3 ⚪ catch vacíos sin comentar · ⬜ X4 ⚪ higiene (.webview-backup, plan-*.md)
 
@@ -169,9 +169,9 @@ Tres cosas que dije en auditorías previas de esta sesión estaban **mal**. Las 
 
 ## 🟡 i18n (`src/i18n.ts`, `media/i18n.js`)
 
-- **[Media] BUG (21 claves)** — Claves de UI usadas en código **sin traducir** → en es/pt/fr/de/it se ven en inglés: toda la barra de búsqueda (`Find`, `Replace`, `Match Case`, `Use Regular Expression`…), controles de Mermaid (`Zoom in/out`, `Pan…`, `Fullscreen`, `Could not render this Mermaid diagram`) y `of`.
-- **[Baja] CONVENCIÓN** — `Reset / centre` y `centre` usan inglés británico; el resto americano. Inconsistencia.
-- **[Baja]** — 2 claves definidas sin uso aparente (`Reprocess (regenerate as a new variant)`, `Search in chat…`).
+- **✅ [Media] (I1) — CORREGIDO** — 24 claves de UI (barra de búsqueda, controles de Mermaid, `of`, avisos) traducidas a es/pt/fr/de/it (24×5).
+- **✅ [Baja] (I2) — CORREGIDO** — clave renombrada a `Reset / center` (americano, consistente con el resto).
+- **✅ [Baja] (I3) — CORREGIDO** — eliminadas las 2 claves sin uso (`Reprocess (regenerate as a new variant)`, `Search in chat…`) de los 5 bundles.
 
 ## 🟡 CSS — deuda menor (no lo que dije antes)
 

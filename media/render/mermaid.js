@@ -105,7 +105,7 @@ import { t } from '../core/i18n.js';
     pad.appendChild(mmBtn(MM_ICON.up, t('Pan up'), () => pz.panBy(0, STEP)));
     pad.appendChild(mmBtn(MM_ICON.zoomIn, t('Zoom in'), pz.zoomIn));
     pad.appendChild(mmBtn(MM_ICON.left, t('Pan left'), () => pz.panBy(STEP, 0)));
-    pad.appendChild(mmBtn(MM_ICON.recenter, t('Reset / centre'), pz.fit));
+    pad.appendChild(mmBtn(MM_ICON.recenter, t('Reset / center'), pz.fit));
     pad.appendChild(mmBtn(MM_ICON.right, t('Pan right'), () => pz.panBy(-STEP, 0)));
     pad.appendChild(gap());
     pad.appendChild(mmBtn(MM_ICON.down, t('Pan down'), () => pz.panBy(0, -STEP)));
