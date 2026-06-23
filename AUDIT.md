@@ -39,7 +39,7 @@
 - ⬜ W4 🟡 processMermaid flotante + race · ⬜ W5 🟡 conversation.js god-view (refactor) · ⬜ W6 ⚪ escapeHtml revienta con no-string · ⬜ W7 ⚪ mermaid unescape deprecado
 
 **Host / orquestación**
-- ✅ H1 🟠 secrets.onDidChange sin disposable · ✅ H2 router floating promise · ⬜ H3 🟠 static activeApply global entre vistas
+- ✅ H1 🟠 secrets.onDidChange sin disposable · ✅ H2 router floating promise · 🔎 H3 revisado: NO es bug (convención F4, funcionalmente correcto)
 - ✅ H4 🟠 summary.upTo sin validar rango · ⬜ H5 🟡 busyRef race (setConfig/delete/edit/replace) · ⬜ H6 🟡 exportHtml fuera de CSP
 - ⬜ H7 🟡 nonce con Math.random · ⬜ H8 🟡 modelsPanel msg.path traversal · ⬜ H9 ⚪ CSP unsafe-inline · ⬜ H10 ⚪ IDs débiles colisionables
 
@@ -142,7 +142,7 @@ Tres cosas que dije en auditorías previas de esta sesión estaban **mal**. Las 
 
 - **✅ [Alta] BUG `extension.ts:74` — CORREGIDO** — `context.secrets.onDidChange(...)` ahora se registra en `context.subscriptions` → se limpia en deactivate (T8).
 - **✅ [Alta] BUG `extension.ts:313` — CORREGIDO** — el callback ahora hace `void routeMessage(...).catch(...)`: loguea el error (`console.error`) y postea un `error` al webview, en vez de dejar un unhandled rejection sin feedback (la UI ya no queda colgada). `no-floating-promises` satisfecho.
-- **[Alta] BUG `extension.ts:135,361`** — `static activeApply` es **estado global compartido entre todos los chats abiertos** → con varios editores, `applyConfig` puede escribir sobre el doc equivocado tras un `await` (N3/F4).
+- **🔎 [reclasificado] `extension.ts:135,361` (H3) — NO es bug** — revisado en detalle: `applyConfig` está acotado a su editor por closure (`getDoc`/`writeDoc`/`document` capturados), y `doc` se captura antes del `await`, así que NO escribe sobre el doc equivocado. El `static activeApply` solo enruta el "usar en chat" del sidebar al último chat activo (comportamiento deseado, documentado en el código). Es un olor de estado global (F4) pero funcionalmente correcto; no amerita cambio. Mi auditoría inicial lo sobrevaloró como "Alta BUG".
 - **✅ [Alta] BUG `chatDocument.ts:174` — CORREGIDO** — `summary.upTo` se clampa a `[0, messages.length]` con `Math.floor`; valores corruptos (`-5`→drop, `99999`→len, `2.7`→2, `NaN`→drop) ya no se propagan al conteo de contexto. (verificado)
 - **[Media] BUG `messageRouter.ts:142-250`** — `setConfig`/`deleteMessage`/`editMessage`/`replaceAll` **chequean `busyRef` pero no lo adquieren** → entre su `getDoc` y `writeDoc` async puede colarse un `send` → escritura concurrente del doc (race).
 - **[Media] BUG `messageRouter.ts:364`** — `exportHtml` escribe HTML del modelo a tmp y lo abre en el navegador **fuera de CSP** → `<img src=attacker>`/scripts se ejecutan (exfiltración, U5).
