@@ -1,6 +1,10 @@
 import * as vscode from 'vscode';
 import * as dns from 'dns';
+import type { Dispatcher } from 'undici';
 import { ipIsPrivate } from './net';
+
+type FetchInput = Parameters<typeof globalThis.fetch>[0];
+type FetchInit = Parameters<typeof globalThis.fetch>[1];
 
 // `fetch` that respects the configured proxy. Defaults to the global `fetch` (no changes in the
 // common case, without proxy). If a proxy is set, routes through undici with a ProxyAgent —
@@ -26,31 +30,32 @@ export function initProxy(): void {
     const { fetch: undiciFetch, ProxyAgent } = require('undici');
     const strictSSL = vscode.workspace.getConfiguration('http').get<boolean>('proxyStrictSSL', true);
     const agent = new ProxyAgent(strictSSL ? proxy : { uri: proxy, requestTls: { rejectUnauthorized: false } });
-    _fetch = ((input: any, init?: any) => undiciFetch(input, { ...(init || {}), dispatcher: agent })) as any;
+    _fetch = ((input: FetchInput, init?: FetchInit) =>
+      undiciFetch(input, { ...(init || {}), dispatcher: agent })) as typeof globalThis.fetch;
   } catch {
     _fetch = globalThis.fetch; // undici unavailable or invalid proxy: fall back to global fetch
   }
 }
 
 /** `fetch` with proxy support. Use instead of the global `fetch`. */
-export const httpFetch: typeof globalThis.fetch = (input: any, init?: any) => _fetch(input, init);
+export const httpFetch: typeof globalThis.fetch = (input: FetchInput, init?: FetchInit) => _fetch(input, init);
 
 // ── SSRF-safe fetch (web_fetch) ───────────────────────────────────────────────────────────────
 // An undici Agent whose DNS lookup validates the resolved IP AT CONNECT time and connects to that
 // exact IP. This closes the DNS-rebinding (TOCTOU) window a separate pre-flight check leaves open:
 // the address that is validated is the address that is connected to (no second, attacker-swappable
 // resolution). Private/internal/metadata IPs are refused.
-let _ssrfAgent: any = null;
+let _ssrfAgent: Dispatcher | null = null;
 let _ssrfTried = false;
-function ssrfSafeDispatcher(): any {
+function ssrfSafeDispatcher(): Dispatcher | null {
   if (_ssrfTried) return _ssrfAgent;
   _ssrfTried = true;
   try {
     const { Agent } = require('undici');
     _ssrfAgent = new Agent({
       connect: {
-        lookup(hostname: string, options: any, cb: (err: Error | null, address?: string, family?: number) => void) {
-          dns.lookup(hostname, { ...(options || {}), all: true }, (err, addresses: any) => {
+        lookup(hostname: string, options: dns.LookupOptions, cb: (err: Error | null, address?: string, family?: number) => void) {
+          dns.lookup(hostname, { ...(options || {}), all: true }, (err, addresses: dns.LookupAddress[]) => {
             if (err) return cb(err);
             const list = Array.isArray(addresses) ? addresses : [addresses];
             for (const a of list) {
@@ -74,7 +79,7 @@ function ssrfSafeDispatcher(): any {
  * validates the resolved IP at connect time (anti DNS-rebinding). With a proxy, the proxy resolves
  * DNS (rebinding to the target IP doesn't apply), so the proxied fetch is used as-is.
  */
-export function safeWebFetch(input: any, init?: any): Promise<Response> {
+export function safeWebFetch(input: FetchInput, init?: FetchInit): Promise<Response> {
   if (_fetch !== globalThis.fetch) return _fetch(input, init); // a proxy is configured
   const dispatcher = ssrfSafeDispatcher();
   if (!dispatcher) return _fetch(input, init);

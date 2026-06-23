@@ -23,15 +23,25 @@ export interface PullProgress {
   completed?: number;
 }
 
+// ── Shapes of the Ollama /api responses we read (only the fields we use). ────────────────────────
+interface TagEntry {
+  name?: string; size?: number; modified_at?: string;
+  details?: { parameter_size?: string; quantization_level?: string; family?: string };
+}
+interface TagsResponse { models?: TagEntry[] }
+/** Full /api/show payload: only `capabilities` is read here; the rest is passed through as `raw`. */
+export interface ShowResponse { capabilities?: string[]; [k: string]: unknown }
+interface PullChunk { error?: unknown; status?: string; total?: number; completed?: number }
+
 const base = (baseUrl: string) => baseUrl.replace(/\/+$/, '');
 
 /** Lists local models (GET /api/tags). */
 export async function listLocal(baseUrl: string): Promise<LocalModel[]> {
   const res = await httpFetch(`${base(baseUrl)}/api/tags`);
   if (!res.ok) throw new Error(`/api/tags HTTP ${res.status}`);
-  const json: any = await res.json();
-  return (json?.models || []).map((m: any): LocalModel => ({
-    name: m.name,
+  const json = await res.json() as TagsResponse;
+  return (json?.models || []).map((m): LocalModel => ({
+    name: m.name ?? '',
     size: m.size || 0,
     parameterSize: m.details?.parameter_size,
     quantization: m.details?.quantization_level,
@@ -41,14 +51,14 @@ export async function listLocal(baseUrl: string): Promise<LocalModel[]> {
 }
 
 /** Model detail (POST /api/show); includes real capabilities (D3: truth after download). */
-export async function show(baseUrl: string, name: string): Promise<{ capabilities: ModelCapabilities; raw: any }> {
+export async function show(baseUrl: string, name: string): Promise<{ capabilities: ModelCapabilities; raw: ShowResponse }> {
   const res = await httpFetch(`${base(baseUrl)}/api/show`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ name }),
   });
   if (!res.ok) throw new Error(`/api/show HTTP ${res.status}`);
-  const json: any = await res.json();
+  const json = await res.json() as ShowResponse;
   const caps: string[] = Array.isArray(json?.capabilities) ? json.capabilities : [];
   return {
     raw: json,
@@ -97,7 +107,7 @@ export async function pull(
   try {
     await readLines(reader, (line) => {
       if (!line) return;
-      let json: any;
+      let json: PullChunk;
       try { json = JSON.parse(line); } catch { return; }
       if (json?.error) throw new Error(String(json.error));
       onProgress({ status: json.status || '', total: json.total, completed: json.completed });

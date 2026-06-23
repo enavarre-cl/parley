@@ -38,6 +38,14 @@ export interface ModelFile {
 
 const HF = 'https://huggingface.co';
 
+// ── Shapes of the Hugging Face API responses we read (only the fields we use). ──────────────────
+interface HfModel {
+  id?: string; modelId?: string; tags?: string[]; pipeline_tag?: string;
+  downloads?: number; likes?: number; lastModified?: string; createdAt?: string;
+}
+interface HfTreeEntry { type?: string; path?: string; size?: number; lfs?: { size?: number } }
+interface HfManifest { config?: { digest?: string } }
+
 /** Searches for GGUF models on HF (GET /api/models?search=&filter=gguf). */
 export type SortMode = 'relevance' | 'likes' | 'downloads' | 'modified';
 const SORT_PARAM: Record<SortMode, string> = {
@@ -56,12 +64,12 @@ export async function searchHF(
   if (author) url += `&author=${encodeURIComponent(author)}`;
   const res = await httpFetch(url, { signal });
   if (!res.ok) throw new Error(`HF search HTTP ${res.status}`);
-  const arr = (await res.json()) as any[];
+  const arr = (await res.json()) as HfModel[];
   return (arr || []).map((m) => toCatalogModel(m));
 }
 
 /** Normalises an HF API object into our CatalogModel. */
-function toCatalogModel(m: any): CatalogModel {
+function toCatalogModel(m: HfModel): CatalogModel {
   const id: string = m.id || m.modelId || '';
   const tags: string[] = Array.isArray(m.tags) ? m.tags : [];
   const pipeline: string = m.pipeline_tag || '';
@@ -92,7 +100,7 @@ export async function projectorFile(id: string, signal?: AbortSignal): Promise<s
   try {
     const res = await httpFetch(`${HF}/api/models/${id}/tree/main?recursive=true`, { signal });
     if (!res.ok) return undefined;
-    const arr = (await res.json()) as any[];
+    const arr = (await res.json()) as HfTreeEntry[];
     const f = (arr || []).find((e) =>
       e?.type === 'file' && typeof e.path === 'string' && /\.gguf$/i.test(e.path) && isAuxiliaryGguf(e.path));
     return f?.path;
@@ -103,7 +111,7 @@ export async function projectorFile(id: string, signal?: AbortSignal): Promise<s
 export async function fetchModel(id: string, signal?: AbortSignal): Promise<CatalogModel> {
   const res = await httpFetch(`${HF}/api/models/${id}`, { signal });
   if (!res.ok) throw new Error(`HF model HTTP ${res.status}`);
-  return toCatalogModel(await res.json());
+  return toCatalogModel(await res.json() as HfModel);
 }
 
 /** Lists the .gguf files of a repo with their size and quant (GET /api/models/{id}/tree/main). */
@@ -111,10 +119,10 @@ export async function modelFiles(id: string, signal?: AbortSignal): Promise<Mode
   const url = `${HF}/api/models/${id}/tree/main?recursive=true`;
   const res = await httpFetch(url, { signal });
   if (!res.ok) throw new Error(`HF tree HTTP ${res.status}`);
-  const arr = (await res.json()) as any[];
+  const arr = (await res.json()) as HfTreeEntry[];
   const ggufs = (arr || [])
     .filter((e) => e?.type === 'file' && typeof e.path === 'string' && /\.gguf$/i.test(e.path))
-    .filter((e) => !isAuxiliaryGguf(e.path)) // excludes mmproj/projectors: not standalone models
+    .filter((e) => !isAuxiliaryGguf(e.path ?? '')) // excludes mmproj/projectors: not standalone models
     .map((e) => ({ path: e.path as string, size: (e.size || e.lfs?.size || 0) as number }));
 
   // Collapse split models (`…-00001-of-00003.gguf`) into ONE entry: a single shard is not usable
@@ -165,7 +173,7 @@ export async function ollamaPullViable(id: string, quant: string, timeoutMs = 60
       headers: { Accept: accept }, signal: ac.signal,
     });
     if (!man.ok) return false;
-    const digest = ((await man.json()) as any)?.config?.digest;
+    const digest = ((await man.json()) as HfManifest)?.config?.digest;
     if (!digest) return false;
     // Range 0-0: confirm the descriptor is actually retrievable without downloading it whole.
     const blob = await httpFetch(`${HF}/v2/${id}/blobs/${digest}`, {
@@ -184,7 +192,7 @@ export async function modelInfo(id: string, signal?: AbortSignal): Promise<Model
   try {
     const res = await httpFetch(`${HF}/api/models/${id}`, { signal });
     if (!res.ok) return { arch: '', params: '' };
-    const m = (await res.json()) as any;
+    const m = (await res.json()) as { config?: { model_type?: string }; safetensors?: { total?: number } };
     return {
       arch: m?.config?.model_type || '',
       params: formatParams(m?.safetensors?.total || 0),
