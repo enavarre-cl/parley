@@ -39,16 +39,40 @@ export function applyCase(matched: string, repl: string): string {
 }
 
 /**
+ * Char ranges of Markdown link/image URLs and autolinks — text the webview renders into an
+ * attribute (href/src), NOT a visible text node, so it never gets a highlight. Replace must skip
+ * these so its occurrence count stays aligned with the webview's visible-match count (otherwise a
+ * single "Replace" targeting the Nth highlight could hit a different Nth source occurrence — e.g.
+ * the one inside a URL — corrupting the link).
+ */
+function hiddenRanges(src: string): Array<[number, number]> {
+  const ranges: Array<[number, number]> = [];
+  let m: RegExpExecArray | null;
+  const link = /!?\[[^\]]*\]\(([^)]*)\)/g; // [label](url) / ![alt](url) → the url portion
+  while ((m = link.exec(src)) !== null) {
+    const start = m.index + m[0].lastIndexOf('(') + 1;
+    ranges.push([start, start + m[1].length]);
+  }
+  const auto = /<([^>\s]+)>/g; // <https://…> autolink
+  while ((m = auto.exec(src)) !== null) ranges.push([m.index + 1, m.index + 1 + m[1].length]);
+  return ranges;
+}
+
+/**
  * Replace matches of `query` (with the find options) in `src`. `nth` = 0 replaces every occurrence;
  * `nth >= 1` replaces only that 1-based occurrence. Returns the new string and the replacement count.
+ * Occurrences inside Markdown link/image URLs are skipped (they aren't highlighted in the webview).
  */
 export function replaceInString(src: string, query: string, replacement: string, nth: number, o: FindOpts): { content: string; count: number } {
   const re = buildFindRegex(query, o);
   if (!re) return { content: src, count: 0 };
+  const hidden = hiddenRanges(src);
+  const inHidden = (i: number): boolean => hidden.some(([s, e]) => i >= s && i < e);
   let out = '', last = 0, occ = 0, count = 0;
   let m: RegExpExecArray | null;
   while ((m = re.exec(src)) !== null) {
     if (m[0].length === 0) { re.lastIndex++; continue; } // guard zero-width matches
+    if (inHidden(m.index)) continue; // inside a link URL → not a visible highlight; leave it untouched
     occ++;
     out += src.slice(last, m.index);
     if (nth === 0 || occ === nth) {

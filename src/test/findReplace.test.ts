@@ -54,3 +54,18 @@ test('replaceInString: regex groups + preserveCase', () => {
     { content: 'BAR bar Bar', count: 3 },
   );
 });
+
+test('replaceInString: skips matches inside Markdown link URLs (B4)', () => {
+  // "example" appears in the label, the URL and prose. The webview only highlights the visible ones
+  // (label + prose), so nth must count those — not the URL occurrence.
+  const src = 'See [example](http://example.com) for the example.';
+  assert.deepEqual(
+    replaceInString(src, 'example', 'sample', 2, {}),
+    { content: 'See [example](http://example.com) for the sample.', count: 1 },
+  );
+  // replace-all also leaves the URL untouched (count = visible matches only).
+  assert.deepEqual(
+    replaceInString(src, 'example', 'X', 0, {}),
+    { content: 'See [X](http://example.com) for the X.', count: 2 },
+  );
+});
