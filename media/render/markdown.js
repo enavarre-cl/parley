@@ -132,18 +132,30 @@ export function renderRaw(src) {
       out.push('<blockquote>' + renderRaw(buf.join('\n')) + '</blockquote>');
       continue;
     }
-    // Unordered list
-    if (/^\s*[-*+]\s+/.test(line)) {
+    // List (ordered or unordered), nested by indentation. The old code stripped the indentation and
+    // emitted every <li> at one level, flattening any hierarchy; this keeps nesting with a small stack.
+    const liRe = /^(\s*)([-*+]|\d+\.)\s+(.*)$/;
+    if (liRe.test(line)) {
       const items = [];
-      while (i < lines.length && /^\s*[-*+]\s+/.test(lines[i])) { items.push(inlineMd(lines[i].replace(/^\s*[-*+]\s+/, ''))); i++; }
-      out.push('<ul>' + items.map((t) => `<li>${t}</li>`).join('') + '</ul>');
-      continue;
-    }
-    // Ordered list
-    if (/^\s*\d+\.\s+/.test(line)) {
-      const items = [];
-      while (i < lines.length && /^\s*\d+\.\s+/.test(lines[i])) { items.push(inlineMd(lines[i].replace(/^\s*\d+\.\s+/, ''))); i++; }
-      out.push('<ol>' + items.map((t) => `<li>${t}</li>`).join('') + '</ol>');
+      let mm;
+      while (i < lines.length && (mm = liRe.exec(lines[i]))) {
+        items.push({ indent: mm[1].replace(/\t/g, '    ').length, ordered: /\d/.test(mm[2]), content: inlineMd(mm[3]) });
+        i++;
+      }
+      let html = '';
+      const stack = []; // [{ indent, tag }] — open lists from outermost to innermost
+      for (const it of items) {
+        while (stack.length && it.indent < stack[stack.length - 1].indent) html += '</li></' + stack.pop().tag + '>';
+        if (!stack.length || it.indent > stack[stack.length - 1].indent) {
+          const tag = it.ordered ? 'ol' : 'ul';
+          html += '<' + tag + '><li>' + it.content;     // nested list inside the still-open parent <li>
+          stack.push({ indent: it.indent, tag });
+        } else {
+          html += '</li><li>' + it.content;             // sibling at the same level
+        }
+      }
+      while (stack.length) html += '</li></' + stack.pop().tag + '>';
+      out.push(html);
       continue;
     }
     // Paragraph

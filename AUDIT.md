@@ -36,8 +36,8 @@
 - ✅ A7 🟡 mcp servidor caído falla rápido · ✅ A8 🟡 inference reporta error de args JSON · ✅ A9 ⚪ MAX_ITERS=0 con tope duro 100 · ✅ A10 ⚪ mcp captura stderr
 
 **Webview**
-- ✅ W1 🟡 botón regenerar ausente tras tools (reportado) · ✅ W2 🟠 colisión placeholder code-span · ⬜ W3 🟡 listas anidadas se aplanan
-- ⬜ W4 🟡 processMermaid flotante + race · ⬜ W5 🟡 conversation.js god-view (refactor) · ⬜ W6 ⚪ escapeHtml revienta con no-string · ⬜ W7 ⚪ mermaid unescape deprecado
+- ✅ W1 🟡 botón regenerar ausente tras tools (reportado) · ✅ W2 🟠 colisión placeholder code-span · ✅ W3 🟡 listas anidadas con nesting
+- ⬜ W4 🟡 processMermaid flotante + race · ⬜ W5 🟡 conversation.js god-view (refactor) · ✅ W6 ⚪ escapeHtml coacciona String · ✅ W7 ⚪ mermaid sin unescape
 
 **Host / orquestación**
 - ✅ H1 🟠 secrets.onDidChange sin disposable · ✅ H2 router floating promise · 🔎 H3 revisado: NO es bug (convención F4, funcionalmente correcto)
@@ -133,11 +133,11 @@ Tres cosas que dije en auditorías previas de esta sesión estaban **mal**. Las 
 - **✅ [Media] BUG `media/chat/conversation.js:329` (W1, reportado) — CORREGIDO** — `canRegenFromPrompt` ya no exige adyacencia (`i+1===lastDisplayable`); se calcula `lastPromptIdx` (el último prompt de usuario cuya respuesta es `lastDisplayable`) y se compara `i===lastPromptIdx`. Así el botón regenerar aparece aunque entre el prompt y la respuesta haya mensajes intermedios de tools. (verificado: con tools, sin tools y multi-turno)
 
 - **✅ [Alta] BUG `markdown.js:39,52` — CORREGIDO** — placeholder de code-spans pasa de ` dígito ` a ` dígito ` (NUL, jamás en prosa) → "entre 0 y 1 hay `x`" ya no corrompe los números ni emite `<code>undefined</code>`. (verificado)
-- **[Media] BUG `markdown.js:130-141`** — **Listas anidadas se aplanan** (se descarta la indentación) → toda jerarquía se pierde en el render.
+- **✅ [Media] BUG `markdown.js:130-141` (W3) — CORREGIDO** — renderer de listas con anidación por indentación (pila de ul/ol); la jerarquía se conserva. (verificado: plana, anidada, mixta)
 - **[Media] BUG `conversation.js:448,458` + `message.js`** — `processMermaid` es promesa flotante (K2) y hay **race**: `renderConversation` hace `innerHTML=''`; si `mermaid.render` resuelve tras el re-render, opera sobre un nodo desconectado → diagramas que "desaparecen".
 - **[Media] CONVENCIÓN `conversation.js` (477 líneas)** — **God-view**: render + estado de streaming + `stableSplit` + panels + editor de summary (≈30 líneas duplicadas de `message.js`) + export con **CSS embebido en JS** (M9). Debe partirse (N1/N2). Hay además **dependencia circular** `conversation.js ↔ message.js` (M7).
-- **[Baja] BUG `core/dom.js:5`** — `escapeHtml(x)` **revienta si `x` no es string** (no coacciona). Un `.attach` con `name`/`mime` no-string rompe el render.
-- **[Baja] BUG `mermaid.js:179`** — `btoa(unescape(...))` usa `unescape` deprecado; falla con SVG fuera de Latin-1.
+- **✅ [Baja] BUG `core/dom.js:5` (W6) — CORREGIDO** — `escapeHtml(String(s))`: un valor no-string ya no rompe el render.
+- **✅ [Baja] BUG `mermaid.js:179` (W7) — CORREGIDO** — UTF-8→base64 con `TextEncoder` en chunks (sin `unescape` deprecado, sin overflow con SVG grande).
 
 ## 🟠 Host / orquestación (`src/extension.ts`, `messageRouter.ts`, …)
 

@@ -176,7 +176,12 @@ import { t } from '../core/i18n.js';
       if (!w || !h) { w = parseFloat(el.getAttribute('width')) || 800; h = parseFloat(el.getAttribute('height')) || 600; }
       el.setAttribute('width', String(w)); el.setAttribute('height', String(h)); el.style.maxWidth = 'none';
       const xml = new XMLSerializer().serializeToString(el);
-      const url = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(xml)));
+      // UTF-8 → base64 without the deprecated unescape(); chunked so a large SVG doesn't overflow
+      // the call stack via String.fromCharCode(...spread).
+      const bytes = new TextEncoder().encode(xml);
+      let bin = '';
+      for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+      const url = 'data:image/svg+xml;base64,' + btoa(bin);
       const img = new Image();
       img.onload = () => {
         const SCALE = 2; // crisp on HiDPI
