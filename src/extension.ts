@@ -11,7 +11,7 @@ import { renderWebviewHtml } from './webviewHtml';
 import { AttachmentStore } from './attachmentStore';
 import { applyPatch, ChatPatch } from './applyPatch';
 import { runInference as runInferenceImpl } from './inference';
-import { routeMessage } from './messageRouter';
+import { routeMessage, WebviewMessage } from './messageRouter';
 import { makeChatOps } from './chatOps';
 import { makeTtsBackend } from './ttsBackend';
 import { makeSystemPrompt } from './systemPrompt';
@@ -308,14 +308,14 @@ class ChatEditorProvider implements vscode.CustomTextEditorProvider {
     };
 
     // Asks for modal confirmation before deleting, unless the webview signals to skip it (Shift).
-    const confirmDelete = async (msg: any, text: string): Promise<boolean> => {
+    const confirmDelete = async (msg: WebviewMessage, text: string): Promise<boolean> => {
       if (msg && msg.confirm === false) return true; // Shift: delete immediately
       const yes = tr('Delete');
       const pick = await vscode.window.showWarningMessage(text, { modal: true }, yes);
       return pick === yes;
     };
 
-    const onMsg = webview.onDidReceiveMessage((msg: any) => void routeMessage(msg, {
+    const onMsg = webview.onDidReceiveMessage((msg: WebviewMessage) => void routeMessage(msg, {
       webview, getDoc, writeDoc, pushDoc, pushLang, sendHistory, loadModels,
       handleSend, handleGenerate, handleFork, handleContinue, handleRegenerate, setVariant, deleteVariant,
       ensureSummary, synthPiper, killPiper, resolveSystemPrompt, tlog, applyPatch,

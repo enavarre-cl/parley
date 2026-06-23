@@ -3,7 +3,8 @@ import * as path from 'path';
 import * as os from 'os';
 import * as fs from 'fs';
 import { ChatDoc } from './chatDocument';
-import { ChatMessage } from './providers/types';
+import { ChatMessage, Attachment } from './providers/types';
+import { ChatPatch } from './applyPatch';
 import { tr } from './i18n';
 import { errMsg, isHiddenToolMsg } from './chatHelpers';
 import { replaceInString, FindOpts } from './findReplace';
@@ -11,6 +12,37 @@ import { SPELL_LANGS, SpellLang, SpellWordsStore } from './spellWords';
 import { routeSysPrompt } from './messageRouterSysPrompt';
 import { removePiperVoice } from './piperVoices';
 import { PiperManager } from './piper/manager';
+
+/**
+ * A message sent webview→host. The discriminator is `type`; the rest are per-message payload fields,
+ * all optional and re-validated by each handler (the value crosses the postMessage JSON boundary).
+ */
+export interface WebviewMessage {
+  type: string;
+  word?: string;
+  lang?: string;
+  index?: number;
+  text?: string;
+  attachments?: Attachment[];
+  rate?: number;
+  voice?: string;
+  id?: number;
+  message?: string;
+  data?: unknown;
+  patch?: ChatPatch;
+  content?: string;
+  query?: string;
+  replacement?: string;
+  opts?: FindOpts;
+  ordinal?: number;
+  variant?: number;
+  fromHere?: boolean;
+  q?: string;
+  reqId?: number;
+  title?: string;
+  html?: string;
+  confirm?: boolean;
+}
 
 /** Everything the message router needs — one explicit context object (low coupling). */
 export interface RouterCtx {
@@ -21,7 +53,7 @@ export interface RouterCtx {
   pushLang: () => void;
   sendHistory: () => void;
   loadModels: () => Promise<void>;
-  handleSend: (text: string, attachments?: any[]) => Promise<void>;
+  handleSend: (text: string, attachments?: Attachment[]) => Promise<void>;
   handleGenerate: () => Promise<void>;
   handleFork: (index: number, fromHere?: boolean) => Promise<void>;
   handleContinue: () => Promise<void>;
@@ -33,7 +65,7 @@ export interface RouterCtx {
   killPiper: () => void;
   resolveSystemPrompt: (doc: ChatDoc) => string;
   tlog: (s: string) => void;
-  applyPatch: (doc: ChatDoc, patch: any) => void;
+  applyPatch: (doc: ChatDoc, patch: ChatPatch) => void;
   abortRef: { current: AbortController | undefined };
   busyRef: { value: boolean };
   ttsTokenRef: { value: number };
@@ -44,12 +76,12 @@ export interface RouterCtx {
   document: vscode.TextDocument;
   searchFiles: (q: string) => Promise<string[]>;
   sysPromptPathAllowed: (resolved: string) => boolean;
-  confirmDelete: (msg: any, text: string) => Promise<boolean>;
-  resolveAttachment: (a: any) => any;
+  confirmDelete: (msg: WebviewMessage, text: string) => Promise<boolean>;
+  resolveAttachment: (a: Attachment) => Attachment;
 }
 
 /** Routes one webview→host message. */
-export async function routeMessage(msg: any, ctx: RouterCtx): Promise<void> {
+export async function routeMessage(msg: WebviewMessage, ctx: RouterCtx): Promise<void> {
       switch (msg?.type) {
         case 'ready':
           ctx.pushLang();
@@ -61,7 +93,7 @@ export async function routeMessage(msg: any, ctx: RouterCtx): Promise<void> {
         case 'spellAddWord':
           // Adds to the active spell-checker language list. The store fires onDidChange →
           // all webviews + the sidebar view are updated.
-          if (typeof msg.word === 'string' && (SPELL_LANGS as string[]).includes(msg.lang)) {
+          if (typeof msg.word === 'string' && typeof msg.lang === 'string' && (SPELL_LANGS as string[]).includes(msg.lang)) {
             await ctx.spellWords.add(msg.lang as SpellLang, msg.word);
           }
           break;
@@ -74,7 +106,7 @@ export async function routeMessage(msg: any, ctx: RouterCtx): Promise<void> {
             ctx.webview.postMessage({ type: 'notice', message: tr('Enable "Auto-summarize when context fills up" to use the summary.') });
             break;
           }
-          const idx = msg.index;
+          const idx = msg.index ?? -1;
           const currentUpTo = doc.summary ? doc.summary.upTo : 0;
           if (!Number.isInteger(idx) || idx <= currentUpTo || idx > doc.messages.length) {
             ctx.webview.postMessage({ type: 'notice', message: tr('Nothing new to summarize.') });
@@ -112,7 +144,7 @@ export async function routeMessage(msg: any, ctx: RouterCtx): Promise<void> {
         case 'send':
           if (ctx.busyRef.value) break;
           ctx.busyRef.value = true;
-          try { await ctx.handleSend(msg.text, msg.attachments); } finally { ctx.busyRef.value = false; }
+          try { await ctx.handleSend(msg.text ?? '', msg.attachments); } finally { ctx.busyRef.value = false; }
           break;
         case 'stop':
           ctx.abortRef.current?.abort();
@@ -154,7 +186,7 @@ export async function routeMessage(msg: any, ctx: RouterCtx): Promise<void> {
             if (doc) {
               const before = doc.provider;
               const toolsBefore = doc.params.tools;
-              ctx.applyPatch(doc, msg.patch);
+              ctx.applyPatch(doc, msg.patch ?? {});
               await ctx.writeDoc(doc);
               if (doc.provider !== before) await ctx.loadModels();
               // Tools just turned ON in an untrusted workspace: nudge the user to grant Workspace Trust
@@ -176,7 +208,7 @@ export async function routeMessage(msg: any, ctx: RouterCtx): Promise<void> {
           if (ctx.busyRef.value) break;
           const doc = ctx.getDoc();
           if (!doc) break;
-          const i = msg.index;
+          const i = msg.index ?? -1;
           if (Number.isInteger(i) && i >= 0 && i < doc.messages.length) {
             if (!(await ctx.confirmDelete(msg, tr('Delete this message?')))) break;
             // Also drags the adjacent HIDDEN tool chain (assistant with toolCalls + 'tool' results)
@@ -200,7 +232,7 @@ export async function routeMessage(msg: any, ctx: RouterCtx): Promise<void> {
           if (ctx.busyRef.value) break;
           const doc = ctx.getDoc();
           if (!doc) break;
-          const i = msg.index;
+          const i = msg.index ?? -1;
           if (Number.isInteger(i) && i >= 0 && i < doc.messages.length) {
             if (!(await ctx.confirmDelete(msg, tr('Delete this message and all below?')))) break;
             // Includes the hidden tool chain preceding the cut point.
@@ -218,7 +250,7 @@ export async function routeMessage(msg: any, ctx: RouterCtx): Promise<void> {
           if (ctx.busyRef.value) break;
           const doc = ctx.getDoc();
           if (!doc) break;
-          const i = msg.index;
+          const i = msg.index ?? -1;
           if (
             Number.isInteger(i) && i > 0 && i < doc.messages.length &&
             doc.messages[i].role === doc.messages[i - 1].role
@@ -239,7 +271,7 @@ export async function routeMessage(msg: any, ctx: RouterCtx): Promise<void> {
           if (ctx.busyRef.value) break;
           const doc = ctx.getDoc();
           if (!doc) break;
-          const i = msg.index;
+          const i = msg.index ?? -1;
           if (Number.isInteger(i) && i >= 0 && i < doc.messages.length && typeof msg.content === 'string') {
             const m = doc.messages[i];
             m.content = msg.content;
@@ -276,8 +308,9 @@ export async function routeMessage(msg: any, ctx: RouterCtx): Promise<void> {
           };
           let total = 0;
           if (msg.type === 'replaceOne') {
-            const i = msg.index;
-            const nth = Number.isInteger(msg.ordinal) && msg.ordinal >= 1 ? msg.ordinal : 1;
+            const i = msg.index ?? -1;
+            const ord = msg.ordinal ?? 0;
+            const nth = Number.isInteger(ord) && ord >= 1 ? ord : 1;
             if (Number.isInteger(i) && i >= 0 && i < doc.messages.length) total = editActive(doc.messages[i], nth);
           } else {
             for (const m of doc.messages) total += editActive(m, 0); // 0 = all occurrences
@@ -305,7 +338,7 @@ export async function routeMessage(msg: any, ctx: RouterCtx): Promise<void> {
           if (ctx.busyRef.value) break;
           if (Number.isInteger(msg.index)) {
             ctx.busyRef.value = true;
-            try { await ctx.handleFork(msg.index, msg.fromHere === true); } finally { ctx.busyRef.value = false; }
+            try { await ctx.handleFork(msg.index!, msg.fromHere === true); } finally { ctx.busyRef.value = false; }
           }
           break;
         case 'regenerateFrom': {
@@ -314,7 +347,7 @@ export async function routeMessage(msg: any, ctx: RouterCtx): Promise<void> {
           if (ctx.busyRef.value) break;
           const doc = ctx.getDoc();
           if (!doc) break;
-          const i = msg.index;
+          const i = msg.index ?? -1;
           if (!Number.isInteger(i) || i < 0 || i >= doc.messages.length || doc.messages[i].role !== 'user') break;
           ctx.busyRef.value = true; // blocks re-entrancy BEFORE mutating/writing
           try {
@@ -330,13 +363,13 @@ export async function routeMessage(msg: any, ctx: RouterCtx): Promise<void> {
         }
         case 'setVariant':
           if (!ctx.busyRef.value && Number.isInteger(msg.index) && Number.isInteger(msg.variant)) {
-            await ctx.setVariant(msg.index, msg.variant);
+            await ctx.setVariant(msg.index!, msg.variant!);
           }
           break;
         case 'deleteVariant':
           if (!ctx.busyRef.value && Number.isInteger(msg.index) && Number.isInteger(msg.variant)) {
             if (!(await ctx.confirmDelete(msg, tr('Delete this variant?')))) break;
-            await ctx.deleteVariant(msg.index, msg.variant);
+            await ctx.deleteVariant(msg.index!, msg.variant!);
           }
           break;
         case 'refreshModels':
@@ -354,7 +387,7 @@ export async function routeMessage(msg: any, ctx: RouterCtx): Promise<void> {
         case 'saveImage': {
           // Saves a generated image of message `index` (the active variant) to disk via a native dialog.
           const doc = ctx.getDoc();
-          const m = doc?.messages[msg.index];
+          const m = msg.index != null ? doc?.messages[msg.index] : undefined;
           if (!m) break;
           const img = (m.attachments ?? []).map(ctx.resolveAttachment).find((a) => a.kind === 'image' && a.data);
           if (!img) break;
@@ -368,7 +401,7 @@ export async function routeMessage(msg: any, ctx: RouterCtx): Promise<void> {
             filters: { [tr('Image')]: [ext] },
           });
           if (!target) break;
-          await vscode.workspace.fs.writeFile(target, Buffer.from(img.data, 'base64'));
+          await vscode.workspace.fs.writeFile(target, Buffer.from(img.data ?? '', 'base64'));
           break;
         }
         case 'exportHtml': {

@@ -2,9 +2,9 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import { tr } from './i18n';
-import type { RouterCtx } from './messageRouter';
+import type { RouterCtx, WebviewMessage } from './messageRouter';
 
-export async function routeSysPrompt(msg: any, ctx: RouterCtx): Promise<void> {
+export async function routeSysPrompt(msg: WebviewMessage, ctx: RouterCtx): Promise<void> {
   switch (msg.type) {
     case 'createSysPrompt': {
       // Creates a .md file (with the current inline prompt) next to the .chat, references it and opens it.
