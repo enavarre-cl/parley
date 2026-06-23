@@ -106,7 +106,7 @@ export function makeTtsBackend(deps: TtsBackendDeps) {
           }
           currentPiperProc = proc; // so we can kill it if cancelled
           let stderr = '';
-          proc.stderr?.on('data', (d: any) => { stderr += d.toString(); });
+          proc.stderr?.on('data', (d: Buffer) => { stderr += d.toString(); });
           proc.on('error', (e: any) => {
             if (currentPiperProc === proc) currentPiperProc = null;
             try { fs.unlinkSync(out); } catch { /* not created / already deleted */ }

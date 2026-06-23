@@ -92,7 +92,7 @@ export class PiperManager {
     return new Promise((resolve, reject) => {
       const p = cp.spawn(cmd, args);
       let err = '';
-      p.stderr?.on('data', (d: any) => { err += d.toString(); });
+      p.stderr?.on('data', (d: Buffer) => { err += d.toString(); });
       p.on('error', reject);
       p.on('close', (c: number) => (c === 0 ? resolve() : reject(new Error(err.trim() || `exit ${c}`))));
     });
@@ -139,7 +139,7 @@ export class PiperManager {
     await new Promise<void>((resolve, reject) => {
       const p = cp.spawn('tar', ['-xzf', archive, '-C', dir]);
       let err = '';
-      p.stderr?.on('data', (d: any) => { err += d.toString(); });
+      p.stderr?.on('data', (d: Buffer) => { err += d.toString(); });
       p.on('error', reject);
       p.on('close', (c: number) => (c === 0 ? resolve() : reject(new Error('tar: ' + (err.trim() || c)))));
     });
@@ -197,7 +197,7 @@ export class PiperManager {
     await new Promise<void>((resolve, reject) => {
       const p = cp.spawn('tar', ['-xzf', archive, '-C', dir]);
       let err = '';
-      p.stderr?.on('data', (d: any) => { err += d.toString(); });
+      p.stderr?.on('data', (d: Buffer) => { err += d.toString(); });
       p.on('error', reject);
       p.on('close', (c: number) => (c === 0 ? resolve() : reject(new Error('tar: ' + (err.trim() || c)))));
     });
@@ -282,7 +282,7 @@ export class PiperManager {
     const args = ['-m', 'piper.http_server', '-m', defaultModel, '--data-dir', voicesDir, '--host', '127.0.0.1', '--port', String(port)];
     const proc = cp.spawn(python, args, { cwd: path.dirname(python) });
     let stderr = '';
-    proc.stderr?.on('data', (d: any) => { stderr += d.toString(); });
+    proc.stderr?.on('data', (d: Buffer) => { stderr += d.toString(); });
     proc.on('exit', () => {
       if (this.serverProc === proc) { this.serverProc = null; this.serverPort = 0; this._onChange.fire(); }
       if (this.idleTimer) { clearTimeout(this.idleTimer); this.idleTimer = null; }
