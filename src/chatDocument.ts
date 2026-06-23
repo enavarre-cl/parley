@@ -1,14 +1,35 @@
 import { Attachment, ChatMessage, ChatVariant, GenerationParams, ProviderId, TokenUsage, validateProvider } from './providers';
 
+// ── Raw shapes as they appear in a loaded .chat file, before validation. Every field is `unknown`
+// because nothing about a hand-editable JSON file is guaranteed until each branch below narrows it;
+// the value of these interfaces over `any` is that a typo (reading a field that doesn't exist) is a
+// compile error, and each access is forced through an explicit type check.
+interface RawUsage { promptTokens?: unknown; completionTokens?: unknown; totalTokens?: unknown; cost?: unknown }
+interface RawAttachment { kind?: unknown; name?: unknown; mime?: unknown; ref?: unknown; data?: unknown; bytes?: unknown }
+interface RawToolCall { id?: unknown; name?: unknown; arguments?: unknown }
+interface RawVariant { content?: unknown; thinking?: unknown; usage?: RawUsage; attachments?: unknown }
+interface RawMessage {
+  role?: unknown; content?: unknown; id?: unknown; ts?: unknown; usage?: RawUsage; thinking?: unknown;
+  toolCalls?: unknown; toolCallId?: unknown; toolName?: unknown; attachments?: unknown; variants?: unknown; active?: unknown;
+}
+interface RawSummary { text?: unknown; upTo?: unknown }
+interface RawDoc {
+  params?: unknown; summary?: RawSummary; usage?: RawUsage; title?: unknown; provider?: unknown; model?: unknown;
+  systemPrompt?: unknown; systemPromptFile?: unknown; spellLang?: unknown; messages?: unknown;
+  [k: string]: unknown; // v1 loose params live at the top level; _extra round-trips unknown keys
+}
+/** A bag of inference settings read either from `raw.params` (v2) or the top level (v1). */
+type RawParams = Record<string, unknown>;
+
 /** Validates/normalizes raw attachments (message- or variant-level) from a loaded .chat. */
-function parseAttachments(raw: any): Attachment[] {
+function parseAttachments(raw: unknown): Attachment[] {
   if (!Array.isArray(raw)) return [];
-  return raw
-    .filter((a: any) => a && (a.kind === 'image' || a.kind === 'text' || a.kind === 'document')
+  return (raw as RawAttachment[])
+    .filter((a) => !!a && (a.kind === 'image' || a.kind === 'text' || a.kind === 'document')
       && (typeof a.data === 'string' || typeof a.ref === 'string'))
-    .map((a: any) => {
+    .map((a) => {
       const o: Attachment = {
-        kind: a.kind,
+        kind: a.kind as Attachment['kind'],
         name: typeof a.name === 'string' ? a.name : 'attachment',
         mime: typeof a.mime === 'string' ? a.mime : 'application/octet-stream',
       };
@@ -111,15 +132,18 @@ export function defaultDoc(defaults: ChatDefaults): ChatDoc {
   };
 }
 
-function num(v: any, fallback: number): number {
+// num()/toggle() read a single still-unverified JSON value, so `unknown` IS the precise type here
+// (a "maybe-number" has no narrower shape); each one narrows before use.
+function num(v: unknown, fallback: number): number {
   return typeof v === 'number' && !Number.isNaN(v) ? v : fallback;
 }
 
 /** Normalises a Toggle read from JSON, tolerating old/partial formats. */
-function toggle(v: any, def: Toggle): Toggle {
+function toggle(v: unknown, def: Toggle): Toggle {
   if (typeof v === 'number') return { enabled: true, value: v };
   if (v && typeof v === 'object') {
-    return { enabled: !!v.enabled, value: num(v.value, def.value) };
+    const o = v as { enabled?: unknown; value?: unknown };
+    return { enabled: !!o.enabled, value: num(o.value, def.value) };
   }
   return { ...def };
 }
@@ -147,14 +171,15 @@ export function repairTrailingToolChain(messages: ChatMessage[]): void {
 export function parseDoc(text: string, defaults: ChatDefaults): ChatDoc {
   if (!text || !text.trim()) return defaultDoc(defaults);
 
-  const raw = JSON.parse(text);
+  const parsed: unknown = JSON.parse(text);
   // JSON.parse accepts non-objects ("null", 42, [..]) — `null` in particular crashed on raw.params
   // / raw.summary below. Treat any non-object shape as an empty doc instead of throwing a TypeError.
-  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return defaultDoc(defaults);
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return defaultDoc(defaults);
+  const raw = parsed as RawDoc;
   const base = defaultDoc(defaults);
   const dp = base.params;
   // Supports both the new `params` object and the loose fields from the v1 format.
-  const rp = raw.params && typeof raw.params === 'object' ? raw.params : raw;
+  const rp: RawParams = (raw.params && typeof raw.params === 'object' ? raw.params : raw) as RawParams;
 
   const params: ChatParams = {
     temperature: num(rp.temperature, dp.temperature),
@@ -170,7 +195,7 @@ export function parseDoc(text: string, defaults: ChatDefaults): ChatDoc {
     presencePenalty: toggle(rp.presencePenalty, dp.presencePenalty),
     frequencyPenalty: toggle(rp.frequencyPenalty, dp.frequencyPenalty),
     seed: toggle(rp.seed, dp.seed),
-    stop: Array.isArray(rp.stop) ? rp.stop.filter((s: any) => typeof s === 'string') : [],
+    stop: Array.isArray(rp.stop) ? (rp.stop as unknown[]).filter((s): s is string => typeof s === 'string') : [],
     thinking: typeof rp.thinking === 'boolean' ? rp.thinking : false,
     autoSummary: typeof rp.autoSummary === 'boolean' ? rp.autoSummary : false,
     tools: typeof rp.tools === 'boolean' ? rp.tools : false,
@@ -189,7 +214,7 @@ export function parseDoc(text: string, defaults: ChatDefaults): ChatDoc {
           totalTokens: Number(raw.usage.totalTokens) || 0,
         }
       : undefined;
-  if (usage && typeof raw.usage.cost === 'number') usage.cost = raw.usage.cost;
+  if (usage && typeof raw.usage?.cost === 'number') usage.cost = raw.usage.cost;
 
   const doc: ChatDoc = {
     version: 2,
@@ -198,17 +223,18 @@ export function parseDoc(text: string, defaults: ChatDefaults): ChatDoc {
     model: typeof raw.model === 'string' ? raw.model : '',
     systemPrompt: typeof raw.systemPrompt === 'string' ? raw.systemPrompt : base.systemPrompt,
     systemPromptFile: typeof raw.systemPromptFile === 'string' && raw.systemPromptFile ? raw.systemPromptFile : undefined,
-    spellLang: ['auto', 'off', 'es', 'en'].includes(raw.spellLang) ? raw.spellLang : undefined,
+    spellLang: typeof raw.spellLang === 'string' && ['auto', 'off', 'es', 'en'].includes(raw.spellLang)
+      ? raw.spellLang as ChatDoc['spellLang'] : undefined,
     params,
     summary,
     usage,
     messages: Array.isArray(raw.messages)
-      ? raw.messages
+      ? (raw.messages as RawMessage[])
           // We never persist 'system' messages (the system prompt lives separately). Filtering them
           // preserves the invariant that webview indices == doc.messages indices.
-          .filter((m: any) => m && typeof m.content === 'string' && typeof m.role === 'string' && m.role !== 'system')
-          .map((m: any) => {
-            const msg: ChatMessage = { role: m.role, content: m.content };
+          .filter((m) => !!m && typeof m.content === 'string' && typeof m.role === 'string' && m.role !== 'system')
+          .map((m) => {
+            const msg: ChatMessage = { role: m.role as ChatMessage['role'], content: m.content as string };
             if (typeof m.id === 'string') msg.id = m.id;
             if (typeof m.ts === 'string') msg.ts = m.ts;
             if (m.usage && typeof m.usage === 'object') {
@@ -221,19 +247,19 @@ export function parseDoc(text: string, defaults: ChatDefaults): ChatDoc {
             }
             if (typeof m.thinking === 'string' && m.thinking) msg.thinking = m.thinking;
             if (Array.isArray(m.toolCalls)) {
-              msg.toolCalls = m.toolCalls
-                .filter((t: any) => t && typeof t.name === 'string')
-                .map((t: any) => ({ id: String(t.id ?? ''), name: t.name, arguments: String(t.arguments ?? '{}') }));
+              msg.toolCalls = (m.toolCalls as RawToolCall[])
+                .filter((t) => !!t && typeof t.name === 'string')
+                .map((t) => ({ id: String(t.id ?? ''), name: t.name as string, arguments: String(t.arguments ?? '{}') }));
             }
             if (typeof m.toolCallId === 'string') msg.toolCallId = m.toolCallId;
             if (typeof m.toolName === 'string') msg.toolName = m.toolName;
             const atts = parseAttachments(m.attachments);
             if (atts.length) msg.attachments = atts;
             if (Array.isArray(m.variants)) {
-              const variants = m.variants
-                .filter((v: any) => v && typeof v.content === 'string')
-                .map((v: any) => {
-                  const o: ChatVariant = { content: v.content };
+              const variants = (m.variants as RawVariant[])
+                .filter((v) => !!v && typeof v.content === 'string')
+                .map((v) => {
+                  const o: ChatVariant = { content: v.content as string };
                   if (typeof v.thinking === 'string' && v.thinking) o.thinking = v.thinking;
                   if (v.usage && typeof v.usage === 'object') {
                     o.usage = {

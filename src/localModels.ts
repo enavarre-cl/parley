@@ -4,11 +4,12 @@ import { setManagedOllamaBaseUrl } from './providers';
 import { OllamaManager } from './ollama/manager';
 import { DownloadManager } from './ollama/downloads';
 import { ModelCardCache } from './ollama/cards';
-import { ModelsTreeProvider, Section } from './modelsView';
+import { ModelsTreeProvider, ModelsTreeItem, Section } from './modelsView';
 import { ModelsPanel } from './modelsPanel';
 import { remove as removeModel } from './ollama/registry';
 import { openVoicesPanel } from './voicesPanel';
 import { errMsg } from './chatHelpers';
+import { ChatPatch } from './applyPatch';
 import { removePiperVoice } from './piperVoices';
 import { PiperManager } from './piper/manager';
 import { SpellWordsStore } from './spellWords';
@@ -25,7 +26,7 @@ export interface LocalModelsDeps {
   piper: PiperManager;
   spellWords: SpellWordsStore;
   voicesChanged: vscode.EventEmitter<void>;
-  getActiveApply: () => ((patch: any) => Promise<void>) | undefined;
+  getActiveApply: () => ((patch: ChatPatch) => Promise<void>) | undefined;
 }
 
 /** Local models (managed Ollama + explorer), TTS/engine commands, and their tree views. */
@@ -99,19 +100,19 @@ export function registerLocalModels(context: vscode.ExtensionContext, deps: Loca
     vscode.window.registerTreeDataProvider('parley.voices', treeVoices),
     vscode.window.registerTreeDataProvider('parley.dictionary', treeDict),
     vscode.commands.registerCommand('parley.models.add', () => ModelsPanel.show(context, ollama, downloads, cards, panelHooks)),
-    vscode.commands.registerCommand('parley.models.openModelFromDownload', (item: any) => {
+    vscode.commands.registerCommand('parley.models.openModelFromDownload', (item: ModelsTreeItem) => {
       const modelId = item?.download?.modelId;
       if (!modelId) return;
       ModelsPanel.show(context, ollama, downloads, cards, panelHooks);
       ModelsPanel.revealModel(modelId);
     }),
-    vscode.commands.registerCommand('parley.models.cancelDownload', (item: any) => {
+    vscode.commands.registerCommand('parley.models.cancelDownload', (item: ModelsTreeItem) => {
       if (item?.download) { cards.remove(item.download.modelId); downloads.cancel(item.download.id); }
     }),
-    vscode.commands.registerCommand('parley.models.retryDownload', (item: any) => {
+    vscode.commands.registerCommand('parley.models.retryDownload', (item: ModelsTreeItem) => {
       if (item?.download?.id) downloads.retry(item.download.id);
     }),
-    vscode.commands.registerCommand('parley.models.removeDownload', (item: any) => {
+    vscode.commands.registerCommand('parley.models.removeDownload', (item: ModelsTreeItem) => {
       if (item?.download) { cards.remove(item.download.modelId); downloads.remove(item.download.id); }
     }),
     vscode.commands.registerCommand('parley.models.clearDownloads', () => downloads.clearFinished()),
@@ -130,7 +131,7 @@ export function registerLocalModels(context: vscode.ExtensionContext, deps: Loca
       } catch (e) { vscode.window.showErrorMessage(`Piper: ${errMsg(e)}`); }
     }),
     vscode.commands.registerCommand('parley.tts.stopServer', () => piper.stopServer()),
-    vscode.commands.registerCommand('parley.tts.removeVoice', async (item: any) => {
+    vscode.commands.registerCommand('parley.tts.removeVoice', async (item: ModelsTreeItem) => {
       const id = item?.word; // the voice node carries its id in `word`
       if (typeof id !== 'string') return;
       const yes = tr('Delete');
@@ -140,8 +141,8 @@ export function registerLocalModels(context: vscode.ExtensionContext, deps: Loca
       refreshTrees();
       voicesChanged.fire();
     }),
-    vscode.commands.registerCommand('parley.engine.install', (item: any) => runEngineTask(item?.word)),
-    vscode.commands.registerCommand('parley.engine.delete', async (item: any) => {
+    vscode.commands.registerCommand('parley.engine.install', (item: ModelsTreeItem) => { if (item?.word) return runEngineTask(item.word); }),
+    vscode.commands.registerCommand('parley.engine.delete', async (item: ModelsTreeItem) => {
       const which = item?.word;
       if (which !== 'ollama' && which !== 'piper') return;
       const name = which === 'ollama' ? 'Ollama' : 'Piper';
@@ -152,7 +153,7 @@ export function registerLocalModels(context: vscode.ExtensionContext, deps: Loca
     }),
     vscode.commands.registerCommand('parley.models.startServer', async () => { await needServer(); }),
     vscode.commands.registerCommand('parley.models.stopServer', () => { ollama.stop(); }),
-    vscode.commands.registerCommand('parley.models.deleteModel', async (item: any) => {
+    vscode.commands.registerCommand('parley.models.deleteModel', async (item: ModelsTreeItem) => {
       const name = item?.model?.name; const baseUrl = ollama.baseUrl();
       if (!name || !baseUrl) return;
       const ok = await vscode.window.showWarningMessage(`${tr('Delete the model')} ${name}?`, { modal: true }, tr('Delete'));
@@ -160,7 +161,7 @@ export function registerLocalModels(context: vscode.ExtensionContext, deps: Loca
       try { await removeModel(baseUrl, name); refreshTrees(); }
       catch (e) { vscode.window.showErrorMessage(`${tr('Could not delete: ')}${errMsg(e)}`); }
     }),
-    vscode.commands.registerCommand('parley.models.openLocalModel', (item: any) => {
+    vscode.commands.registerCommand('parley.models.openLocalModel', (item: ModelsTreeItem) => {
       const id = localModelHfId(item?.model?.name);
       if (!id) { vscode.window.showInformationMessage(tr('This model is not from Hugging Face.')); return; }
       ModelsPanel.show(context, ollama, downloads, cards, panelHooks);

@@ -9,7 +9,7 @@ import {
 } from './chatDocument';
 import { renderWebviewHtml } from './webviewHtml';
 import { AttachmentStore } from './attachmentStore';
-import { applyPatch } from './applyPatch';
+import { applyPatch, ChatPatch } from './applyPatch';
 import { runInference as runInferenceImpl } from './inference';
 import { routeMessage } from './messageRouter';
 import { makeChatOps } from './chatOps';
@@ -137,7 +137,7 @@ async function createNewChat(): Promise<void> {
 class ChatEditorProvider implements vscode.CustomTextEditorProvider {
   static readonly viewType = 'parley.editor';
   /** Applier for the focused chat: the models view uses it to "use this model". */
-  static activeApply: ((patch: any) => Promise<void>) | undefined;
+  static activeApply: ((patch: ChatPatch) => Promise<void>) | undefined;
 
   constructor(
     private readonly context: vscode.ExtensionContext,
