@@ -12,7 +12,7 @@
 
 ---
 
-## 📋 Inventario completo (67 hallazgos · 10 ✅ · 57 ⬜)
+## 📋 Inventario completo (67 hallazgos · 55 ✅ corregidos · 6 🔎 revisados/anotados · 3 ⬜ deuda diferida)
 
 > ID estable por subsistema. ✅ = corregido y commiteado · ⬜ = pendiente. Detalle de cada uno en
 > su sección. Severidad: 🔴 crítico · 🟠 alta · 🟡 media · ⚪ baja/convención.
@@ -137,7 +137,7 @@ Tres cosas que dije en auditorías previas de esta sesión estaban **mal**. Las 
 - **✅ [Alta] BUG `markdown.js:39,52` — CORREGIDO** — placeholder de code-spans pasa de ` dígito ` a ` dígito ` (NUL, jamás en prosa) → "entre 0 y 1 hay `x`" ya no corrompe los números ni emite `<code>undefined</code>`. (verificado)
 - **✅ [Media] BUG `markdown.js:130-141` (W3) — CORREGIDO** — renderer de listas con anidación por indentación (pila de ul/ol); la jerarquía se conserva. (verificado: plana, anidada, mixta)
 - **✅ [Media] BUG `mermaid.js:55` (W4) — CORREGIDO** — tras `await mermaid.render` se chequea `el.isConnected`: si un re-render desconectó el nodo, se omite el montaje (el nodo de reemplazo, re-marcado pending, se procesa en la siguiente pasada). Ya no "desaparecen" diagramas.
-- **[Media] CONVENCIÓN `conversation.js` (477 líneas)** — **God-view**: render + estado de streaming + `stableSplit` + panels + editor de summary (≈30 líneas duplicadas de `message.js`) + export con **CSS embebido en JS** (M9). Debe partirse (N1/N2). Hay además **dependencia circular** `conversation.js ↔ message.js` (M7).
+- **⬜ DEUDA DIFERIDA (W5) — `conversation.js` (477 líneas) — God-view**: render + estado de streaming + `stableSplit` + panels + editor de summary (≈30 líneas duplicadas de `message.js`) + export con **CSS embebido en JS** (M9). Debe partirse (N1/N2) en `chat/stream.js` · `chat/tools.js` · `chat/export.js` · `chat/summary.js`, dejando `conversation.js` como orquestador. Refactor grande del webview con riesgo de regresión que requiere **probar la app** (no hay tests de webview) — diferido a una sesión con verificación manual. Dependencia circular `conversation.js ↔ message.js` (M7) a resolver en el mismo corte.
 - **✅ [Baja] BUG `core/dom.js:5` (W6) — CORREGIDO** — `escapeHtml(String(s))`: un valor no-string ya no rompe el render.
 - **✅ [Baja] BUG `mermaid.js:179` (W7) — CORREGIDO** — UTF-8→base64 con `TextEncoder` en chunks (sin `unescape` deprecado, sin overflow con SVG grande).
 
@@ -184,7 +184,7 @@ Tres cosas que dije en auditorías previas de esta sesión estaban **mal**. Las 
 
 ## Transversales
 
-- **`any` en lógica interna** (no en la capa de JSON externo): ~185 ocurrencias, con focos en `localModels.ts`, `mcp.ts`, `chatDocument.ts`, `inference.ts`, `attachmentStore.ts`, `ttsBackend.ts`. Viola C2/C3. ESLint lo permite a propósito, pero el estándar pide `unknown`+narrowing fuera de la frontera.
+- **⬜ DEUDA DIFERIDA — `any` en lógica interna (X1 + P12)**: ~185 ocurrencias (`localModels.ts`, `mcp.ts`, `chatDocument.ts`, `inference.ts`, `attachmentStore.ts`, `ttsBackend.ts`, bodies de request en providers). Tipar a `unknown`+narrowing / tipos propios. Mecánico, bajo riesgo, bajo valor; ESLint lo permite a propósito. Pendiente para una pasada dedicada.
 - **6 archivos en 400–500 líneas** (M2): `conversation.js` (god-view), `piper/manager.ts`, `extension.ts`, `messageRouter.ts`, `models.js`, `panels/config.js`.
 - **✅ `catch` vacíos (X3) — CORREGIDO** — comentados como best-effort (tts logging/audio, pointer capture).
 - **🔎 Higiene (X4) — decisión del usuario** — `.webview-backup/` (gitignored) y `plan-*.md` (no trackeados) no afectan el repo ni el paquete; son archivos locales tuyos, no los borro sin permiso.
