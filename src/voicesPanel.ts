@@ -65,7 +65,7 @@ export function openVoicesPanel(
 
   const send = () => panel.webview.postMessage({ type: 'voices', voices: voicesState(voicesDir) });
 
-  panel.webview.onDidReceiveMessage(async (m: any) => {
+  panel.webview.onDidReceiveMessage(async (m: { type?: string; id?: string }) => {
     if (m?.type === 'ready') { send(); return; }
     if (m?.type === 'remove' && typeof m.id === 'string') {
       removePiperVoice(voicesDir, m.id);

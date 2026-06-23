@@ -49,7 +49,7 @@ export function openDictionaryPanel(context: vscode.ExtensionContext, store: Spe
 
   const send = async () => panel.webview.postMessage({ type: 'words', words: await store.list(lang) });
   const sub = store.onDidChange(() => { void send(); });
-  panel.webview.onDidReceiveMessage(async (m: any) => {
+  panel.webview.onDidReceiveMessage(async (m: { type?: string; word?: string }) => {
     if (m?.type === 'ready') await send();
     else if (m?.type === 'add' && typeof m.word === 'string') await store.add(lang, m.word);
     else if (m?.type === 'remove' && typeof m.word === 'string') await store.remove(lang, m.word);

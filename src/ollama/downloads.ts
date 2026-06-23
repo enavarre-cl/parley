@@ -70,7 +70,7 @@ export class DownloadManager {
     for (const it of this.storage.get<DownloadItem[]>(STORAGE_KEY, [])) {
       if (!it.mode) {
         // Migrate items persisted before the pull/import refactor (had a single `importModel` URL).
-        const legacy = (it as any).importModel as string | undefined;
+        const legacy = (it as { importModel?: string }).importModel;
         it.mode = legacy ? 'import' : 'pull';
         if (legacy && !it.importPaths) {
           const m = legacy.match(/\/resolve\/main\/(.+)$/);
@@ -168,7 +168,7 @@ export class DownloadManager {
   }
 
   /** Does this error look like an HF tag/manifest 400 (so an import fallback is worth trying)? */
-  private isTagError(e: any): boolean {
+  private isTagError(e: unknown): boolean {
     const m = String(errMsg(e));
     return /(?:^|\D)400(?:\D|$)/.test(m) || /tag .*not .*available/i.test(m);
   }

@@ -84,7 +84,7 @@ export function activate(context: vscode.ExtensionContext) {
       supportsMultipleEditorsPerDocument: false,
     }),
     vscode.commands.registerCommand('parley.new', () => createNewChat()),
-    vscode.commands.registerCommand('parley.spell.openDictionary', (item: any) => {
+    vscode.commands.registerCommand('parley.spell.openDictionary', (item: { word?: string } | undefined) => {
       const lang = item?.word === 'en' ? 'en' : 'es'; // the node carries the language in `word`
       openDictionaryPanel(context, spellWords, lang);
     }),
@@ -355,7 +355,7 @@ class ChatEditorProvider implements vscode.CustomTextEditorProvider {
     });
 
     // The models view can apply a provider+model to the currently focused chat.
-    const applyConfig = async (patch: any): Promise<void> => {
+    const applyConfig = async (patch: ChatPatch): Promise<void> => {
       if (busyRef.value) return;
       const doc = getDoc();
       if (!doc) return;

@@ -2,10 +2,10 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import { OllamaManager } from './ollama/manager';
-import { searchHF, modelFiles, readme, modelInfo, fetchModel, ollamaPullViable, OFFICIAL_ORG_NAMES } from './ollama/catalog';
+import { searchHF, modelFiles, readme, modelInfo, fetchModel, ollamaPullViable, OFFICIAL_ORG_NAMES, CatalogModel, SortMode } from './ollama/catalog';
 import { hfPullRef, formatBytes } from './ollama/parse';
 import { DownloadManager } from './ollama/downloads';
-import { ModelCardCache } from './ollama/cards';
+import { ModelCardCache, ModelCard } from './ollama/cards';
 import { tr, resolvedLang, activeBundle } from './i18n';
 import { makeNonce, errMsg } from './chatHelpers';
 
@@ -19,10 +19,29 @@ export interface ModelsPanelHooks {
 /** Free space (bytes) on the volume containing `p`, or 0 if it cannot be determined. */
 function freeSpace(p: string): number {
   try {
-    const st: any = (fs as any).statfsSync?.(p);
+    // fs.statfsSync exists at runtime (Node ≥18) but may be absent from the @types/node in use.
+    const statfsSync = (fs as { statfsSync?: (p: string) => { bavail?: number; bsize?: number } }).statfsSync;
+    const st = statfsSync?.(p);
     if (st && typeof st.bavail === 'number' && typeof st.bsize === 'number') return st.bavail * st.bsize;
   } catch { /* not available */ }
   return 0;
+}
+
+/** A message sent from the models-panel webview to the host (all payload fields re-validated). */
+interface ModelsPanelMessage {
+  type: string;
+  limit?: number;
+  query?: string;
+  author?: string;
+  sort?: SortMode;
+  id?: string;
+  model?: CatalogModel;
+  quant?: string;
+  size?: number;
+  pullable?: boolean;
+  path?: string;
+  shards?: string[];
+  name?: string;
 }
 
 export class ModelsPanel {
@@ -61,7 +80,7 @@ export class ModelsPanel {
     panel.onDidDispose(() => this.dispose(), null, this.disposables);
   }
 
-  private post(msg: any): void { void this.panel.webview.postMessage(msg); }
+  private post(msg: Record<string, unknown>): void { void this.panel.webview.postMessage(msg); }
 
   /** Opens a model card WITHOUT changing the search: uses the sidecar if present, otherwise fetches from HF. */
   revealModelImpl(modelId: string): void {
@@ -98,7 +117,7 @@ export class ModelsPanel {
     });
   }
 
-  private async onMessage(msg: any): Promise<void> {
+  private async onMessage(msg: ModelsPanelMessage): Promise<void> {
     try {
       switch (msg?.type) {
         case 'search': {
@@ -110,27 +129,28 @@ export class ModelsPanel {
           break;
         }
         case 'detail': {
+          const detailId = msg.id ?? '';
           const [files, md, info] = await Promise.all([
-            modelFiles(msg.id).catch(() => []),
-            readme(msg.id).catch(() => ''),
-            modelInfo(msg.id).catch(() => ({ arch: '', params: '' })),
+            modelFiles(detailId).catch(() => []),
+            readme(detailId).catch(() => ''),
+            modelInfo(detailId).catch(() => ({ arch: '', params: '' })),
           ]);
-          let payload: any = { files, readme: md, info };
+          let payload: ModelCard = { files, readme: md, info };
           if (!files.length && !md && !info.arch) {
             // HF did not respond → use the locally cached card (offline sidecar), if present.
-            const cached = this.cards.load(msg.id);
+            const cached = this.cards.load(msg.id ?? '');
             if (cached) payload = cached;
           } else {
             // Save the FULL card (with the model header) to avoid re-querying HF.
-            this.cards.save(msg.id, { model: msg.model, files, readme: md, info });
+            this.cards.save(msg.id ?? '', { model: msg.model, files, readme: md, info });
           }
           this.post({ type: 'detail', id: msg.id, ...payload });
           break;
         }
-        case 'pull': await this.doPull(msg.id, msg.quant, msg.size || 0, msg.pullable !== false, msg.path || '', Array.isArray(msg.shards) ? msg.shards : []); break;
+        case 'pull': await this.doPull(msg.id ?? '', msg.quant ?? '', msg.size || 0, msg.pullable !== false, msg.path || '', Array.isArray(msg.shards) ? msg.shards : []); break;
         case 'cancelDownload': if (msg.id) { const d = this.downloads.get(msg.id); if (d) this.cards.remove(d.modelId); this.downloads.cancel(msg.id); } break;
         case 'retryDownload': if (msg.id) this.downloads.retry(msg.id); break;
-        case 'useModel': await this.useModel(msg.name); break;
+        case 'useModel': await this.useModel(msg.name ?? ''); break;
       }
     } catch (e) {
       this.post({ type: 'error', message: errMsg(e) });

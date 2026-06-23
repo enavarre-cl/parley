@@ -14,12 +14,12 @@ export const PROVIDER_IDS = ['openai', 'ollama', 'gemini', 'anthropic', 'openrou
 export type ProviderId = (typeof PROVIDER_IDS)[number];
 
 /** Type guard for a valid backend id. */
-export function isProviderId(v: any): v is ProviderId {
-  return PROVIDER_IDS.includes(v);
+export function isProviderId(v: unknown): v is ProviderId {
+  return PROVIDER_IDS.includes(v as ProviderId);
 }
 
 /** Normalizes a value to a valid backend id (defaults to 'openai'). */
-export function validateProvider(v: any): ProviderId {
+export function validateProvider(v: unknown): ProviderId {
   return isProviderId(v) ? v : 'openai';
 }
 

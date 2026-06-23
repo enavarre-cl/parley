@@ -18,7 +18,7 @@ export interface Attachment {
 export interface ToolSchema {
   name: string;
   description?: string;
-  parameters: any; // JSON Schema
+  parameters: Record<string, unknown>; // JSON Schema
 }
 
 export interface ToolCall {

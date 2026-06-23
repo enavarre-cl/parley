@@ -49,10 +49,10 @@ export function isHiddenToolMsg(m: ChatMessage): boolean {
 }
 
 /** Validates and limits the attachments arriving from the webview. */
-export function sanitizeAttachments(input: any): { kind: 'image' | 'text' | 'document'; name: string; mime: string; data: string }[] {
+export function sanitizeAttachments(input: unknown): { kind: 'image' | 'text' | 'document'; name: string; mime: string; data: string }[] {
   if (!Array.isArray(input)) return [];
   const out: { kind: 'image' | 'text' | 'document'; name: string; mime: string; data: string }[] = [];
-  for (const a of input.slice(0, 10)) {
+  for (const a of (input as { kind?: unknown; name?: unknown; mime?: unknown; data?: unknown }[]).slice(0, 10)) {
     if (!a || (a.kind !== 'image' && a.kind !== 'text' && a.kind !== 'document')) continue;
     if (typeof a.data !== 'string' || !a.data) continue;
     out.push({

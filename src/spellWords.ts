@@ -8,8 +8,10 @@ export const SPELL_LANG_NAMES: Record<SpellLang, string> = {
 };
 export type SpellWordsMap = Record<SpellLang, string[]>;
 
-function cleanList(v: any): string[] {
-  return Array.isArray(v) ? v.filter((s) => typeof s === 'string' && s.trim()).map((s: string) => s.trim()) : [];
+function cleanList(v: unknown): string[] {
+  return Array.isArray(v)
+    ? (v as unknown[]).filter((s): s is string => typeof s === 'string' && !!s.trim()).map((s) => s.trim())
+    : [];
 }
 
 /**
