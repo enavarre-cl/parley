@@ -144,7 +144,8 @@ export async function runInference(
       // model stops requesting tools or the user presses Stop (the AbortController breaks it).
       const cfgIters = vscode.workspace.getConfiguration('parley').get<number>('tools.maxIterations', 8);
       const MAX_ITERS = Number.isFinite(cfgIters) && cfgIters >= 0 ? Math.floor(cfgIters) : 8;
-      for (let iter = 0; MAX_ITERS === 0 || iter < MAX_ITERS; iter++) {
+      const HARD_ITER_CAP = 100; // backstop even when the user sets 0 (unlimited): a model stuck in a
+      for (let iter = 0; (MAX_ITERS === 0 || iter < MAX_ITERS) && iter < HARD_ITER_CAP; iter++) { // tool loop won't run away on cost
         if (ac.signal.aborted) { aborted = true; break; }
         const id = `m_${Date.now().toString(36)}_${iter}`;
         webview.postMessage({ type: 'streamStart', id });
@@ -180,13 +181,20 @@ export async function runInference(
         // Results are collected in request order to keep tool_result ↔ tool_call pairing intact.
         const toolResults = await Promise.all(res.toolCalls.map(async (tc): Promise<{ tc: typeof tc; out: string }> => {
           let args: any = {};
-          try { args = JSON.parse(tc.arguments || '{}'); } catch { /* empty args */ }
+          let parseError = false;
+          try { args = JSON.parse(tc.arguments || '{}'); } catch { parseError = true; }
           webview.postMessage({ type: 'toolCall', name: tc.name, args: tc.arguments || '' });
           let out: string;
-          try {
-            out = await toolHub.call(tc.name, args, ac.signal); // Stop cancels in-flight tools too
-          } catch (e: any) {
-            out = 'Error: ' + (e?.message ?? e);
+          if (parseError) {
+            // Tell the model its arguments were invalid JSON so it can retry, instead of silently
+            // running the tool with {} (which masks the real problem).
+            out = `Error: tool arguments were not valid JSON: ${(tc.arguments || '').slice(0, 200)}`;
+          } else {
+            try {
+              out = await toolHub.call(tc.name, args, ac.signal); // Stop cancels in-flight tools too
+            } catch (e: any) {
+              out = 'Error: ' + (e?.message ?? e);
+            }
           }
           webview.postMessage({ type: 'toolResult', name: tc.name, content: out });
           return { tc, out };

@@ -33,7 +33,7 @@
 - ✅ A1 🟠 abort persiste assistant+toolCalls sin respuesta · ✅ A2 🟠 tools en paralelo · ⬜ A3 🟡 fs_search síncrono bloquea event loop
 - **🟠 Altas: COMPLETAS** (P3, A1, A2, W2, H1, H4, L2, L3 + H3 reclasificado)
 - ✅ A4 🟡 mcp dispose zombie · ✅ A5 🟡 mcp ignora isError · ✅ A6 🟡 mcp buffer stdio acotado
-- ✅ A7 🟡 mcp servidor caído falla rápido · ⬜ A8 🟡 inference traga error de args JSON · ⬜ A9 ⚪ MAX_ITERS=0 sin tope · ✅ A10 ⚪ mcp captura stderr
+- ✅ A7 🟡 mcp servidor caído falla rápido · ✅ A8 🟡 inference reporta error de args JSON · ✅ A9 ⚪ MAX_ITERS=0 con tope duro 100 · ✅ A10 ⚪ mcp captura stderr
 
 **Webview**
 - ✅ W1 🟡 botón regenerar ausente tras tools (reportado) · ✅ W2 🟠 colisión placeholder code-span · ⬜ W3 🟡 listas anidadas se aplanan
@@ -124,8 +124,8 @@ Tres cosas que dije en auditorías previas de esta sesión estaban **mal**. Las 
 - **✅ [Media] BUG `mcp.ts:113` (A5) — CORREGIDO** — `callTool` respeta `isError`: prefija `Error:` para que el modelo distinga fallo de salida normal.
 - **✅ [Media] BUG `mcp.ts:60` (A6) — CORREGIDO** — buffer stdio acotado a 8MiB (evita OOM por línea sin newline).
 - **✅ [Media] BUG `mcp.ts` (A7) — CORREGIDO** — flag `alive` (false en exit/error): una request a un servidor muerto falla al instante en vez de esperar 30s.
-- **[Media] BUG `inference.ts:181`** — Args JSON malformados → **se traga el error y ejecuta con `args={}`** en vez de devolver un error al modelo para que se autocorrija.
-- **[Baja] BUG `inference.ts:147`** — `MAX_ITERS===0` (ilimitado) **sin tope de seguridad**: modelo en bucle de tools solo se corta por Stop manual → coste descontrolado.
+- **✅ [Media] BUG `inference.ts:181` (A8) — CORREGIDO** — args JSON inválidos devuelven un tool result de error al modelo (para que reintente) en vez de ejecutar con `{}`.
+- **✅ [Baja] BUG `inference.ts:147` (A9) — CORREGIDO** — `HARD_ITER_CAP=100` como backstop aun con `MAX_ITERS=0`: un bucle de tools desbocado no dispara coste infinito.
 - **✅ [Baja] BUG `mcp.ts:40` (A10) — CORREGIDO** — se conserva la cola (2KB) de stderr y se incluye en el error de exit.
 
 ## 🟠 Webview / render (`media/**`)
