@@ -15,8 +15,8 @@
 ## 📋 Inventario completo (74 hallazgos: 67 auditoría + W8 + 6 de la 2.ª pasada)
 
 > **Estado: 63 ✅ corregidos · 8 🔎 revisados/por-diseño · 3 ⬜ abiertos.**
-> Los 3 abiertos, sin esconderlos: **B4** (find/replace ocurrencia equivocada en URL/sintaxis — fix no trivial),
-> **models.js** (IIFE clásico, no partible sin correr la app), **~180 `any` de frontera** (ESLint los permite a propósito).
+> **B4 y models.js: cerrados.** Solo queda el `any` de **frontera** (json de API, mensajes webview, args de
+> comandos VS Code) que el propio `eslint.config.js` desactiva a propósito — ver X1.
 > ✅ = corregido y commiteado · 🔎 = revisado, no era bug / por diseño · ⬜ = abierto.
 > Severidad: 🔴 crítico · 🟠 alta · 🟡 media · ⚪ baja/convención.
 
@@ -54,11 +54,11 @@
 **i18n / CSS / transversal**
 - ✅ I1 🟡 claves UI traducidas (24×5) · ✅ I2 ⚪ Reset / center (americano) · ✅ I3 ⚪ 2 claves muertas eliminadas
 - ✅ S1 ⚪ colores con tokens de tema · ✅ S2 ⚪ badges consolidados · ✅ S3 ⚪ anillo de foco · ✅ S4 ⚪ override muerto quitado
-- 🔎 X1 🟡 `any`: internos tipados (errMsg/localModels); ~180 de frontera por diseño (ESLint lo permite) · ✅ X2 🟡 M2 5/6 archivos partidos (models.js IIFE diferido) · ✅ X3 ⚪ catch vacíos comentados · 🔎 X4 ⚪ higiene: archivos locales (tu decisión)
+- 🔎 X1 🟡 `any`: **internos eliminados** (22 catches→`unknown`+errMsg, stream data→`Buffer`, localModels; 182→155); los 155 restantes son frontera (json API, msg webview, args cmd) que ESLint permite a propósito · ✅ X2 🟡 M2 **6/6** (models.js partido: modelsFormat.js + NUL limpiados) · ✅ X3 ⚪ catch vacíos comentados · 🔎 X4 ⚪ higiene: archivos locales (tu decisión)
 
 **Segunda pasada de caza (B1–B6, post-auditoría)**
 - ✅ B1/W9 🟠 streaming rompía bloques multilínea · ✅ B2 🟠 negrita con `*` interno corrompía · ✅ B3 🟡 celdas de tabla con `\|`/code-span
-- ✅ B5 🟠 deleteVariant variante equivocada · ✅ B6 🟠 turno con answer vacío deja cadena de tools colgante · ⬜ B4 🟡 KNOWN ISSUE: find/replace ocurrencia equivocada (URL/sintaxis)
+- ✅ B5 🟠 deleteVariant variante equivocada · ✅ B6 🟠 turno con answer vacío deja cadena de tools colgante · ✅ B4 🟡 find/replace salta ocurrencias dentro de URLs de markdown
 
 ---
 
@@ -227,7 +227,7 @@ Tras la primera auditoría, una caza adicional enfocada en correctitud encontró
 - **✅ B5 — `deleteVariant`** mostraba la variante equivocada al borrar una con índice < activa. {`ab4cefc`}
 - **✅ B6 — Turno con answer vacío tras tools** dejaba la cadena de tools colgante en disco; ahora se
   persiste un assistant de cierre (`usedTools`). {`aafab77`}
-- **⬜ B4 — KNOWN ISSUE: Find/Replace puede reemplazar la ocurrencia equivocada** cuando el término
+- **✅ B4 — CORREGIDO: Find/Replace salta ocurrencias dentro de URLs** cuando el término
   aparece dentro de una URL o sintaxis markdown (la cuenta de ocurrencias del webview = `<mark>`
   visibles; la del host = ocurrencias en el source crudo; divergen si una ocurrencia del source no
   produce un `<mark>` visible, p. ej. dentro de un `href`). `media/features/find.js:179-191` lo asume
