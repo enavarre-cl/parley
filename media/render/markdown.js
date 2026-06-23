@@ -50,8 +50,11 @@ function inlineMd(text) {
     const href = scheme && !/^(https?|mailto)$/i.test(scheme[1]) ? '#' : url; // url is already escaped
     return '<a href="' + href + '">' + label + '</a>';
   });
-  t = t.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-  t = t.replace(/__([^_]+)__/g, '<strong>$1</strong>');
+  // Non-greedy so a bold span can contain a lone `*`/`_` (math, globs: `**2 * 3 = 6**`). The old
+  // `[^*]+` stopped at the interior `*`, leaving a literal `**` that the single-`*` italic rule below
+  // then mangled into a spurious `<em>`. Bounded to one paragraph (inlineMd runs per block).
+  t = t.replace(/\*\*([\s\S]+?)\*\*/g, '<strong>$1</strong>');
+  t = t.replace(/__([\s\S]+?)__/g, '<strong>$1</strong>');
   t = t.replace(/(^|[^*])\*([^*\n]+)\*/g, '$1<em>$2</em>');
   t = t.replace(/(^|[\s(])_([^_\n]+)_(?=[\s.,!?)]|$)/g, '$1<em>$2</em>');
   t = t.replace(/~~([^~]+)~~/g, '<del>$1</del>');
@@ -60,7 +63,20 @@ function inlineMd(text) {
 }
 
 function splitRow(line) {
-  return line.replace(/^\s*\|?/, '').replace(/\|?\s*$/, '').split('|').map((c) => c.trim());
+  // Split on cell pipes, but NOT on an escaped `\|` (→ literal pipe) or a `|` inside a `code` span.
+  // A raw `.split('|')` mis-counted cells and split code spans / leaked the backslash.
+  const s = line.replace(/^\s*\|?/, '').replace(/\|?\s*$/, '');
+  const cells = [];
+  let cur = '', inCode = false;
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+    if (ch === '\\' && s[i + 1] === '|') { cur += '|'; i++; continue; } // escaped pipe → literal
+    if (ch === '`') inCode = !inCode;
+    if (ch === '|' && !inCode) { cells.push(cur.trim()); cur = ''; continue; }
+    cur += ch;
+  }
+  cells.push(cur.trim());
+  return cells;
 }
 
 // Block-level Markdown renderer (headings, lists, blockquotes, tables, code…).
