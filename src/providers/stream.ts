@@ -1,5 +1,10 @@
-/** Defensive cap: if the backend sends a "line" without `\n` that grows indefinitely, avoids exhausting memory. */
-const MAX_LINE_BUFFER = 4 * 1024 * 1024;
+/**
+ * Defensive cap: if the backend sends a "line" without `\n` that grows indefinitely, avoids
+ * exhausting memory. Sized to fit a legitimately large single SSE line — an inline base64 image
+ * from an image-output model can be several MB — so we don't truncate (and corrupt) valid content
+ * at the old 4MiB; only a truly runaway stream is clipped.
+ */
+const MAX_LINE_BUFFER = 64 * 1024 * 1024;
 
 /**
  * Guarantees that a tool-call's arguments are VALID JSON. Models sometimes deliver them

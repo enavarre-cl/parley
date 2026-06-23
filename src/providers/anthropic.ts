@@ -108,10 +108,11 @@ export class AnthropicProvider implements LLMProvider {
     }
 
     if (p.thinking) {
-      // With thinking: budget < max_tokens, and temperature must be 1 (no top_p/top_k).
+      // With thinking: budget < max_tokens, and temperature MUST be 1 (top_p/top_k not allowed).
       const budget = Math.max(1024, Math.min(maxTokens - 512, 4096));
       body.max_tokens = Math.max(maxTokens, budget + 512);
       body.thinking = { type: 'enabled', budget_tokens: budget };
+      body.temperature = 1; // required by the API when thinking is enabled (was only in the comment)
     } else {
       if (p.temperature !== undefined) body.temperature = p.temperature;
       if (p.topP !== undefined) body.top_p = p.topP;

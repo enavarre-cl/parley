@@ -25,9 +25,9 @@
 
 **Providers**
 - ✅ P1 stream flush final · ✅ P2 stream reader release · ✅ P3 🟠 AbortSignal chequeado en read-loop
-- ✅ P4 🟡 timeout de red · ⬜ P5 🟡 tool-call id sin índice (openai:229) · ⬜ P6 🟡 isImageOutputModel demasiado amplio
-- ⬜ P7 🟡 anthropic temperature:1 no fijado · ⬜ P8 🟡 defensive cap trunca línea grande · ⬜ P9 🟡 gemini functionResponse sin validar toolName
-- ⬜ P10 ⚪ multiple tool_calls sin index (openai:217) · ⬜ P11 ⚪ baseUrl sin validar (4 providers) · ⬜ P12 🟡 `any` en bodies de request
+- ✅ P4 🟡 timeout de red · ✅ P5 🟡 tool-call id con índice · ✅ P6 🟡 isImageOutputModel ajustado
+- ✅ P7 🟡 anthropic temperature:1 fijado · ✅ P8 🟡 defensive cap 64MiB · ⬜ P9 🟡 gemini functionResponse sin validar toolName
+- ✅ P10 ⚪ multiple tool_calls por id · ⬜ P11 ⚪ baseUrl sin validar (4 providers) · ⬜ P12 🟡 `any` en bodies de request
 
 **Loop agéntico / tools**
 - ✅ A1 🟠 abort persiste assistant+toolCalls sin respuesta · ✅ A2 🟠 tools en paralelo · ⬜ A3 🟡 fs_search síncrono bloquea event loop
@@ -106,12 +106,12 @@ Tres cosas que dije en auditorías previas de esta sesión estaban **mal**. Las 
 - **✅ [Alta] BUG `stream.ts:26-44` — CORREGIDO** — `readLines` envuelto en `try/finally` que llama `reader.cancel()` siempre (cierre normal, throw de `onLine`, abort) → libera la conexión y señala cancelación. 2 tests nuevos verifican que `cancel()` se llama en ambas rutas. (51/51)
 - **✅ [Alta] BUG `stream.ts` (P3) — CORREGIDO** — `readLines` acepta `signal`: un listener `abort` cancela el reader (desbloquea un `read()` pendiente) y se chequea `signal.aborted` antes/después de cada `read()`, lanzando para que el provider lo trate como abort. Los 4 providers pasan `cb.signal`. (verificado: aborta y libera incluso con reader que nunca termina)
 - **✅ [Media] BUG `request.ts:15` + `listModels` (P4) — CORREGIDO** — `postStream` usa `fetchWithHeadersTimeout` (60s para headers; el body streamed sigue ilimitado y respeta Stop). Los 4 `listModels` usan `AbortSignal.timeout(15s)`. Un backend que acepta y se queda mudo ya no cuelga la UI.
-- **[Media] BUG `openai.ts:229`** — IDs de tool-call sintéticos **sin índice** (`call_${name}`): dos llamadas a la misma tool sin `id` colisionan → tool results mal enrutados. Ollama/Gemini sí añaden índice; OpenAI no (inconsistencia).
-- **[Media] BUG `multimodal.ts:23`** — `isImageOutputModel` con regex `/…|image/i` es demasiado amplio: cualquier modelo con "image" en el id (visión, embeddings) se trata como image-output → se le quitan tools silenciosamente.
-- **[Media] BUG `anthropic.ts:110-119`** — Con thinking, la API exige `temperature:1` y el código **no lo fija** (el comentario dice que sí). El comentario miente respecto al código.
-- **[Media] BUG `stream.ts:36`** — El "defensive cap" `slice(-MAX)` **trunca por el medio** una línea legítima >4MiB (imagen base64 inline) → `JSON.parse` falla → se descarta.
+- **✅ [Media] BUG `openai.ts:229` (P5) — CORREGIDO** — el id sintético incluye la clave del acumulador (`call_<name>_<key>`): dos tools homónimas sin id ya no colisionan.
+- **✅ [Media] BUG `multimodal.ts:23` (P6) — CORREGIDO** — regex ajustado a patrones de generación (`nano-banana`, `flash-image`, `image-generation/preview`, `-image$`); ya no captura `image-input`/visión.
+- **✅ [Media] BUG `anthropic.ts:110-119` (P7) — CORREGIDO** — `body.temperature = 1` se fija explícitamente con thinking (antes solo estaba en el comentario).
+- **✅ [Media] BUG `stream.ts:36` (P8) — CORREGIDO** — cap subido de 4MiB a 64MiB: una imagen base64 inline ya no se trunca; solo se recorta un stream realmente desbocado.
 - **[Media] BUG `gemini.ts:69`** — `functionResponse` sin validar `toolName` ausente → Gemini 400. Sin validación de frontera (L4).
-- **[Baja] BUG `openai.ts:217`** — Múltiples tool_calls sin `index` caen todas en `0` → name/arguments concatenados de tools distintas.
+- **✅ [Baja] BUG `openai.ts:217` (P10) — CORREGIDO** — la clave del acumulador es `index` o, en su defecto, `id`: múltiples tool_calls completas en un delta ya no colapsan en slot 0.
 - **[Baja] BUG (4 providers)** — `baseUrl` de settings se concatena sin validar esquema/host y la API key viaja en headers → un `.chat` compartido con baseUrl malicioso podría exfiltrar la key.
 - **[Media] CONVENCIÓN (todos)** — `body: any`, `usage: any`, `parts: any[]` en cuerpos de request que el propio código construye (tipables). Viola C2/C3: `any` solo para JSON de entrada, no para lo que tú rellenas.
 

@@ -21,7 +21,10 @@ export function dataUrl(a: Attachment): string {
  * call time; a false positive just yields a clear API error (the modality is rejected).
  */
 export function isImageOutputModel(model: string): boolean {
-  return /nano-?banana|image/i.test(model || '');
+  // Match image-GENERATION ids, not any id containing "image" (which also hit vision / image-INPUT
+  // models like `gpt-4o-image-input`, wrongly stripping their tools). Covers `nano-banana`,
+  // `*-flash-image`, `*-image-generation`/`-preview`, and ids ending in `-image`.
+  return /nano-?banana|flash[-_]image|image[-_](generation|preview)|[-_]image$/i.test(model || '');
 }
 
 /** Parses a base64 data URL ("data:image/png;base64,XXXX") into {mime,data}, or null. */

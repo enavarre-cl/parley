@@ -146,7 +146,7 @@ export class OpenAIProvider implements LLMProvider {
     }, 'Backend');
     let answer = '';
     let thinking = '';
-    const toolAcc: Record<number, { id: string; name: string; arguments: string }> = {};
+    const toolAcc: Record<string, { id: string; name: string; arguments: string }> = {};
     let usage: any;
     const images: GenImage[] = [];
     const imageSeen = new Set<string>(); // dedup (a frame may repeat in delta + final message)
@@ -214,8 +214,10 @@ export class OpenAIProvider implements LLMProvider {
       // Accumulate tool_calls that arrive fragmented.
       if (Array.isArray(delta.tool_calls)) {
         for (const tc of delta.tool_calls) {
-          const i = typeof tc.index === 'number' ? tc.index : 0;
-          const e = (toolAcc[i] ??= { id: '', name: '', arguments: '' });
+          // Key by index when the server fragments; else by id so multiple complete tool_calls in
+          // one delta don't all collapse into slot 0 (P10).
+          const key = typeof tc.index === 'number' ? `i${tc.index}` : (tc.id || '0');
+          const e = (toolAcc[key] ??= { id: '', name: '', arguments: '' });
           if (tc.id) e.id = tc.id;
           if (tc.function?.name) e.name += tc.function.name;
           if (tc.function?.arguments) e.arguments += tc.function.arguments;
@@ -224,9 +226,10 @@ export class OpenAIProvider implements LLMProvider {
     }, cb.signal);
     splitter.flush();
 
-    const toolCalls = Object.values(toolAcc)
-      .filter((t) => t.name)
-      .map((t) => ({ id: t.id || `call_${t.name}`, name: t.name, arguments: safeToolArgs(t.arguments) }));
+    const toolCalls = Object.entries(toolAcc)
+      .filter(([, t]) => t.name)
+      // Synthetic id includes the accumulator key so two same-named tools without an id don't collide (P5).
+      .map(([key, t]) => ({ id: t.id || `call_${t.name}_${key}`, name: t.name, arguments: safeToolArgs(t.arguments) }));
 
     return {
       answer, thinking, usage,
