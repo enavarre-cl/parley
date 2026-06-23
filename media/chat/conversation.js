@@ -46,7 +46,11 @@ let toolsLive = []; // tool activity for the current turn
       // streamCommitLen advanced too far and the next char fell into the gap (a clipped first letter,
       // e.g. "Jenny" → "enny", until the final whole-text render).
       offset += line.length + (i < lines.length - 1 ? 1 : 0);
-      if (!inFence && /^\s*$/.test(line)) lastSafe = offset; // block boundary
+      // A blank line is a settled block boundary ONLY when a line follows it: committing a blank
+      // line that is currently the LAST line would freeze a not-yet-finished block (a table whose
+      // separator/rows haven't arrived, a multi-line list/blockquote) as separate one-line <p>s for
+      // the rest of the stream. Requiring a following line also keeps lastSafe ≤ text.length.
+      if (!inFence && /^\s*$/.test(line) && i < lines.length - 1) lastSafe = offset;
     }
     return lastSafe;
   }
