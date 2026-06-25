@@ -105,23 +105,60 @@
   }
 
   // README render: basic markdown preserving embedded HTML (HF mixes both).
-  function renderReadme(md) {
-    if (!md) return `<span class="mb-muted">${esc(t('No README'))}</span>`;
-    const blocks = [];
-    md = md.replace(/```[\s\S]*?```/g, (m) => { blocks.push(m); return `\u0000${blocks.length - 1}\u0000`; });
-    let html = md
+  // Inline Markdown (links, images, bold, inline code). Applied per line/cell.
+  function inlineMd(s) {
+    return s
       .replace(/!\[([^\]]*)\]\(([^)\s]+)[^)]*\)/g, '<img alt="$1" src="$2">')
       .replace(/\[([^\]]+)\]\(([^)\s]+)[^)]*\)/g, '<a href="$2">$1</a>')
-      .replace(/^######\s+(.+)$/gm, '<h6>$1</h6>')
-      .replace(/^#####\s+(.+)$/gm, '<h5>$1</h5>')
-      .replace(/^####\s+(.+)$/gm, '<h4>$1</h4>')
-      .replace(/^###\s+(.+)$/gm, '<h3>$1</h3>')
-      .replace(/^##\s+(.+)$/gm, '<h2>$1</h2>')
-      .replace(/^#\s+(.+)$/gm, '<h1>$1</h1>')
       .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
       .replace(/`([^`]+)`/g, '<code>$1</code>');
-    html = html.replace(/\u0000(\d+)\u0000/g, (m, i) => {
-      const code = (blocks[Number(i)] || '').replace(/^```\w*\n?/, '').replace(/```\s*$/, '');
+  }
+  // Cells of a Markdown table row (drops the leading/trailing pipe).
+  function tableCells(line) {
+    return line.replace(/^\s*\|/, '').replace(/\|\s*$/, '').split('|').map((c) => c.trim());
+  }
+  const isTableSep = (l) => l.includes('|') && /-/.test(l) && /^[\s|:-]+$/.test(l);
+
+  // Block-level Markdown: headings, lists, tables, code fences and paragraphs. (The chat's full
+  // renderer is an ES module; this browser is a classic script, so it carries its own small one.)
+  function renderReadme(md) {
+    if (!md) return `<span class="mb-muted">${esc(t('No README'))}</span>`;
+    const fences = [];
+    md = md.replace(/```[\s\S]*?```/g, (m) => { fences.push(m); return `@@CODE${fences.length - 1}@@`; });
+    const lines = md.split('\n');
+    const out = [];
+    let i = 0;
+    while (i < lines.length) {
+      const line = lines[i];
+      if (/^@@CODE\d+@@$/.test(line.trim())) { out.push(line.trim()); i++; continue; }
+      const h = /^(#{1,6})\s+(.+)$/.exec(line);
+      if (h) { out.push(`<h${h[1].length}>${inlineMd(h[2])}</h${h[1].length}>`); i++; continue; }
+      if (line.includes('|') && i + 1 < lines.length && isTableSep(lines[i + 1])) {
+        const head = tableCells(line); i += 2;
+        let html = '<table><thead><tr>' + head.map((c) => `<th>${inlineMd(c)}</th>`).join('') + '</tr></thead><tbody>';
+        while (i < lines.length && lines[i].includes('|')) {
+          html += '<tr>' + tableCells(lines[i]).map((c) => `<td>${inlineMd(c)}</td>`).join('') + '</tr>'; i++;
+        }
+        out.push(html + '</tbody></table>'); continue;
+      }
+      if (/^\s*[-*]\s+/.test(line)) {
+        const items = [];
+        while (i < lines.length && /^\s*[-*]\s+/.test(lines[i])) {
+          items.push(`<li>${inlineMd(lines[i].replace(/^\s*[-*]\s+/, ''))}</li>`); i++;
+        }
+        out.push(`<ul>${items.join('')}</ul>`); continue;
+      }
+      if (!line.trim()) { i++; continue; }
+      const para = [];
+      while (i < lines.length && lines[i].trim() && !/^#{1,6}\s/.test(lines[i]) && !/^\s*[-*]\s+/.test(lines[i])
+        && !/^@@CODE\d+@@$/.test(lines[i].trim())
+        && !(lines[i].includes('|') && i + 1 < lines.length && isTableSep(lines[i + 1]))) {
+        para.push(lines[i]); i++;
+      }
+      out.push(`<p>${inlineMd(para.join(' '))}</p>`);
+    }
+    let html = out.join('\n').replace(/@@CODE(\d+)@@/g, (m, n) => {
+      const code = (fences[Number(n)] || '').replace(/^```\w*\n?/, '').replace(/```\s*$/, '');
       return `<pre><code>${esc(code)}</code></pre>`;
     });
     return sanitizeHtml(html);
