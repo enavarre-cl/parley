@@ -1,8 +1,8 @@
 {
-  "name": "parley-io",
-  "displayName": "Parley.IO",
+  "name": "jotflow",
+  "displayName": "Jotflow",
   "description": "%ext.description%",
-  "version": "1.6.2",
+  "version": "2.0.0",
   "publisher": "enavarre",
   "license": "MIT",
   "engines": {
@@ -24,155 +24,155 @@
   "contributes": {
     "commands": [
       {
-        "command": "parley.new",
+        "command": "jotflow.new",
         "title": "%cmd.new.title%",
         "icon": "$(add)"
       },
       {
-        "command": "parley.setApiKey",
+        "command": "jotflow.setApiKey",
         "title": "%cmd.setApiKey.title%"
       },
       {
-        "command": "parley.models.add",
+        "command": "jotflow.models.add",
         "title": "%cmd.models.add.title%",
-        "category": "Parley",
+        "category": "Jotflow",
         "icon": "$(add)"
       },
       {
-        "command": "parley.models.refresh",
+        "command": "jotflow.models.refresh",
         "title": "%cmd.models.refresh.title%",
-        "category": "Parley",
+        "category": "Jotflow",
         "icon": "$(refresh)"
       },
       {
-        "command": "parley.models.startServer",
+        "command": "jotflow.models.startServer",
         "title": "%cmd.models.startServer.title%",
-        "category": "Parley",
+        "category": "Jotflow",
         "icon": "$(play)"
       },
       {
-        "command": "parley.models.stopServer",
+        "command": "jotflow.models.stopServer",
         "title": "%cmd.models.stopServer.title%",
-        "category": "Parley",
+        "category": "Jotflow",
         "icon": "$(debug-stop)"
       },
       {
-        "command": "parley.models.deleteModel",
+        "command": "jotflow.models.deleteModel",
         "title": "%cmd.models.deleteModel.title%",
-        "category": "Parley",
+        "category": "Jotflow",
         "icon": "$(close)"
       },
       {
-        "command": "parley.models.cancelDownload",
+        "command": "jotflow.models.cancelDownload",
         "title": "%cmd.models.cancelDownload.title%",
-        "category": "Parley",
+        "category": "Jotflow",
         "icon": "$(stop-circle)"
       },
       {
-        "command": "parley.models.retryDownload",
+        "command": "jotflow.models.retryDownload",
         "title": "%cmd.models.retryDownload.title%",
-        "category": "Parley",
+        "category": "Jotflow",
         "icon": "$(refresh)"
       },
       {
-        "command": "parley.models.removeDownload",
+        "command": "jotflow.models.removeDownload",
         "title": "%cmd.models.removeDownload.title%",
-        "category": "Parley",
+        "category": "Jotflow",
         "icon": "$(close)"
       },
       {
-        "command": "parley.models.clearDownloads",
+        "command": "jotflow.models.clearDownloads",
         "title": "%cmd.models.clearDownloads.title%",
-        "category": "Parley",
+        "category": "Jotflow",
         "icon": "$(clear-all)"
       },
       {
-        "command": "parley.models.openModelFromDownload",
+        "command": "jotflow.models.openModelFromDownload",
         "title": "%cmd.models.openModelFromDownload.title%",
-        "category": "Parley",
+        "category": "Jotflow",
         "icon": "$(go-to-file)"
       },
       {
-        "command": "parley.models.openLocalModel",
+        "command": "jotflow.models.openLocalModel",
         "title": "%cmd.models.openLocalModel.title%",
-        "category": "Parley"
+        "category": "Jotflow"
       },
       {
-        "command": "parley.compareVersion",
+        "command": "jotflow.compareVersion",
         "title": "%cmd.compareVersion.title%",
-        "category": "Parley",
+        "category": "Jotflow",
         "icon": "$(git-compare)"
       },
       {
-        "command": "parley.spell.openDictionary",
+        "command": "jotflow.spell.openDictionary",
         "title": "%cmd.spell.openDictionary.title%",
-        "category": "Parley"
+        "category": "Jotflow"
       },
       {
-        "command": "parley.tts.openVoices",
+        "command": "jotflow.tts.openVoices",
         "title": "%cmd.tts.openVoices.title%",
-        "category": "Parley",
+        "category": "Jotflow",
         "icon": "$(add)"
       },
       {
-        "command": "parley.tts.startServer",
+        "command": "jotflow.tts.startServer",
         "title": "%cmd.tts.startServer.title%",
-        "category": "Parley",
+        "category": "Jotflow",
         "icon": "$(play)"
       },
       {
-        "command": "parley.tts.stopServer",
+        "command": "jotflow.tts.stopServer",
         "title": "%cmd.tts.stopServer.title%",
-        "category": "Parley",
+        "category": "Jotflow",
         "icon": "$(debug-stop)"
       },
       {
-        "command": "parley.tts.removeVoice",
+        "command": "jotflow.tts.removeVoice",
         "title": "%cmd.tts.removeVoice.title%",
-        "category": "Parley",
+        "category": "Jotflow",
         "icon": "$(trash)"
       },
       {
-        "command": "parley.engine.install",
+        "command": "jotflow.engine.install",
         "title": "%cmd.engine.install.title%",
-        "category": "Parley",
+        "category": "Jotflow",
         "icon": "$(cloud-download)"
       },
       {
-        "command": "parley.engine.delete",
+        "command": "jotflow.engine.delete",
         "title": "%cmd.engine.delete.title%",
-        "category": "Parley",
+        "category": "Jotflow",
         "icon": "$(trash)"
       }
     ],
     "viewsContainers": {
       "activitybar": [
         {
-          "id": "parley",
-          "title": "Parley",
+          "id": "jotflow",
+          "title": "Jotflow",
           "icon": "media/icon.svg"
         }
       ]
     },
     "views": {
-      "parley": [
+      "jotflow": [
         {
-          "id": "parley.engines",
+          "id": "jotflow.engines",
           "name": "%view.engines.name%",
           "icon": "media/icon.svg"
         },
         {
-          "id": "parley.models",
+          "id": "jotflow.models",
           "name": "%view.models.name%",
           "icon": "media/icon.svg"
         },
         {
-          "id": "parley.voices",
+          "id": "jotflow.voices",
           "name": "%view.voices.name%",
           "icon": "media/icon.svg"
         },
         {
-          "id": "parley.dictionary",
+          "id": "jotflow.dictionary",
           "name": "%view.dictionary.name%",
           "icon": "media/icon.svg"
         }
@@ -181,146 +181,146 @@
     "menus": {
       "view/title": [
         {
-          "command": "parley.models.add",
-          "when": "view == parley.models",
+          "command": "jotflow.models.add",
+          "when": "view == jotflow.models",
           "group": "navigation@1"
         },
         {
-          "command": "parley.models.refresh",
-          "when": "view == parley.models",
+          "command": "jotflow.models.refresh",
+          "when": "view == jotflow.models",
           "group": "navigation@2"
         },
         {
-          "command": "parley.tts.openVoices",
-          "when": "view == parley.voices",
+          "command": "jotflow.tts.openVoices",
+          "when": "view == jotflow.voices",
           "group": "navigation"
         }
       ],
       "view/item/context": [
         {
-          "command": "parley.models.startServer",
-          "when": "view == parley.engines && viewItem == engine.ollama.stopped",
+          "command": "jotflow.models.startServer",
+          "when": "view == jotflow.engines && viewItem == engine.ollama.stopped",
           "group": "inline@1"
         },
         {
-          "command": "parley.models.stopServer",
-          "when": "view == parley.engines && viewItem == engine.ollama.running",
+          "command": "jotflow.models.stopServer",
+          "when": "view == jotflow.engines && viewItem == engine.ollama.running",
           "group": "inline@1"
         },
         {
-          "command": "parley.engine.install",
-          "when": "view == parley.engines && viewItem =~ /engine\\.(ollama|piper)\\.notinstalled/",
+          "command": "jotflow.engine.install",
+          "when": "view == jotflow.engines && viewItem =~ /engine\\.(ollama|piper)\\.notinstalled/",
           "group": "inline@1"
         },
         {
-          "command": "parley.tts.startServer",
-          "when": "view == parley.engines && viewItem == engine.piper.stopped",
+          "command": "jotflow.tts.startServer",
+          "when": "view == jotflow.engines && viewItem == engine.piper.stopped",
           "group": "inline@1"
         },
         {
-          "command": "parley.tts.stopServer",
-          "when": "view == parley.engines && viewItem == engine.piper.running",
+          "command": "jotflow.tts.stopServer",
+          "when": "view == jotflow.engines && viewItem == engine.piper.running",
           "group": "inline@1"
         },
         {
-          "command": "parley.engine.delete",
-          "when": "view == parley.engines && viewItem =~ /engine\\.(ollama|piper)\\.(stopped|running)/",
+          "command": "jotflow.engine.delete",
+          "when": "view == jotflow.engines && viewItem =~ /engine\\.(ollama|piper)\\.(stopped|running)/",
           "group": "inline@3"
         },
         {
-          "command": "parley.models.deleteModel",
-          "when": "view == parley.models && viewItem == ollamaModel",
+          "command": "jotflow.models.deleteModel",
+          "when": "view == jotflow.models && viewItem == ollamaModel",
           "group": "inline"
         },
         {
-          "command": "parley.models.clearDownloads",
-          "when": "view == parley.models && viewItem == ollamaDownloads",
+          "command": "jotflow.models.clearDownloads",
+          "when": "view == jotflow.models && viewItem == ollamaDownloads",
           "group": "inline"
         },
         {
-          "command": "parley.models.cancelDownload",
-          "when": "view == parley.models && viewItem =~ /ollamaDownload\\.(downloading|queued)/",
+          "command": "jotflow.models.cancelDownload",
+          "when": "view == jotflow.models && viewItem =~ /ollamaDownload\\.(downloading|queued)/",
           "group": "inline"
         },
         {
-          "command": "parley.models.retryDownload",
-          "when": "view == parley.models && viewItem == ollamaDownload.failed",
+          "command": "jotflow.models.retryDownload",
+          "when": "view == jotflow.models && viewItem == ollamaDownload.failed",
           "group": "inline@1"
         },
         {
-          "command": "parley.models.removeDownload",
-          "when": "view == parley.models && viewItem == ollamaDownload.failed",
+          "command": "jotflow.models.removeDownload",
+          "when": "view == jotflow.models && viewItem == ollamaDownload.failed",
           "group": "inline@2"
         },
         {
-          "command": "parley.models.openModelFromDownload",
-          "when": "view == parley.models && viewItem =~ /ollamaDownload\\./",
+          "command": "jotflow.models.openModelFromDownload",
+          "when": "view == jotflow.models && viewItem =~ /ollamaDownload\\./",
           "group": "navigation"
         },
         {
-          "command": "parley.spell.openDictionary",
-          "when": "view == parley.dictionary && viewItem == spellDictLang",
+          "command": "jotflow.spell.openDictionary",
+          "when": "view == jotflow.dictionary && viewItem == spellDictLang",
           "group": "inline"
         },
         {
-          "command": "parley.tts.removeVoice",
-          "when": "view == parley.voices && viewItem == piperVoice",
+          "command": "jotflow.tts.removeVoice",
+          "when": "view == jotflow.voices && viewItem == piperVoice",
           "group": "inline"
         }
       ],
       "timeline/item/context": [
         {
-          "command": "parley.compareVersion",
+          "command": "jotflow.compareVersion",
           "when": "timelineItem =~ /localHistory/ && resourceExtname == .chat",
           "group": "1_actions"
         }
       ],
       "editor/title": [
         {
-          "command": "parley.compareVersion",
-          "when": "activeCustomEditorId == parley.editor",
+          "command": "jotflow.compareVersion",
+          "when": "activeCustomEditorId == jotflow.editor",
           "group": "navigation"
         }
       ],
       "commandPalette": [
         {
-          "command": "parley.compareVersion",
+          "command": "jotflow.compareVersion",
           "when": "resourceExtname == .chat"
         },
         {
-          "command": "parley.spell.openDictionary",
+          "command": "jotflow.spell.openDictionary",
           "when": "false"
         },
         {
-          "command": "parley.tts.openVoices",
+          "command": "jotflow.tts.openVoices",
           "when": "false"
         },
         {
-          "command": "parley.tts.startServer",
+          "command": "jotflow.tts.startServer",
           "when": "false"
         },
         {
-          "command": "parley.tts.stopServer",
+          "command": "jotflow.tts.stopServer",
           "when": "false"
         },
         {
-          "command": "parley.tts.removeVoice",
+          "command": "jotflow.tts.removeVoice",
           "when": "false"
         },
         {
-          "command": "parley.engine.install",
+          "command": "jotflow.engine.install",
           "when": "false"
         },
         {
-          "command": "parley.engine.delete",
+          "command": "jotflow.engine.delete",
           "when": "false"
         }
       ]
     },
     "customEditors": [
       {
-        "viewType": "parley.editor",
-        "displayName": "Parley",
+        "viewType": "jotflow.editor",
+        "displayName": "Jotflow",
         "selector": [
           {
             "filenamePattern": "*.chat"
@@ -334,7 +334,7 @@
         "title": "%config.title.general%",
         "order": 1,
         "properties": {
-          "parley.language": {
+          "jotflow.language": {
             "type": "string",
             "enum": [
               "auto",
@@ -357,7 +357,7 @@
             "default": "auto",
             "description": "%config.language.desc%"
           },
-          "parley.provider": {
+          "jotflow.provider": {
             "type": "string",
             "enum": [
               "openai",
@@ -376,14 +376,14 @@
             "default": "openai",
             "description": "%config.provider.desc%"
           },
-          "parley.temperature": {
+          "jotflow.temperature": {
             "type": "number",
             "default": 0.7,
             "minimum": 0,
             "maximum": 2,
             "description": "%config.temperature.desc%"
           },
-          "parley.maxTokens": {
+          "jotflow.maxTokens": {
             "type": "number",
             "default": 2048,
             "description": "%config.maxTokens.desc%"
@@ -394,12 +394,12 @@
         "title": "LM Studio / OpenAI",
         "order": 2,
         "properties": {
-          "parley.openai.baseUrl": {
+          "jotflow.openai.baseUrl": {
             "type": "string",
             "default": "http://localhost:1234/v1",
             "description": "%config.openai.baseUrl.desc%"
           },
-          "parley.openai.apiKey": {
+          "jotflow.openai.apiKey": {
             "type": "string",
             "default": "",
             "description": "%config.openai.apiKey.desc%"
@@ -410,29 +410,29 @@
         "title": "Ollama",
         "order": 3,
         "properties": {
-          "parley.ollama.managed": {
+          "jotflow.ollama.managed": {
             "type": "boolean",
             "default": true,
             "description": "%config.ollama.managed.desc%"
           },
-          "parley.ollama.port": {
+          "jotflow.ollama.port": {
             "type": "number",
             "default": 0,
             "markdownDescription": "%config.ollama.port.desc%"
           },
-          "parley.ollama.modelsPath": {
+          "jotflow.ollama.modelsPath": {
             "type": "string",
             "default": "",
             "markdownDescription": "%config.ollama.modelsPath.desc%"
           },
-          "parley.ollama.maxConcurrentDownloads": {
+          "jotflow.ollama.maxConcurrentDownloads": {
             "type": "number",
             "default": 2,
             "minimum": 1,
             "maximum": 6,
             "markdownDescription": "%config.ollama.maxConcurrentDownloads.desc%"
           },
-          "parley.ollama.baseUrl": {
+          "jotflow.ollama.baseUrl": {
             "type": "string",
             "default": "http://localhost:11434",
             "markdownDescription": "%config.ollama.baseUrl.desc%"
@@ -443,12 +443,12 @@
         "title": "Google Gemini",
         "order": 4,
         "properties": {
-          "parley.gemini.apiKey": {
+          "jotflow.gemini.apiKey": {
             "type": "string",
             "default": "",
             "description": "%config.gemini.apiKey.desc%"
           },
-          "parley.gemini.baseUrl": {
+          "jotflow.gemini.baseUrl": {
             "type": "string",
             "default": "https://generativelanguage.googleapis.com/v1beta",
             "description": "%config.gemini.baseUrl.desc%"
@@ -459,12 +459,12 @@
         "title": "Anthropic",
         "order": 5,
         "properties": {
-          "parley.anthropic.apiKey": {
+          "jotflow.anthropic.apiKey": {
             "type": "string",
             "default": "",
             "description": "%config.anthropic.apiKey.desc%"
           },
-          "parley.anthropic.baseUrl": {
+          "jotflow.anthropic.baseUrl": {
             "type": "string",
             "default": "https://api.anthropic.com/v1",
             "description": "%config.anthropic.baseUrl.desc%"
@@ -475,17 +475,17 @@
         "title": "OpenRouter",
         "order": 6,
         "properties": {
-          "parley.openrouter.apiKey": {
+          "jotflow.openrouter.apiKey": {
             "type": "string",
             "default": "",
             "description": "%config.openrouter.apiKey.desc%"
           },
-          "parley.openrouter.baseUrl": {
+          "jotflow.openrouter.baseUrl": {
             "type": "string",
             "default": "https://openrouter.ai/api/v1",
             "description": "%config.openrouter.baseUrl.desc%"
           },
-          "parley.openrouter.vendors": {
+          "jotflow.openrouter.vendors": {
             "type": "array",
             "items": {
               "type": "string"
@@ -493,7 +493,7 @@
             "default": [],
             "markdownDescription": "%config.openrouter.vendors.desc%"
           },
-          "parley.openrouter.customModels": {
+          "jotflow.openrouter.customModels": {
             "type": "array",
             "items": {
               "type": "string"
@@ -501,7 +501,7 @@
             "default": [],
             "markdownDescription": "%config.openrouter.customModels.desc%"
           },
-          "parley.openrouter.sort": {
+          "jotflow.openrouter.sort": {
             "type": "string",
             "enum": [
               "",
@@ -524,13 +524,13 @@
         "title": "%config.title.tools%",
         "order": 7,
         "properties": {
-          "parley.tools.maxReadBytes": {
+          "jotflow.tools.maxReadBytes": {
             "type": "number",
             "default": 100000,
             "minimum": 0,
             "markdownDescription": "%config.tools.maxReadBytes.desc%"
           },
-          "parley.tools.maxIterations": {
+          "jotflow.tools.maxIterations": {
             "type": "number",
             "default": 8,
             "minimum": 0,
@@ -542,22 +542,22 @@
         "title": "%config.title.tts%",
         "order": 8,
         "properties": {
-          "parley.tts.piperPath": {
+          "jotflow.tts.piperPath": {
             "type": "string",
             "default": "piper",
             "markdownDescription": "%config.tts.piperPath.desc%"
           },
-          "parley.tts.piperModel": {
+          "jotflow.tts.piperModel": {
             "type": "string",
             "default": "",
             "markdownDescription": "%config.tts.piperModel.desc%"
           },
-          "parley.tts.piperSpeaker": {
+          "jotflow.tts.piperSpeaker": {
             "type": "number",
             "default": -1,
             "markdownDescription": "%config.tts.piperSpeaker.desc%"
           },
-          "parley.tts.debug": {
+          "jotflow.tts.debug": {
             "type": "boolean",
             "default": false,
             "description": "%config.tts.debug.desc%"
@@ -613,12 +613,12 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/enavarre-cl/parley"
+    "url": "https://github.com/enavarre-cl/jotflow"
   },
   "bugs": {
-    "url": "https://github.com/enavarre-cl/parley/issues"
+    "url": "https://github.com/enavarre-cl/jotflow/issues"
   },
-  "homepage": "https://github.com/enavarre-cl/parley#readme",
+  "homepage": "https://github.com/enavarre-cl/jotflow#readme",
   "dependencies": {
     "undici": "^6.26.0"
   }

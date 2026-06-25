@@ -37,7 +37,7 @@ export function makeLoadModels(deps: LoadModelsDeps): () => Promise<void> {
         let models = await buildProvider(doc.provider).listModels();
         // Global OpenRouter vendor filter (prefix before '/').
         if (doc.provider === 'openrouter') {
-          const cfg = vscode.workspace.getConfiguration('parley');
+          const cfg = vscode.workspace.getConfiguration('jotflow');
           const vendors = cfg.get<string[]>('openrouter.vendors', []);
           if (vendors.length) {
             models = models.filter((m) => vendors.includes(m.id.split('/')[0]));

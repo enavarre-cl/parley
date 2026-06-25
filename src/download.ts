@@ -58,7 +58,7 @@ export function downloadFile(url: string, destPath: string, opts: DownloadOpts =
       hostname: u.hostname,
       port: u.port || undefined,
       path: u.pathname + u.search,
-      headers: { 'User-Agent': 'parley', Accept: '*/*' },
+      headers: { 'User-Agent': 'jotflow', Accept: '*/*' },
       // reject internal/private IPs (anti-SSRF) on this request and every redirect. Cast: Node's
       // LookupFunction typing is stricter than the runtime contract safeLookup honours.
       lookup: safeLookup as https.RequestOptions['lookup'],

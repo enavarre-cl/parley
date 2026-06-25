@@ -53,7 +53,7 @@ export class ModelsPanel {
   static show(context: vscode.ExtensionContext, manager: OllamaManager, downloads: DownloadManager, cards: ModelCardCache, hooks: ModelsPanelHooks): void {
     if (ModelsPanel.current) { ModelsPanel.current.panel.reveal(); return; }
     const panel = vscode.window.createWebviewPanel(
-      'parley.models.browser', tr('Explore models'), vscode.ViewColumn.Active,
+      'jotflow.models.browser', tr('Explore models'), vscode.ViewColumn.Active,
       { enableScripts: true, retainContextWhenHidden: true, localResourceRoots: [vscode.Uri.joinPath(context.extensionUri, 'media')] }
     );
     ModelsPanel.current = new ModelsPanel(panel, context, manager, downloads, cards, hooks);

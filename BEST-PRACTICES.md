@@ -1,6 +1,6 @@
 # Best Practices — TypeScript / JavaScript / CSS & VS Code Extensions
 
-> Estándar de desarrollo para **Parley**. Catálogo exhaustivo de reglas con ejemplos
+> Estándar de desarrollo para **Jotflow**. Catálogo exhaustivo de reglas con ejemplos
 > correcto (✓) / incorrecto (✗). Cada regla es accionable y verificable en review.
 >
 > **Fuentes sintetizadas:** TypeScript Handbook (*Do's & Don'ts*), MDN (*JS Code Style*,

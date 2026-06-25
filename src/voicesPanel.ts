@@ -29,7 +29,7 @@ export function openVoicesPanel(
   if (openPanel) { openPanel.reveal(); return; }
 
   const panel = vscode.window.createWebviewPanel(
-    'parley.voices',
+    'jotflow.voices',
     tr('Voices'),
     vscode.ViewColumn.Active,
     { enableScripts: true, localResourceRoots: [vscode.Uri.joinPath(context.extensionUri, 'media')] }

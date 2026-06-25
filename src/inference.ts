@@ -143,7 +143,7 @@ export async function runInference(
       abortRef.current = ac;
       // Max agentic tool-loop iterations (configurable). 0 = unlimited: the loop still ends when the
       // model stops requesting tools or the user presses Stop (the AbortController breaks it).
-      const cfgIters = vscode.workspace.getConfiguration('parley').get<number>('tools.maxIterations', 8);
+      const cfgIters = vscode.workspace.getConfiguration('jotflow').get<number>('tools.maxIterations', 8);
       const MAX_ITERS = Number.isFinite(cfgIters) && cfgIters >= 0 ? Math.floor(cfgIters) : 8;
       const HARD_ITER_CAP = 100; // backstop even when the user sets 0 (unlimited): a model stuck in a
       for (let iter = 0; (MAX_ITERS === 0 || iter < MAX_ITERS) && iter < HARD_ITER_CAP; iter++) { // tool loop won't run away on cost

@@ -41,7 +41,7 @@ export function activate(context: vscode.ExtensionContext) {
   // the chat's voice selector only shows downloaded ones.
   const voicesChanged = new vscode.EventEmitter<void>();
   context.subscriptions.push(voicesChanged);
-  // Notifies open chats when parley.language changes, so the UI re-translates live (no reload).
+  // Notifies open chats when jotflow.language changes, so the UI re-translates live (no reload).
   const langChanged = new vscode.EventEmitter<void>();
   context.subscriptions.push(langChanged);
   const provider = new ChatEditorProvider(context, spellWords, piper, voicesChanged.event, langChanged.event);
@@ -52,7 +52,7 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.workspace.onDidChangeConfiguration((e) => {
       if (e.affectsConfiguration('http')) initProxy();
-      if (e.affectsConfiguration('parley.language')) langChanged.fire();
+      if (e.affectsConfiguration('jotflow.language')) langChanged.fire();
     })
   );
   registerApiKeys(context); // SecretStorage ⇄ overrides + the setApiKey command (apiKeys.ts)
@@ -62,8 +62,8 @@ export function activate(context: vscode.ExtensionContext) {
       webviewOptions: { retainContextWhenHidden: true },
       supportsMultipleEditorsPerDocument: false,
     }),
-    vscode.commands.registerCommand('parley.new', () => createNewChat()),
-    vscode.commands.registerCommand('parley.spell.openDictionary', (item: { word?: string } | undefined) => {
+    vscode.commands.registerCommand('jotflow.new', () => createNewChat()),
+    vscode.commands.registerCommand('jotflow.spell.openDictionary', (item: { word?: string } | undefined) => {
       const lang = item?.word === 'en' ? 'en' : 'es'; // the node carries the language in `word`
       openDictionaryPanel(context, spellWords, lang);
     })
@@ -86,7 +86,7 @@ async function createNewChat(): Promise<void> {
   const target = await vscode.window.showSaveDialog({
     defaultUri,
     saveLabel: tr('Create chat'),
-    filters: { 'Parley': ['chat'] },
+    filters: { 'Jotflow': ['chat'] },
   });
   if (!target) return;
 
@@ -96,7 +96,7 @@ async function createNewChat(): Promise<void> {
 }
 
 class ChatEditorProvider implements vscode.CustomTextEditorProvider {
-  static readonly viewType = 'parley.editor';
+  static readonly viewType = 'jotflow.editor';
   // Registry of open chat editors with their config-apply fn, ordered by focus recency (most recent
   // last). The models view's "use this model" targets the focused editor, or the most-recently
   // focused still-open one — so closing a chat that was opened on top of another restores the latter
@@ -295,7 +295,7 @@ class ChatEditorProvider implements vscode.CustomTextEditorProvider {
     }).catch((err) => {
       // A throwing handler would otherwise be an unhandled rejection: no log, and the UI left
       // hanging (e.g. a busy state never cleared). Log it and surface it to the webview.
-      console.error('[parley] message handler failed:', err);
+      console.error('[jotflow] message handler failed:', err);
       webview.postMessage({ type: 'error', message: tr('Something went wrong handling that action.') + ' ' + ((err && err.message) || String(err)) });
     }));
 
@@ -351,7 +351,7 @@ class ChatEditorProvider implements vscode.CustomTextEditorProvider {
     const onSpell = this.spellWords.onDidChange(async () => webview.postMessage({ type: 'spellWords', words: await this.spellWords.all() }));
     // Change in downloaded voices (voices panel, tree) → re-filters the chat selector.
     const onVoices = this.onVoicesChanged(() => webview.postMessage({ type: 'piperVoices', ids: this.downloadedVoiceIds() }));
-    // parley.language changed in settings → re-translate the UI live (no reload needed).
+    // jotflow.language changed in settings → re-translate the UI live (no reload needed).
     const onLang = this.onLangChanged(() => pushLang());
     panel.onDidDispose(() => {
       abortRef.current?.abort();
@@ -372,7 +372,7 @@ class ChatEditorProvider implements vscode.CustomTextEditorProvider {
       lang: resolvedLang(),
       bundle: activeBundle(),
       downloadedVoices: this.downloadedVoiceIds(),
-      piperCustomSet: !!vscode.workspace.getConfiguration("parley").get<string>("tts.piperModel", ""),
+      piperCustomSet: !!vscode.workspace.getConfiguration("jotflow").get<string>("tts.piperModel", ""),
     });
   }
 }

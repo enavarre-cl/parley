@@ -1,9 +1,9 @@
-/** API-key storage: SecretStorage ⇄ provider overrides, plus the `parley.setApiKey` command. */
+/** API-key storage: SecretStorage ⇄ provider overrides, plus the `jotflow.setApiKey` command. */
 import * as vscode from 'vscode';
 import { setApiKeyOverride, ProviderId } from './providers';
 import { tr } from './i18n';
 
-// Backends that use an API key (Ollama does not). The secret is stored as `parley.<id>.apiKey`.
+// Backends that use an API key (Ollama does not). The secret is stored as `jotflow.<id>.apiKey`.
 const KEY_PROVIDERS: { id: ProviderId; label: string }[] = [
   { id: 'openai', label: 'LM Studio / OpenAI' },
   { id: 'gemini', label: 'Google Gemini' },
@@ -14,7 +14,7 @@ const KEY_PROVIDERS: { id: ProviderId; label: string }[] = [
 /** Loads API keys from SecretStorage (encrypted) into the provider overrides. */
 export async function loadApiKeys(context: vscode.ExtensionContext): Promise<void> {
   for (const { id } of KEY_PROVIDERS) {
-    const k = await context.secrets.get(`parley.${id}.apiKey`);
+    const k = await context.secrets.get(`jotflow.${id}.apiKey`);
     setApiKeyOverride(id, k || undefined);
   }
 }
@@ -24,8 +24,8 @@ export function registerApiKeys(context: vscode.ExtensionContext): void {
   void loadApiKeys(context); // populate overrides from SecretStorage on startup
   context.subscriptions.push(
     // If secrets change (another window, or the command), reload. Disposable so it is cleaned up on deactivate.
-    context.secrets.onDidChange((e) => { if (e.key.startsWith('parley.') && e.key.endsWith('.apiKey')) void loadApiKeys(context); }),
-    vscode.commands.registerCommand('parley.setApiKey', async () => {
+    context.secrets.onDidChange((e) => { if (e.key.startsWith('jotflow.') && e.key.endsWith('.apiKey')) void loadApiKeys(context); }),
+    vscode.commands.registerCommand('jotflow.setApiKey', async () => {
       const pick = await vscode.window.showQuickPick(
         KEY_PROVIDERS.map((p) => ({ label: p.label, id: p.id })),
         { placeHolder: tr('Backend for the API key') }
@@ -37,7 +37,7 @@ export function registerApiKeys(context: vscode.ExtensionContext): void {
         placeHolder: '••••••••',
       });
       if (key === undefined) return; // cancelled
-      const secretKey = `parley.${pick.id}.apiKey`;
+      const secretKey = `jotflow.${pick.id}.apiKey`;
       if (key) await context.secrets.store(secretKey, key);
       else await context.secrets.delete(secretKey);
       setApiKeyOverride(pick.id, key || undefined);

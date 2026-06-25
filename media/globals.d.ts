@@ -13,7 +13,7 @@ interface Window {
   LangZoom?: any;
   mermaid?: any;
   MERMAID_SRC?: string;
-  PARLEY_NONCE?: string;
+  JOTFLOW_NONCE?: string;
   DOWNLOADED_VOICES?: string[];
   PIPER_CUSTOM_SET?: boolean;
   SPELL_DICTS?: any;

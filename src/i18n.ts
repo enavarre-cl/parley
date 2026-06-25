@@ -9,9 +9,9 @@ export type Lang = 'en' | 'es' | 'pt' | 'fr' | 'de' | 'it';
 /** Supported UI languages. English is the source (no bundle); the rest have package.nls.<lang>.json. */
 export const SUPPORTED_LANGS: Lang[] = ['en', 'es', 'pt', 'fr', 'de', 'it'];
 
-/** Effective language: respects parley.language ('auto'|code) or VS Code's locale when 'auto'. */
+/** Effective language: respects jotflow.language ('auto'|code) or VS Code's locale when 'auto'. */
 export function resolvedLang(): Lang {
-  const pref = vscode.workspace.getConfiguration('parley').get<string>('language', 'auto');
+  const pref = vscode.workspace.getConfiguration('jotflow').get<string>('language', 'auto');
   if (pref && pref !== 'auto' && (SUPPORTED_LANGS as string[]).includes(pref)) return pref as Lang;
   const loc = vscode.env.language.toLowerCase();
   return SUPPORTED_LANGS.find((l) => l !== 'en' && loc.startsWith(l)) ?? 'en';

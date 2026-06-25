@@ -1,4 +1,4 @@
-# Contributing to Parley
+# Contributing to Jotflow
 
 > New here? Read [ARCHITECTURE.md](ARCHITECTURE.md) first for a map of the codebase
 > (extension host ↔ webviews, providers, the agentic loop, local engines, i18n, security).
@@ -12,7 +12,7 @@ npm run compile        # tsc → out/
 
 Open the folder in VS Code and press **F5** (the “Run Extension” launch config). An *Extension
 Development Host* window opens with the extension loaded. Create a chat from the command palette
-(`Cmd/Ctrl+Shift+P`) → **“Parley: New chat”**, or open any file with the `.chat` extension.
+(`Cmd/Ctrl+Shift+P`) → **“Jotflow: New chat”**, or open any file with the `.chat` extension.
 
 > Reloading the dev host (**⌘R / Ctrl+R**) is required after changing `package.json` (commands,
 > menus, views) or the extension host code.
@@ -65,8 +65,8 @@ factory. To add a provider `foo`:
    **`KEY_PROVIDERS`** (SecretStorage entry + load), and add `<option value="foo">Foo</option>`
    to `#providerSelect` in the chat HTML.
 
-4. **`package.json`** — add `foo` to the `parley.provider` enum and the
-   `parley.foo.baseUrl` / `parley.foo.apiKey` settings (with `%nls%` keys).
+4. **`package.json`** — add `foo` to the `jotflow.provider` enum and the
+   `jotflow.foo.baseUrl` / `jotflow.foo.apiKey` settings (with `%nls%` keys).
 
 5. **`package.nls.json`** (+ `es/pt/fr/de/it`) — the new setting/enum descriptions.
 
@@ -91,14 +91,14 @@ Dev deps: `nspell`, `dictionary-{en,es,pt,fr,de,it}`, `esbuild`. The `.aff/.dic`
 dictionaries.
 
 > UI translations live in `package.nls.<lang>.json` (English is the key). To add a language,
-> add its bundle, extend the `parley.language` enum, and `SPELL_LANGS` in `src/spellWords.ts`.
+> add its bundle, extend the `jotflow.language` enum, and `SPELL_LANGS` in `src/spellWords.ts`.
 
 ## Packaging a `.vsix`
 
 ```bash
 npm install -g @vscode/vsce
 vsce ls          # review what will be packaged (respects .vscodeignore)
-vsce package     # produces parley-<version>.vsix
+vsce package     # produces jotflow-<version>.vsix
 ```
 
 Install it via **Extensions → Install from VSIX…**. CI (GitHub Actions,

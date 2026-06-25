@@ -236,7 +236,7 @@ export class PiperManager {
 
   /** Installs the engine (if missing). */
   async install(notify?: Notify): Promise<void> {
-    await this.resolveBin(vscode.workspace.getConfiguration('parley'), notify);
+    await this.resolveBin(vscode.workspace.getConfiguration('jotflow'), notify);
   }
 
   // ───────────────────────── Daemon HTTP (piper.http_server) ─────────────────────────

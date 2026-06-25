@@ -196,7 +196,7 @@ export async function routeMessage(msg: WebviewMessage, ctx: RouterCtx): Promise
               if (doc.params.tools && !toolsBefore && !vscode.workspace.isTrusted) {
                 const manage = tr('Manage Trust');
                 const pick = await vscode.window.showWarningMessage(
-                  tr('Parley tools (workspace files + MCP servers) need a trusted workspace to run.'),
+                  tr('Jotflow tools (workspace files + MCP servers) need a trusted workspace to run.'),
                   manage,
                 );
                 if (pick === manage) await vscode.commands.executeCommand('workbench.trust.manage');
@@ -296,7 +296,7 @@ export async function routeMessage(msg: WebviewMessage, ctx: RouterCtx): Promise
         case 'exportHtml': {
           // Writes a self-contained HTML file and opens it in the browser (which can print it → Save as PDF).
           const safe = String(msg.title || 'chat').replace(/[^\w\- ]+/g, '_').replace(/\s+/g, '_').slice(0, 40);
-          const file = vscode.Uri.file(path.join(os.tmpdir(), `parley-${safe}-${Date.now()}.html`));
+          const file = vscode.Uri.file(path.join(os.tmpdir(), `jotflow-${safe}-${Date.now()}.html`));
           await vscode.workspace.fs.writeFile(file, Buffer.from(String(msg.html || ''), 'utf8'));
           await vscode.env.openExternal(file);
           // Deletes the temp file after giving the browser time to load it (otherwise they pile up in /tmp).
@@ -304,7 +304,7 @@ export async function routeMessage(msg: WebviewMessage, ctx: RouterCtx): Promise
           break;
         }
         case 'openSettings':
-          await vscode.commands.executeCommand('workbench.action.openSettings', 'parley');
+          await vscode.commands.executeCommand('workbench.action.openSettings', 'jotflow');
           break;
         case 'createSysPrompt':
         case 'pickSysPrompt':

@@ -88,10 +88,10 @@ export function renderTtsConfig() {
     const note = document.createElement('div');
     note.className = 'cfg-note';
     note.textContent = tts.prefs.piperVoice === 'custom'
-      ? t('Set the .onnx model path in Settings (parley.tts.piperModel).')
+      ? t('Set the .onnx model path in Settings (jotflow.tts.piperModel).')
       : !realVoices.length
-        ? t('No voices downloaded. Add one from the Parley panel (Voices ➕).')
-        : t('Downloaded voices work offline. Add more from the Parley panel (Voices ➕).');
+        ? t('No voices downloaded. Add one from the Jotflow panel (Voices ➕).')
+        : t('Downloaded voices work offline. Add more from the Jotflow panel (Voices ➕).');
     configFields.appendChild(note);
   }
 

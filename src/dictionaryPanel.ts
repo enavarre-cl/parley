@@ -12,7 +12,7 @@ export function openDictionaryPanel(context: vscode.ExtensionContext, store: Spe
 
   const langName = SPELL_LANG_NAMES[lang] || lang;
   const panel = vscode.window.createWebviewPanel(
-    'parley.dictionary',
+    'jotflow.dictionary',
     `${tr('Dictionary')}: ${langName}`,
     vscode.ViewColumn.Active,
     { enableScripts: true, localResourceRoots: [vscode.Uri.joinPath(context.extensionUri, 'media')] }

@@ -48,7 +48,7 @@ function collectUris(arg: unknown): vscode.Uri[] {
 }
 
 export function registerCompare(context: vscode.ExtensionContext): void {
-  const cmd = vscode.commands.registerCommand('parley.compareVersion', async (arg: unknown) => {
+  const cmd = vscode.commands.registerCommand('jotflow.compareVersion', async (arg: unknown) => {
     // 1) Resolve the "past" and "current" versions.
     let pastUri: vscode.Uri | undefined;
     let currentUri: vscode.Uri | undefined;
@@ -71,7 +71,7 @@ export function registerCompare(context: vscode.ExtensionContext): void {
     if (!pastUri) {
       const picked = await vscode.window.showOpenDialog({
         title: tr('Pick a .chat version to compare'),
-        filters: { 'Parley': ['chat'] },
+        filters: { 'Jotflow': ['chat'] },
         canSelectMany: false,
       });
       if (!picked || !picked.length) return;
@@ -94,7 +94,7 @@ export function registerCompare(context: vscode.ExtensionContext): void {
     // 3) Open the two-column webview.
     const name = path.basename(currentUri.fsPath);
     const panel = vscode.window.createWebviewPanel(
-      'parley.compare',
+      'jotflow.compare',
       tr('Compare: ') + name,
       vscode.ViewColumn.Active,
       { enableScripts: true, localResourceRoots: [vscode.Uri.joinPath(context.extensionUri, 'media')] }

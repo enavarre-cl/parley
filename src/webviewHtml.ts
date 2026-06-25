@@ -71,7 +71,7 @@ export function renderWebviewHtml(
   <link href="${uri('messages.css')}" rel="stylesheet" />
   <link href="${uri('composer.css')}" rel="stylesheet" />
   <link href="${uri('conversation.css')}" rel="stylesheet" />
-  <title>Parley</title>
+  <title>Jotflow</title>
 </head>
 <body>
   <div id="app">
@@ -223,7 +223,7 @@ export function renderWebviewHtml(
   window.I18N_LANG = ${jsonForScript(lang)};
   window.I18N_BUNDLE = ${jsonForScript(bundle)};
   window.MERMAID_SRC = '${uri('mermaid.min.js')}'; // lazy-loaded on first Mermaid block
-  window.PARLEY_NONCE = '${nonce}';                // so the lazy <script> passes the CSP</script>
+  window.JOTFLOW_NONCE = '${nonce}';                // so the lazy <script> passes the CSP</script>
   <!-- Classic scripts set window globals (LangZoom / LangI18n / LangSpell) consumed by the modules. -->
   <script nonce="${nonce}" src="${uri('zoom.js')}"></script>
   <script nonce="${nonce}" src="${uri('i18n.js')}"></script>

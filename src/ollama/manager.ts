@@ -133,7 +133,7 @@ export class OllamaManager {
     this.startPromise = (async () => {
       try {
         const bin = await this.ensureBinary(onProgress);
-        const cfg = vscode.workspace.getConfiguration('parley');
+        const cfg = vscode.workspace.getConfiguration('jotflow');
         let port = cfg.get<number>('ollama.port', 0);
         if (!port || port <= 0) port = await freePort();
         const host = `127.0.0.1:${port}`;

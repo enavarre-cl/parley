@@ -36,7 +36,7 @@ export interface StartOpts {
   mode: 'pull' | 'import'; importPaths?: string[]; name?: string;
 }
 
-const STORAGE_KEY = 'parley.downloads';
+const STORAGE_KEY = 'jotflow.downloads';
 
 export class DownloadManager {
   private items = new Map<string, DownloadItem>();
@@ -126,7 +126,7 @@ export class DownloadManager {
 
   /** Starts as many queued items as the concurrency limit allows (several in parallel). */
   private processNext(): void {
-    const max = Math.max(1, vscode.workspace.getConfiguration('parley').get<number>('ollama.maxConcurrentDownloads', 2));
+    const max = Math.max(1, vscode.workspace.getConfiguration('jotflow').get<number>('ollama.maxConcurrentDownloads', 2));
     while (this.active().length < max) {
       const next = this.list().find((i) => i.state === 'queued');
       if (!next) break;

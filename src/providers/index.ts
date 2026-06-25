@@ -35,7 +35,7 @@ export function setApiKeyOverride(id: ProviderId, key: string | undefined): void
 }
 /** Resolves the API key for a backend: SecretStorage first, settings value as fallback. */
 export function resolveApiKey(id: ProviderId): string {
-  const cfg = vscode.workspace.getConfiguration('parley');
+  const cfg = vscode.workspace.getConfiguration('jotflow');
   return keyOverrides[id] || cfg.get<string>(`${id}.apiKey`, '') || '';
 }
 
@@ -49,7 +49,7 @@ function ollamaBaseUrl(cfg: vscode.WorkspaceConfiguration): string {
 }
 
 export function buildProvider(providerId: ProviderId): LLMProvider {
-  const cfg = vscode.workspace.getConfiguration('parley');
+  const cfg = vscode.workspace.getConfiguration('jotflow');
   if (providerId === 'ollama') {
     // Managed Ollama is local and trusted; a user-set remote URL still gets sanity-checked. No key.
     return new OllamaProvider(validateBaseUrl(ollamaBaseUrl(cfg), { hasKey: false }));
@@ -95,7 +95,7 @@ export interface ProviderInfo {
 
 /** Describes the active backend: human-readable label, endpoint, and API key status. */
 export function providerInfo(id: ProviderId): ProviderInfo {
-  const cfg = vscode.workspace.getConfiguration('parley');
+  const cfg = vscode.workspace.getConfiguration('jotflow');
   if (id === 'ollama') {
     return {
       id,
@@ -143,7 +143,7 @@ export function providerInfo(id: ProviderId): ProviderInfo {
 
 /** Default values for new `.chat` files. */
 export function chatDefaults() {
-  const cfg = vscode.workspace.getConfiguration('parley');
+  const cfg = vscode.workspace.getConfiguration('jotflow');
   return {
     provider: cfg.get<ProviderId>('provider', 'openai'),
     temperature: cfg.get<number>('temperature', 0.7),

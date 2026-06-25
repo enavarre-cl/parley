@@ -31,7 +31,7 @@ import { t } from '../core/i18n.js';
       if (!src) { resolve(null); return; }
       const s = document.createElement('script');
       s.src = src;
-      if (window.PARLEY_NONCE) s.setAttribute('nonce', window.PARLEY_NONCE); // pass the CSP
+      if (window.JOTFLOW_NONCE) s.setAttribute('nonce', window.JOTFLOW_NONCE); // pass the CSP
       s.onload = init;
       s.onerror = () => resolve(null);
       document.head.appendChild(s);

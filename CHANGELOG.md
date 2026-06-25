@@ -1,9 +1,23 @@
 # Changelog
 
-All notable changes to Parley. Format based on
+All notable changes to Jotflow. Format based on
 [Keep a Changelog](https://keepachangelog.com/); versioning follows [SemVer](https://semver.org/).
 
 ## [Unreleased]
+
+## [2.0.0] - 2026-06-24
+
+Rebranding from **Parley** to **Jotflow**, prompted by a brand collision with the existing
+**Parley.io**. There are **no functional changes** in this release — the code, features and
+behavior are identical to 1.6.2. Everything user-facing and internal that carried the old name
+was renamed: extension `displayName`/`name`, command and view IDs (`jotflow.*`), the custom
+editor `viewType` (`jotflow.editor`), configuration keys (`jotflow.*`), localized strings across
+all 7 `package.nls.*.json` files, the TTS nonce/log identifiers, documentation and CI artifacts.
+
+The **major** version bump reflects the new identity rather than any breaking code change: the
+package `name` changes to `jotflow`, which changes the extension ID to `enavarre.jotflow`. On the
+Marketplace this is effectively a **new extension** — existing Parley users will not receive this
+as an update and must install Jotflow separately.
 
 ## [1.6.2] - 2026-06-23
 
@@ -42,13 +56,13 @@ safety and security hardening — no behavior change for the user.
 ### Security
 - Validate the configured backend `baseUrl` before use: reject malformed URLs and non-`http(s)`
   schemes (`file:`/`data:`/`javascript:`), and **refuse to send an API key over plaintext `http` to a
-  non-loopback host** (P11). ([`f23152e`](https://github.com/enavarre-cl/parley/commit/f23152e))
+  non-loopback host** (P11). ([`f23152e`](https://github.com/enavarre-cl/jotflow/commit/f23152e))
 - Gate the Piper system-Python fallback (`python3`/`py`/`python` resolved via `PATH`) behind
   **Workspace Trust** — same posture as the filesystem tools and MCP servers (L7). The SHA-pinned
-  standalone Python is tried first and is unaffected. ([`2f4b1ae`](https://github.com/enavarre-cl/parley/commit/2f4b1ae))
+  standalone Python is tried first and is unaffected. ([`2f4b1ae`](https://github.com/enavarre-cl/jotflow/commit/2f4b1ae))
 - CSP: the extension's own DOM no longer relies on `style-src 'unsafe-inline'` (the download progress
   bar sets its width via the CSSOM); it is now attributable **only** to Mermaid's generated SVG, with
-  the bounded residual documented (H9). ([`9c11653`](https://github.com/enavarre-cl/parley/commit/9c11653))
+  the bounded residual documented (H9). ([`9c11653`](https://github.com/enavarre-cl/jotflow/commit/9c11653))
 
 ### Internal
 - **Type safety: every `any`-as-a-type removed from `src/` (182 → 0).** Real interfaces and generics
@@ -56,73 +70,73 @@ safety and security hardening — no behavior change for the user.
   parsing, per-provider response/stream shapes, `WebviewMessage`/`ModelsPanelMessage`, `ChatPatch`,
   `ModelCard`, `ModelsTreeItem`, `TokenUsage`/`ChatResult`/`Attachment`, and typed `fetch`/`dns`/
   `undici` signatures. `unknown`+narrowing is used **only** at true JSON/VS Code boundaries (X1).
-  ([`d39586b`](https://github.com/enavarre-cl/parley/commit/d39586b), [`6a3b5ca`](https://github.com/enavarre-cl/parley/commit/6a3b5ca), [`a7a6b01`](https://github.com/enavarre-cl/parley/commit/a7a6b01), [`eb2c2f5`](https://github.com/enavarre-cl/parley/commit/eb2c2f5), [`0dc39d4`](https://github.com/enavarre-cl/parley/commit/0dc39d4), [`b0015c7`](https://github.com/enavarre-cl/parley/commit/b0015c7), [`91495a1`](https://github.com/enavarre-cl/parley/commit/91495a1), [`e0cf976`](https://github.com/enavarre-cl/parley/commit/e0cf976))
+  ([`d39586b`](https://github.com/enavarre-cl/jotflow/commit/d39586b), [`6a3b5ca`](https://github.com/enavarre-cl/jotflow/commit/6a3b5ca), [`a7a6b01`](https://github.com/enavarre-cl/jotflow/commit/a7a6b01), [`eb2c2f5`](https://github.com/enavarre-cl/jotflow/commit/eb2c2f5), [`0dc39d4`](https://github.com/enavarre-cl/jotflow/commit/0dc39d4), [`b0015c7`](https://github.com/enavarre-cl/jotflow/commit/b0015c7), [`91495a1`](https://github.com/enavarre-cl/jotflow/commit/91495a1), [`e0cf976`](https://github.com/enavarre-cl/jotflow/commit/e0cf976))
 - Replace the `activeApply` global (state smell) with a focus-ordered registry of open chat editors,
   so the models view's "use this model" targets the focused editor — or the most-recently-focused
-  still-open one when a chat opened on top of another is closed (H3). ([`ac930ca`](https://github.com/enavarre-cl/parley/commit/ac930ca))
+  still-open one when a chat opened on top of another is closed (H3). ([`ac930ca`](https://github.com/enavarre-cl/jotflow/commit/ac930ca))
 - Remove leftover local files (`.webview-backup/`, `plan-*.md`) and the stale `.gitignore` line (X4).
-  ([`8bf18c2`](https://github.com/enavarre-cl/parley/commit/8bf18c2))
+  ([`8bf18c2`](https://github.com/enavarre-cl/jotflow/commit/8bf18c2))
 
 ### Fixed
 - Find & Replace no longer replaces the wrong occurrence when the term appears inside a Markdown
   link/URL or autolink: the host now skips source matches that fall inside hidden link/image URL
-  ranges, matching what the webview highlights (B4, the 1.6.0 known issue). ([`dda6e4d`](https://github.com/enavarre-cl/parley/commit/dda6e4d))
+  ranges, matching what the webview highlights (B4, the 1.6.0 known issue). ([`dda6e4d`](https://github.com/enavarre-cl/jotflow/commit/dda6e4d))
 
 ## [1.6.0] - 2026-06-22
 
-Security + reliability pass from a full code audit (([`bd6a71d`](https://github.com/enavarre-cl/parley/commit/bd6a71d)) inventory). 55 findings fixed
+Security + reliability pass from a full code audit (([`bd6a71d`](https://github.com/enavarre-cl/jotflow/commit/bd6a71d)) inventory). 55 findings fixed
 across 39 commits; see `AUDIT.md` for per-finding detail and `BEST-PRACTICES.md` for the standard.
 
 ### Security
-- Block a `javascript:` link XSS in rendered Markdown — a leading control char bypassed the scheme allowlist. ([`99ce763`](https://github.com/enavarre-cl/parley/commit/99ce763))
-- Stop `fs_write` from overwriting `.mcp.json` / `.mcp/` (deferred RCE via spawned MCP servers). ([`1449043`](https://github.com/enavarre-cl/parley/commit/1449043))
-- Stop `fs_search`/`fs_glob` from leaking files outside the workspace via an in-workspace symlink. ([`0533234`](https://github.com/enavarre-cl/parley/commit/0533234))
-- Escape values interpolated into the inline webview `<script>` (`</script>` breakout). ([`8d6852c`](https://github.com/enavarre-cl/parley/commit/8d6852c))
-- Validate IPs in `downloadFile` (block SSRF to private hosts / cloud metadata, incl. redirects). ([`1c36358`](https://github.com/enavarre-cl/parley/commit/1c36358))
-- Anchor the TTS voice-id validation to block path traversal. ([`182a51e`](https://github.com/enavarre-cl/parley/commit/182a51e))
-- Use a strong fixed-length `crypto` CSP nonce everywhere. ([`1860e16`](https://github.com/enavarre-cl/parley/commit/1860e16))
-- Strict CSP + nonce on the HTML export. ([`dc9c0e8`](https://github.com/enavarre-cl/parley/commit/dc9c0e8))
-- Reject absolute/`..` model-import paths from the webview. ([`c951136`](https://github.com/enavarre-cl/parley/commit/c951136))
+- Block a `javascript:` link XSS in rendered Markdown — a leading control char bypassed the scheme allowlist. ([`99ce763`](https://github.com/enavarre-cl/jotflow/commit/99ce763))
+- Stop `fs_write` from overwriting `.mcp.json` / `.mcp/` (deferred RCE via spawned MCP servers). ([`1449043`](https://github.com/enavarre-cl/jotflow/commit/1449043))
+- Stop `fs_search`/`fs_glob` from leaking files outside the workspace via an in-workspace symlink. ([`0533234`](https://github.com/enavarre-cl/jotflow/commit/0533234))
+- Escape values interpolated into the inline webview `<script>` (`</script>` breakout). ([`8d6852c`](https://github.com/enavarre-cl/jotflow/commit/8d6852c))
+- Validate IPs in `downloadFile` (block SSRF to private hosts / cloud metadata, incl. redirects). ([`1c36358`](https://github.com/enavarre-cl/jotflow/commit/1c36358))
+- Anchor the TTS voice-id validation to block path traversal. ([`182a51e`](https://github.com/enavarre-cl/jotflow/commit/182a51e))
+- Use a strong fixed-length `crypto` CSP nonce everywhere. ([`1860e16`](https://github.com/enavarre-cl/jotflow/commit/1860e16))
+- Strict CSP + nonce on the HTML export. ([`dc9c0e8`](https://github.com/enavarre-cl/jotflow/commit/dc9c0e8))
+- Reject absolute/`..` model-import paths from the webview. ([`c951136`](https://github.com/enavarre-cl/jotflow/commit/c951136))
 
 ### Fixed
-- Streaming kept multi-line blocks intact (tables/lists/blockquotes no longer fragment into one-line paragraphs until the stream ends). ([`fbd617f`](https://github.com/enavarre-cl/parley/commit/fbd617f))
-- Bold spans can contain a lone `*`/`_` (e.g. `**2 * 3 = 6**`) instead of corrupting into a spurious `<em>`. ([`82faf65`](https://github.com/enavarre-cl/parley/commit/82faf65))
-- Table cells respect an escaped `\|` and a `|` inside a code span. ([`82faf65`](https://github.com/enavarre-cl/parley/commit/82faf65))
-- Deleting a chat-response variant no longer jumps to a different variant when an earlier one is removed. ([`ab4cefc`](https://github.com/enavarre-cl/parley/commit/ab4cefc))
-- A turn that used tools but returned no closing text now persists a closing assistant (no dangling tool chain lost next turn). ([`aafab77`](https://github.com/enavarre-cl/parley/commit/aafab77))
-- Streaming clipped the first letter of a block ("Jenny" → "enny") until the stream ended. ([`05fb7d4`](https://github.com/enavarre-cl/parley/commit/05fb7d4))
-- Numbers in prose rendered as `<code>undefined</code>` ("entre 0 y 1") — code-span placeholder collision. ([`8e79369`](https://github.com/enavarre-cl/parley/commit/8e79369))
-- Show the regenerate button on the prompt even when the answer used tools. ([`af08fd3`](https://github.com/enavarre-cl/parley/commit/af08fd3))
-- Don't wipe an accumulated answer on a failed/aborted turn. ([`97a2397`](https://github.com/enavarre-cl/parley/commit/97a2397))
-- Nested Markdown lists keep their nesting; `escapeHtml` coerces non-strings; drop deprecated `unescape`. ([`59bd569`](https://github.com/enavarre-cl/parley/commit/59bd569))
-- Mermaid diagrams no longer "disappear" when a re-render detaches the node mid-render. ([`6974e0a`](https://github.com/enavarre-cl/parley/commit/6974e0a))
-- Stream: flush the final chunk so Ollama token usage isn't lost. ([`728a44b`](https://github.com/enavarre-cl/parley/commit/728a44b))
-- Stream: always release the reader (leak/abort). ([`ce91371`](https://github.com/enavarre-cl/parley/commit/ce91371))
-- Stream: honor the `AbortSignal` inside the read loop. ([`84f3f14`](https://github.com/enavarre-cl/parley/commit/84f3f14))
-- Providers: network timeouts so a silent backend can't hang the UI. ([`15336a9`](https://github.com/enavarre-cl/parley/commit/15336a9))
-- Providers: tool-call id collisions, image-model detection, Anthropic thinking temp, line-buffer cap. ([`b205696`](https://github.com/enavarre-cl/parley/commit/b205696))
-- Gemini: default the function-response name to avoid a 400. ([`d9d0042`](https://github.com/enavarre-cl/parley/commit/d9d0042))
-- Agentic loop: run a turn's tool calls concurrently. ([`b01f9cc`](https://github.com/enavarre-cl/parley/commit/b01f9cc))
-- Agentic loop: repair a dangling tool chain before persisting on abort. ([`f51edd8`](https://github.com/enavarre-cl/parley/commit/f51edd8))
-- Agentic loop: report invalid tool-arg JSON + hard iteration backstop. ([`21ff371`](https://github.com/enavarre-cl/parley/commit/21ff371))
-- `fs_search` file I/O is async so it doesn't freeze the editor. ([`ec16a15`](https://github.com/enavarre-cl/parley/commit/ec16a15))
-- MCP: honor `isError`, fail fast on a dead server, keep stderr, bound the stdio buffer, tree-kill. ([`2ee7f9c`](https://github.com/enavarre-cl/parley/commit/2ee7f9c))
-- Tree-kill Ollama/Piper (no zombies; fixes Windows `shell:true`). ([`37eaf83`](https://github.com/enavarre-cl/parley/commit/37eaf83))
-- Downloads: per-item import dir, Piper spawn-error handling, abort-listener cleanup. ([`e4027a3`](https://github.com/enavarre-cl/parley/commit/e4027a3))
-- Piper: validate/re-fetch the voice `.onnx.json`. ([`aa163de`](https://github.com/enavarre-cl/parley/commit/aa163de))
-- Piper: time out the TTS synth request. ([`4e00fb8`](https://github.com/enavarre-cl/parley/commit/4e00fb8))
-- `.chat`: don't crash on a `null`/non-object file; preserve unknown fields round-trip. ([`d78d0b6`](https://github.com/enavarre-cl/parley/commit/d78d0b6))
-- `.chat`: clamp `summary.upTo` to a valid range. ([`0471988`](https://github.com/enavarre-cl/parley/commit/0471988))
-- Attachments: unique temp file + mtime cache invalidation. ([`4971a52`](https://github.com/enavarre-cl/parley/commit/4971a52))
-- Use `crypto.randomUUID()` for message/attachment ids. ([`c5558f2`](https://github.com/enavarre-cl/parley/commit/c5558f2))
-- Host: register the SecretStorage listener as a disposable. ([`d9939f8`](https://github.com/enavarre-cl/parley/commit/d9939f8))
-- Host: surface/log errors from the webview message router. ([`2859d3c`](https://github.com/enavarre-cl/parley/commit/2859d3c))
-- Router: hold the busy lock across `setConfig`. ([`40bea77`](https://github.com/enavarre-cl/parley/commit/40bea77))
+- Streaming kept multi-line blocks intact (tables/lists/blockquotes no longer fragment into one-line paragraphs until the stream ends). ([`fbd617f`](https://github.com/enavarre-cl/jotflow/commit/fbd617f))
+- Bold spans can contain a lone `*`/`_` (e.g. `**2 * 3 = 6**`) instead of corrupting into a spurious `<em>`. ([`82faf65`](https://github.com/enavarre-cl/jotflow/commit/82faf65))
+- Table cells respect an escaped `\|` and a `|` inside a code span. ([`82faf65`](https://github.com/enavarre-cl/jotflow/commit/82faf65))
+- Deleting a chat-response variant no longer jumps to a different variant when an earlier one is removed. ([`ab4cefc`](https://github.com/enavarre-cl/jotflow/commit/ab4cefc))
+- A turn that used tools but returned no closing text now persists a closing assistant (no dangling tool chain lost next turn). ([`aafab77`](https://github.com/enavarre-cl/jotflow/commit/aafab77))
+- Streaming clipped the first letter of a block ("Jenny" → "enny") until the stream ended. ([`05fb7d4`](https://github.com/enavarre-cl/jotflow/commit/05fb7d4))
+- Numbers in prose rendered as `<code>undefined</code>` ("entre 0 y 1") — code-span placeholder collision. ([`8e79369`](https://github.com/enavarre-cl/jotflow/commit/8e79369))
+- Show the regenerate button on the prompt even when the answer used tools. ([`af08fd3`](https://github.com/enavarre-cl/jotflow/commit/af08fd3))
+- Don't wipe an accumulated answer on a failed/aborted turn. ([`97a2397`](https://github.com/enavarre-cl/jotflow/commit/97a2397))
+- Nested Markdown lists keep their nesting; `escapeHtml` coerces non-strings; drop deprecated `unescape`. ([`59bd569`](https://github.com/enavarre-cl/jotflow/commit/59bd569))
+- Mermaid diagrams no longer "disappear" when a re-render detaches the node mid-render. ([`6974e0a`](https://github.com/enavarre-cl/jotflow/commit/6974e0a))
+- Stream: flush the final chunk so Ollama token usage isn't lost. ([`728a44b`](https://github.com/enavarre-cl/jotflow/commit/728a44b))
+- Stream: always release the reader (leak/abort). ([`ce91371`](https://github.com/enavarre-cl/jotflow/commit/ce91371))
+- Stream: honor the `AbortSignal` inside the read loop. ([`84f3f14`](https://github.com/enavarre-cl/jotflow/commit/84f3f14))
+- Providers: network timeouts so a silent backend can't hang the UI. ([`15336a9`](https://github.com/enavarre-cl/jotflow/commit/15336a9))
+- Providers: tool-call id collisions, image-model detection, Anthropic thinking temp, line-buffer cap. ([`b205696`](https://github.com/enavarre-cl/jotflow/commit/b205696))
+- Gemini: default the function-response name to avoid a 400. ([`d9d0042`](https://github.com/enavarre-cl/jotflow/commit/d9d0042))
+- Agentic loop: run a turn's tool calls concurrently. ([`b01f9cc`](https://github.com/enavarre-cl/jotflow/commit/b01f9cc))
+- Agentic loop: repair a dangling tool chain before persisting on abort. ([`f51edd8`](https://github.com/enavarre-cl/jotflow/commit/f51edd8))
+- Agentic loop: report invalid tool-arg JSON + hard iteration backstop. ([`21ff371`](https://github.com/enavarre-cl/jotflow/commit/21ff371))
+- `fs_search` file I/O is async so it doesn't freeze the editor. ([`ec16a15`](https://github.com/enavarre-cl/jotflow/commit/ec16a15))
+- MCP: honor `isError`, fail fast on a dead server, keep stderr, bound the stdio buffer, tree-kill. ([`2ee7f9c`](https://github.com/enavarre-cl/jotflow/commit/2ee7f9c))
+- Tree-kill Ollama/Piper (no zombies; fixes Windows `shell:true`). ([`37eaf83`](https://github.com/enavarre-cl/jotflow/commit/37eaf83))
+- Downloads: per-item import dir, Piper spawn-error handling, abort-listener cleanup. ([`e4027a3`](https://github.com/enavarre-cl/jotflow/commit/e4027a3))
+- Piper: validate/re-fetch the voice `.onnx.json`. ([`aa163de`](https://github.com/enavarre-cl/jotflow/commit/aa163de))
+- Piper: time out the TTS synth request. ([`4e00fb8`](https://github.com/enavarre-cl/jotflow/commit/4e00fb8))
+- `.chat`: don't crash on a `null`/non-object file; preserve unknown fields round-trip. ([`d78d0b6`](https://github.com/enavarre-cl/jotflow/commit/d78d0b6))
+- `.chat`: clamp `summary.upTo` to a valid range. ([`0471988`](https://github.com/enavarre-cl/jotflow/commit/0471988))
+- Attachments: unique temp file + mtime cache invalidation. ([`4971a52`](https://github.com/enavarre-cl/jotflow/commit/4971a52))
+- Use `crypto.randomUUID()` for message/attachment ids. ([`c5558f2`](https://github.com/enavarre-cl/jotflow/commit/c5558f2))
+- Host: register the SecretStorage listener as a disposable. ([`d9939f8`](https://github.com/enavarre-cl/jotflow/commit/d9939f8))
+- Host: surface/log errors from the webview message router. ([`2859d3c`](https://github.com/enavarre-cl/jotflow/commit/2859d3c))
+- Router: hold the busy lock across `setConfig`. ([`40bea77`](https://github.com/enavarre-cl/jotflow/commit/40bea77))
 
 ### Changed
-- i18n: translate 24 UI strings into es/pt/fr/de/it, fix British spelling, drop unused keys. ([`d420d11`](https://github.com/enavarre-cl/parley/commit/d420d11))
-- CSS: theme-token status colors, keyboard focus ring, deduplicated badges. ([`e18686d`](https://github.com/enavarre-cl/parley/commit/e18686d))
-- Comment best-effort empty catches. ([`3c715b6`](https://github.com/enavarre-cl/parley/commit/3c715b6))
+- i18n: translate 24 UI strings into es/pt/fr/de/it, fix British spelling, drop unused keys. ([`d420d11`](https://github.com/enavarre-cl/jotflow/commit/d420d11))
+- CSS: theme-token status colors, keyboard focus ring, deduplicated badges. ([`e18686d`](https://github.com/enavarre-cl/jotflow/commit/e18686d))
+- Comment best-effort empty catches. ([`3c715b6`](https://github.com/enavarre-cl/jotflow/commit/3c715b6))
 
 
 ### Known issues
@@ -132,7 +146,7 @@ across 39 commits; see `AUDIT.md` for per-finding detail and `BEST-PRACTICES.md`
   **→ Resolved in 1.6.1.**
 
 ### Added
-- `BEST-PRACTICES.md` (dev standard) and `AUDIT.md` (full audit). ([`99ce763`](https://github.com/enavarre-cl/parley/commit/99ce763))
+- `BEST-PRACTICES.md` (dev standard) and `AUDIT.md` (full audit). ([`99ce763`](https://github.com/enavarre-cl/jotflow/commit/99ce763))
 
 ## [1.5.6] - 2026-06-22
 
@@ -338,14 +352,14 @@ across 39 commits; see `AUDIT.md` for per-finding detail and `BEST-PRACTICES.md`
 ## [1.2.2] - 2026-06-21
 
 ### Changed
-- **`parley.tools.maxReadBytes`** now accepts **`0` = unlimited** (no truncation of `fs_read` /
+- **`jotflow.tools.maxReadBytes`** now accepts **`0` = unlimited** (no truncation of `fs_read` /
   `web_fetch` output); its minimum dropped from 1000 to 0. Default unchanged (100000). Localized in
   all six languages.
 
 ## [1.2.1] - 2026-06-21
 
 ### Added
-- **`parley.tools.maxIterations`** — configurable cap on the agentic tool-loop (the model calls
+- **`jotflow.tools.maxIterations`** — configurable cap on the agentic tool-loop (the model calls
   tools, sees results, continues). Default **8**; **`0` = unlimited** (the loop still ends when the
   model stops requesting tools or you press Stop). Localized in all six languages.
 
@@ -421,7 +435,7 @@ across 39 commits; see `AUDIT.md` for per-finding detail and `BEST-PRACTICES.md`
 
 ### Added
 - **`@file` mentions** in the composer: type `@`, pick a workspace file, insert its full path.
-- **`parley.openrouter.customModels`** — add model ids the API doesn't list (e.g. new / preview
+- **`jotflow.openrouter.customModels`** — add model ids the API doesn't list (e.g. new / preview
   models like `sourceful/riverflow-v2.5-fast`); merged into the model list.
 
 ### Changed

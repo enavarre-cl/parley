@@ -22,9 +22,9 @@ export function makeTtsBackend(deps: TtsBackendDeps) {
     // TTS trace to file (for debugging without relying on the webview console).
     const tlog = (s: string) => {
       // Only traces if the user enables debug (off by default).
-      if (!vscode.workspace.getConfiguration('parley').get<boolean>('tts.debug', false)) return;
+      if (!vscode.workspace.getConfiguration('jotflow').get<boolean>('tts.debug', false)) return;
       try { console.log('[TTS]', s); } catch { /* nothing */ }
-      try { fs.appendFileSync(path.join(os.tmpdir(), 'parley-tts.log'), new Date().toISOString() + ' ' + s + '\n'); } catch { /* nothing */ }
+      try { fs.appendFileSync(path.join(os.tmpdir(), 'jotflow-tts.log'), new Date().toISOString() + ' ' + s + '\n'); } catch { /* nothing */ }
     };
     const synthPiper = async (text: string, rate: number, voice: string, reqId: number): Promise<void> => {
       const t = text.trim();
@@ -36,7 +36,7 @@ export function makeTtsBackend(deps: TtsBackendDeps) {
       // All TTS messages carry the request id so the webview can filter stale ones.
       const post = (m: Record<string, unknown>) => webview.postMessage({ ...m, id: reqId });
       const notice = (m: string) => webview.postMessage({ type: 'notice', message: m });
-      const cfg = vscode.workspace.getConfiguration('parley');
+      const cfg = vscode.workspace.getConfiguration('jotflow');
       const speaker = cfg.get<number>('tts.piperSpeaker', -1);
       const isCurated = !!voice && /^[a-z]{2}_[A-Z]{2}-/.test(voice);
       // Via DAEMON (resident model, fast): curated voices only. Any failure falls through to
@@ -78,7 +78,7 @@ export function makeTtsBackend(deps: TtsBackendDeps) {
         model = cfg.get<string>('tts.piperModel', '') || '';
       }
       if (!model) {
-        post({ type: 'ttsError', message: tr('No voice available. Download one from the Parley panel (Voices ➕), or set a custom .onnx path in Settings (parley.tts.piperModel).') });
+        post({ type: 'ttsError', message: tr('No voice available. Download one from the Jotflow panel (Voices ➕), or set a custom .onnx path in Settings (jotflow.tts.piperModel).') });
         return;
       }
       if (cancelled()) return;
@@ -95,7 +95,7 @@ export function makeTtsBackend(deps: TtsBackendDeps) {
       // Synthesises a chunk and returns the WAV Buffer (or an error).
       const synthChunk = (chunk: string): Promise<{ ok: boolean; buf?: Buffer; err?: string }> =>
         new Promise((resolve) => {
-          const out = path.join(os.tmpdir(), `parley-tts-${Date.now()}-${Math.floor(Math.random() * 1e6)}.wav`);
+          const out = path.join(os.tmpdir(), `jotflow-tts-${Date.now()}-${Math.floor(Math.random() * 1e6)}.wav`);
           const args = ['--model', model, '--output_file', out, '--length_scale', lengthScale];
           if (typeof speaker === 'number' && speaker >= 0) args.push('--speaker', String(speaker));
           let proc: cp.ChildProcess;

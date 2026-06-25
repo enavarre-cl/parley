@@ -1,4 +1,4 @@
-# Parley — Architecture
+# Jotflow — Architecture
 
 A VS Code extension that turns a `.chat` file into a full chat editor for LLMs, with
 pluggable backends (LM Studio / OpenAI-compatible, Ollama, Google Gemini, Anthropic,
@@ -222,7 +222,7 @@ sequenceDiagram
   R->>R: trim context (last-N / auto-summary)
   R->>R: resolveSystemPrompt (file or inline)
   R->>R: build wire = [system, summary?, history]
-  loop agentic loop (≤ parley.tools.maxIterations, 0=∞, one AbortController)
+  loop agentic loop (≤ jotflow.tools.maxIterations, 0=∞, one AbortController)
     R->>P: chat(model, wire, params, callbacks)
     P->>LLM: stream request
     LLM-->>P: deltas (content / reasoning / tool_calls / images)
@@ -349,7 +349,7 @@ graph LR
   KEY["English string (key in code/HTML)"] --> TR["tr() / LangI18n.t()"]
   BUNDLE["package.nls.&lt;lang&gt;.json<br/>(active bundle)"] --> TR
   TR --> OUT["translated text"]
-  SET["parley.language change"] -- "langChanged event → pushLang" --> BUNDLE
+  SET["jotflow.language change"] -- "langChanged event → pushLang" --> BUNDLE
 ```
 
 ---

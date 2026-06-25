@@ -16,7 +16,7 @@ SECURITY.md
 .vscode-test/**
 ejemplo.chat
 media/icon-src.svg
-media/icon-parley-full*.png
+media/icon-jotflow-full*.png
 media/*.ps.png
 media/img*.png
 media/vid*.gif

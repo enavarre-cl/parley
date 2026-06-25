@@ -107,7 +107,7 @@ const DEFAULT_MAX_READ = 100_000; // bytes
 
 /** Read limit for fs_read (global setting, with a robust fallback if broken). 0 = unlimited. */
 function maxReadBytes(): number {
-  const v = vscode.workspace.getConfiguration('parley').get<number>('tools.maxReadBytes', DEFAULT_MAX_READ);
+  const v = vscode.workspace.getConfiguration('jotflow').get<number>('tools.maxReadBytes', DEFAULT_MAX_READ);
   if (v === 0) return Infinity; // 0 = unlimited (no truncation); Math.min(size, ∞) = size
   return typeof v === 'number' && Number.isFinite(v) && v > 0 ? Math.floor(v) : DEFAULT_MAX_READ;
 }
@@ -279,7 +279,7 @@ const BUILTIN: { schema: ToolSchema; run: (args: Record<string, unknown>, signal
           if (u.protocol !== 'http:' && u.protocol !== 'https:') throw new Error('Only http/https URLs are allowed.');
           await assertSafeHost(u.hostname);
           res = await safeWebFetch(url, {
-            headers: { 'User-Agent': 'Mozilla/5.0 (Parley)', Accept: '*/*' },
+            headers: { 'User-Agent': 'Mozilla/5.0 (Jotflow)', Accept: '*/*' },
             signal: controller.signal,
             redirect: 'manual',
           });
