@@ -4,7 +4,7 @@
  */
 import { t } from '../core/i18n.js';
 import { vscode } from '../core/vscode.js';
-import { $ } from '../core/dom.js';
+import { $, setImageSrc } from '../core/dom.js';
 import { getDoc } from '../ui/store.js';
 import { notice, clearNotices } from '../ui/notifications.js';
 import { addMessage } from './message.js';
@@ -94,10 +94,7 @@ export function setSummarizing(on) {
       chip.className = 'attach-chip';
       if (a.kind === 'image') {
         const img = document.createElement('img');
-        // Only build the data: URL from a validated image mime + base64 payload.
-        if (/^image\/[\w.+-]+$/i.test(a.mime || '') && /^[A-Za-z0-9+/=]+$/.test(a.data || '')) {
-          img.src = 'data:' + a.mime + ';base64,' + a.data;
-        }
+        setImageSrc(img, a.mime, a.data);
         chip.appendChild(img);
       } else {
         chip.appendChild(document.createTextNode('📄 ' + a.name));

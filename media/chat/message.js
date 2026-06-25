@@ -5,7 +5,7 @@
 import { t } from '../core/i18n.js';
 import { vscode } from '../core/vscode.js';
 import { ICONS } from '../core/icons.js';
-import { $, iconButton, escapeHtml } from '../core/dom.js';
+import { $, iconButton, escapeHtml, setImageSrc } from '../core/dom.js';
 import { render as renderMarkdown } from '../render/markdown.js';
 import { processMermaid } from '../render/mermaid.js';
 import { getDoc } from '../ui/store.js';
@@ -210,10 +210,7 @@ export function addMessage(role, content, opts) {
       for (const a of opts.attachments) {
         if (a.kind === 'image') {
           const img = document.createElement('img');
-          // Only build the data: URL from a validated image mime + base64 payload.
-          if (/^image\/[\w.+-]+$/i.test(a.mime || '') && /^[A-Za-z0-9+/=]+$/.test(a.data || '')) {
-            img.src = 'data:' + a.mime + ';base64,' + a.data;
-          }
+          setImageSrc(img, a.mime, a.data);
           img.title = t('Click to enlarge');
           img.addEventListener('click', () => img.classList.toggle('zoomed'));
           att.appendChild(img);

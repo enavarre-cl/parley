@@ -8,6 +8,27 @@ export function escapeHtml(s) {
   }[c]));
 }
 
+/**
+ * Points an <img> at a base64 attachment via a Blob object URL (`blob:`), not a `data:` string —
+ * so untrusted bytes never flow into a URL string sink (avoids the CodeQL url-redirection/xss-dom
+ * false positives on `img.src = 'data:'+…`). Validates the mime is an image and the payload is
+ * base64; revokes the object URL once loaded so it doesn't leak across re-renders.
+ */
+export function setImageSrc(img, mime, data) {
+  if (!/^image\/[\w.+-]+$/i.test(mime || '') || !/^[A-Za-z0-9+/=]+$/.test(data || '')) return;
+  let bytes;
+  try {
+    const bin = atob(data);
+    bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  } catch { return; } // not valid base64
+  const url = URL.createObjectURL(new Blob([bytes], { type: mime }));
+  const revoke = () => URL.revokeObjectURL(url);
+  img.addEventListener('load', revoke, { once: true });
+  img.addEventListener('error', revoke, { once: true });
+  img.src = url;
+}
+
 // An icon button with a custom tooltip (data-tip → CSS) instead of the slow/unreliable native
 // `title`; aria-label for a11y.
 export function iconButton(svg, title, onClick) {
