@@ -210,7 +210,8 @@ export function addMessage(role, content, opts) {
       for (const a of opts.attachments) {
         if (a.kind === 'image') {
           const img = document.createElement('img');
-          img.src = 'data:' + a.mime + ';base64,' + a.data;
+          const mime = /^image\/[\w.+-]+$/i.test(a.mime || '') ? a.mime : 'image/png'; // constrain the data: URL
+          img.src = 'data:' + mime + ';base64,' + a.data;
           img.title = t('Click to enlarge');
           img.addEventListener('click', () => img.classList.toggle('zoomed'));
           att.appendChild(img);

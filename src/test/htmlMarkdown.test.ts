@@ -34,3 +34,9 @@ test('htmlToMarkdown drops script/style and images', () => {
   const md = htmlToMarkdown('<style>.x{}</style><p>Hi</p><img src="logo.png" alt="logo"><script>bad()</script>');
   assert.strictEqual(md, 'Hi');
 });
+
+test('htmlToMarkdown removes split/nested tags a single pass would reassemble', () => {
+  const md = htmlToMarkdown('<p>ok</p><scr<script>ipt>alert(1)</scr<script>ipt>');
+  assert.match(md, /ok/);
+  assert.doesNotMatch(md, /<script/i); // iterative strip leaves no reconstructable tag
+});

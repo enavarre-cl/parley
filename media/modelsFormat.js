@@ -94,15 +94,21 @@
     return text.length > 200 ? text.slice(0, 200).replace(/\s+\S*$/, '') + '…' : text;
   }
 
-  // Strips dangerous content from the README HTML (CSP already blocks inline scripts; this is extra defense).
+  // Strips dangerous content from the README HTML (CSP already blocks inline scripts; this is extra
+  // defense). Each removal runs in a fixpoint loop so a split/nested payload (e.g. `<scr<script>ipt>`)
+  // that one pass would reassemble is fully removed (CodeQL js/incomplete-multi-character-sanitization).
   function sanitizeHtml(html) {
-    return html
-      .replace(/<\s*(script|style|iframe|object|embed|link|meta)[\s\S]*?<\s*\/\s*\1\s*>/gi, '')
-      .replace(/<\s*(script|style|iframe|object|embed|link|meta)[^>]*>/gi, '')
-      .replace(/\son\w+\s*=\s*"[^"]*"/gi, '')
-      .replace(/\son\w+\s*=\s*'[^']*'/gi, '')
-      .replace(/\son\w+\s*=\s*[^\s>]+/gi, '')
-      .replace(/(href|src)\s*=\s*("|')\s*javascript:[^"']*\2/gi, '$1=$2#$2');
+    let prev;
+    do {
+      prev = html;
+      html = html
+        .replace(/<\s*(script|style|iframe|object|embed|link|meta)[\s\S]*?<\s*\/\s*\1\s*>/gi, '')
+        .replace(/<\s*(script|style|iframe|object|embed|link|meta)[^>]*>/gi, '')
+        .replace(/\son\w+\s*=\s*"[^"]*"/gi, '')
+        .replace(/\son\w+\s*=\s*'[^']*'/gi, '')
+        .replace(/\son\w+\s*=\s*[^\s>]+/gi, '');
+    } while (html !== prev);
+    return html.replace(/(href|src)\s*=\s*("|')\s*javascript:[^"']*\2/gi, '$1=$2#$2');
   }
 
   // README render: basic markdown preserving embedded HTML (HF mixes both).

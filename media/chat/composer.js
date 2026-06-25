@@ -94,7 +94,8 @@ export function setSummarizing(on) {
       chip.className = 'attach-chip';
       if (a.kind === 'image') {
         const img = document.createElement('img');
-        img.src = 'data:' + a.mime + ';base64,' + a.data;
+        const mime = /^image\/[\w.+-]+$/i.test(a.mime || '') ? a.mime : 'image/png'; // constrain the data: URL
+        img.src = 'data:' + mime + ';base64,' + a.data;
         chip.appendChild(img);
       } else {
         chip.appendChild(document.createTextNode('📄 ' + a.name));

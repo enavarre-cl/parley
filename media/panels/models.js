@@ -4,7 +4,7 @@
  */
 import { t } from '../core/i18n.js';
 import { ICONS } from '../core/icons.js';
-import { $ } from '../core/dom.js';
+import { $, escapeHtml } from '../core/dom.js';
 import { getDoc } from '../ui/store.js';
 
 const statusDot = $('statusDot');
@@ -64,8 +64,9 @@ const CTX_BUDGET_RATIO = 0.75; // auto context budget = this fraction of the mod
     if (c.tools) caps.push(['tool', t('Tools / function calling')]);
     // Tooltip on both the span (title) and inside the SVG (<title>), for maximum compatibility.
     modelCapsEl.innerHTML = caps.map((c) => {
-      const svg = ICONS[c[0]].replace('>', '><title>' + c[1] + '</title>', 1);
-      return '<span class="cap" title="' + c[1] + '">' + svg + '</span>';
+      const label = escapeHtml(c[1]); // labels are translations, but escape before innerHTML anyway
+      const svg = ICONS[c[0]].replace('>', '><title>' + label + '</title>', 1);
+      return '<span class="cap" title="' + label + '">' + svg + '</span>';
     }).join('');
   }
 
