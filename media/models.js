@@ -161,6 +161,7 @@
          <div class="mb-head">
            <h2>${esc(id)}</h2>
            ${m.official ? `<span class="mb-verified" title="${esc(t('Official'))}">✓ ${esc(t('Official'))}</span>` : ''}
+           ${m.cloud ? `<span class="mb-cloud" title="${esc(t('Runs on Ollama Cloud (no local download)'))}">☁ ${esc(t('Cloud'))}</span>` : ''}
          </div>
          ${stats}
          ${summary ? `<div class="mb-desc-box">${esc(summary)}</div>` : ''}
