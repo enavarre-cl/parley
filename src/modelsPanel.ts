@@ -166,11 +166,11 @@ export class ModelsPanel {
           const { signal } = this.searchAbort;
           if (this.source() === 'ollama') {
             const models = await searchOllama(msg.query || '', limit, signal, toOllamaSort(sort));
-            this.post({ type: 'searchResults', models, limit, officialOrgs: [] });
+            this.post({ type: 'searchResults', models, limit, officialOrgs: [], source: 'ollama' });
             break;
           }
           const models = await searchHF(msg.query || '', limit, signal, msg.author || '', sort);
-          this.post({ type: 'searchResults', models, limit, officialOrgs: OFFICIAL_ORG_NAMES });
+          this.post({ type: 'searchResults', models, limit, officialOrgs: OFFICIAL_ORG_NAMES, source: 'huggingface' });
           break;
         }
         case 'detail': {

@@ -20,6 +20,7 @@
   let officialOrgs = [];        // curated list of official orgs (sent by the backend)
   let sortBy = 'relevance';     // Best Match by default (like LM Studio)
   let ollamaHasKey = false;     // whether an Ollama API key is configured (host-reported)
+  let searchSource = 'ollama';  // active catalog source (host-reported); drives the filter bar
 
   // Provider and sort order are filtered on the server. Capabilities are NOT filtered (only shown
   // as estimated badges): relying on a heuristic to hide results leads to inconsistencies.
@@ -28,18 +29,26 @@
   function renderFilters() {
     const fb = $('mb-filters');
     if (!fb) return;
-    // Union of official orgs (always) + authors present in the results.
-    const set = new Set([...officialOrgs, ...results.map((m) => m.author).filter(Boolean)]);
-    if (filterProvider) set.add(filterProvider);
-    const authors = [...set].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
-    fb.innerHTML =
-      `<select id="mb-provider" class="mb-select-sm">
-         <option value="">${esc(t('All providers'))}</option>
-         ${authors.map((a) => `<option value="${esc(a)}"${a === filterProvider ? ' selected' : ''}>${esc(a)}</option>`).join('')}
-       </select>
-       <select id="mb-sort" class="mb-select-sm mb-sort">
-         ${[['relevance', 'Best Match'], ['likes', 'Most Likes'], ['downloads', 'Most Downloads'], ['modified', 'Recently Updated']]
-        .map(([v, l]) => `<option value="${v}"${v === sortBy ? ' selected' : ''}>${esc(t(l))}</option>`).join('')}
+    const isHF = searchSource === 'huggingface';
+    // Provider/author filter only exists on Hugging Face; Ollama's library has no author namespace.
+    let providerSel = '';
+    if (isHF) {
+      const set = new Set([...officialOrgs, ...results.map((m) => m.author).filter(Boolean)]);
+      if (filterProvider) set.add(filterProvider);
+      const authors = [...set].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+      providerSel =
+        `<select id="mb-provider" class="mb-select-sm">
+           <option value="">${esc(t('All providers'))}</option>
+           ${authors.map((a) => `<option value="${esc(a)}"${a === filterProvider ? ' selected' : ''}>${esc(a)}</option>`).join('')}
+         </select>`;
+    }
+    // Sort: HF exposes Best Match/Likes/Downloads/Updated; Ollama's search only ranks Popular/Newest.
+    const sortOpts = isHF
+      ? [['relevance', 'Best Match'], ['likes', 'Most Likes'], ['downloads', 'Most Downloads'], ['modified', 'Recently Updated']]
+      : [['relevance', 'Popular'], ['modified', 'Newest']];
+    fb.innerHTML = providerSel +
+      `<select id="mb-sort" class="mb-select-sm mb-sort">
+         ${sortOpts.map(([v, l]) => `<option value="${v}"${v === sortBy ? ' selected' : ''}>${esc(t(l))}</option>`).join('')}
        </select>`;
     const ss = $('mb-sort');
     if (ss) ss.addEventListener('change', () => { sortBy = ss.value; currentLimit = PAGE; doSearch(); });
@@ -277,6 +286,7 @@
       case 'searchResults': {
         lastFetchCount = (msg.models || []).length;
         if (typeof msg.limit === 'number') currentLimit = msg.limit;
+        if (msg.source) searchSource = msg.source;
         if (Array.isArray(msg.officialOrgs) && msg.officialOrgs.length) officialOrgs = msg.officialOrgs;
         // We respect the order returned by HF according to the chosen criterion (Best Match / Likes / etc.).
         results = (msg.models || []).slice();
