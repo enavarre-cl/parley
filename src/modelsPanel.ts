@@ -5,6 +5,7 @@ import { OllamaManager } from './ollama/manager';
 import { searchHF, modelFiles, readme, modelInfo, fetchModel, ollamaPullViable, OFFICIAL_ORG_NAMES, CatalogModel, SortMode } from './ollama/catalog';
 import { searchOllama, ollamaModelTags, ollamaModelCard, OllamaSort } from './ollama/library';
 import { hfPullRef, formatBytes } from './ollama/parse';
+import { resolveApiKey } from './providers';
 
 /** Where the model browser searches/downloads from. `ollama` is the default. */
 type ModelSource = 'ollama' | 'huggingface';
@@ -97,10 +98,15 @@ export class ModelsPanel {
       ? 'huggingface' : 'ollama';
   }
 
+  /** Whether an Ollama API key is configured (so the webview can drop the "set a key" hint). */
+  private hasOllamaKey(): boolean {
+    return !!resolveApiKey('ollama');
+  }
+
   /** Opens a model card WITHOUT changing the search: uses the sidecar if present, otherwise fetches from HF. */
   revealModelImpl(modelId: string): void {
     const card = this.cards.load(modelId);
-    if (card?.model) { this.post({ type: 'showCachedModel', card }); return; }
+    if (card?.model) { this.post({ type: 'showCachedModel', card, hasKey: this.hasOllamaKey() }); return; }
     void (this.source() === 'ollama' ? this.buildCardFromOllama(modelId) : this.buildCardFromHF(modelId));
   }
 
@@ -115,7 +121,7 @@ export class ModelsPanel {
       };
       const card = { model, files, cloudTags, readme: '', info: { arch: '', params: '' } };
       this.cards.save(modelId, card);
-      this.post({ type: 'showCachedModel', card });
+      this.post({ type: 'showCachedModel', card, hasKey: this.hasOllamaKey() });
     } catch (e) {
       this.post({ type: 'error', message: `Could not load model card: ${errMsg(e)}` });
     }
@@ -178,7 +184,7 @@ export class ModelsPanel {
             const info = { arch: '', params: overview.params, context: overview.context };
             const card: ModelCard = { model: msg.model, files: tags.files, cloudTags: tags.cloudTags, readme, info };
             this.cards.save(detailId, card);
-            this.post({ type: 'detail', id: msg.id, ...card });
+            this.post({ type: 'detail', id: msg.id, ...card, hasKey: this.hasOllamaKey() });
             break;
           }
           const [files, md, info] = await Promise.all([

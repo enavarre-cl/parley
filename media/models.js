@@ -19,6 +19,7 @@
   let filterProvider = '';      // provider: server-side filter (HF author=)
   let officialOrgs = [];        // curated list of official orgs (sent by the backend)
   let sortBy = 'relevance';     // Best Match by default (like LM Studio)
+  let ollamaHasKey = false;     // whether an Ollama API key is configured (host-reported)
 
   // Provider and sort order are filtered on the server. Capabilities are NOT filtered (only shown
   // as estimated badges): relying on a heuristic to hide results leads to inconsistencies.
@@ -152,7 +153,8 @@
         <button class="mb-dl" id="mb-cloud-reg">${esc(t('Register'))}</button>
         <span class="mb-opt-count">${cloud.length} ${esc(t('cloud variants'))}</span>
       </div>
-      <div class="mb-reco">${esc(t('Runs on Ollama Cloud. Registering adds the selected variant to your model list (no weights downloaded); needs an Ollama API key — see Set API Key.'))}</div>`;
+      <div class="mb-reco">${esc(t('Runs on Ollama Cloud. Registering adds the selected variant to your model list (no weights downloaded).')
+        + (ollamaHasKey ? '' : ' ' + t('Needs an Ollama API key — see Set API Key.')))}</div>`;
     }
     if (!opts) {
       opts = `<div class="mb-muted">${esc(t('No downloadable files found'))}</div>`;
@@ -285,6 +287,7 @@
         break;
       }
       case 'detail':
+        if (typeof msg.hasKey === 'boolean') ollamaHasKey = msg.hasKey;
         if (msg.id === selected) renderDetail(msg.id, msg.files || [], msg.readme || '', msg.info || {}, undefined, msg.cloudTags || []);
         break;
       case 'showCachedLoading':
@@ -294,6 +297,7 @@
         // Click on a download → shows the card WITHOUT altering the current search.
         const card = msg.card || {};
         if (!card.model) break;
+        if (typeof msg.hasKey === 'boolean') ollamaHasKey = msg.hasKey;
         selected = card.model.id;
         // Re-renders the list: clears the previous selection and highlights ONLY if the model is
         // in the current results (does not inject anything or alter the search).
