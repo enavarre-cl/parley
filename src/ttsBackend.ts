@@ -6,17 +6,21 @@ import * as path from 'path';
 import { tr } from './i18n';
 import { wavData, concatWavs, splitForTTS } from './audio';
 import { PiperManager } from './piper/manager';
+import { ChatterboxManager } from './chatterbox/manager';
+import { chatterboxVoicePath, chatterboxVoiceLanguage } from './chatterboxVoices';
+import { isSafeVoiceId, isChatterboxLanguage, isChatterboxModel, CHATTERBOX_DEFAULT_MODEL } from './chatterbox/assets';
 import { errMsg } from './chatHelpers';
 
 export interface TtsBackendDeps {
   webview: vscode.Webview;
   piper: PiperManager;
+  chatterbox: ChatterboxManager;
   ttsTokenRef: { value: number };
 }
 
-/** Piper TTS synthesis backend (daemon + per-chunk spawn). Cohesive; deps explicit. */
+/** Neural TTS synthesis backends (Piper + Chatterbox). Cohesive; deps explicit. */
 export function makeTtsBackend(deps: TtsBackendDeps) {
-  const { webview, piper, ttsTokenRef } = deps;
+  const { webview, piper, chatterbox, ttsTokenRef } = deps;
     let currentPiperProc: cp.ChildProcess | null = null; // piper process in flight, so we can kill it on cancel
     const killPiper = () => { if (currentPiperProc) { try { currentPiperProc.kill(); } catch { /* nothing */ } currentPiperProc = null; } };
     // TTS trace to file (for debugging without relying on the webview console).
@@ -146,5 +150,74 @@ export function makeTtsBackend(deps: TtsBackendDeps) {
       post({ type: 'ttsAudio', data: wav.toString('base64'), last: true });
       post({ type: 'ttsDone' });
     };
-  return { synthPiper, killPiper, tlog };
+
+    // Chatterbox: one resident model in the daemon, voice cloned from a reference clip. The whole
+    // message is synthesised in one shot (the model is slower than Piper; chunking gives no early
+    // playback benefit and would reload phrasing per chunk). Cancellation via the shared token.
+    const synthChatterbox = async (text: string, voice: string, exaggeration: number, reqId: number): Promise<void> => {
+      const t = text.trim();
+      if (!t) return;
+      const myToken = ++ttsTokenRef.value;
+      const cancelled = (): boolean => myToken !== ttsTokenRef.value;
+      const post = (m: Record<string, unknown>): Thenable<boolean> => webview.postMessage({ ...m, id: reqId });
+      const progress = (pct: number, text: string): void => { post({ type: 'ttsProgress', pct, text }); };
+      if (!voice || !isSafeVoiceId(voice)) {
+        post({ type: 'ttsError', message: tr('No Chatterbox voice selected. Create one from the Voices panel (YouTube fragment or a local clip).') });
+        return;
+      }
+      const refWav = chatterboxVoicePath(chatterbox.voicesDir(), voice);
+      if (!fs.existsSync(refWav)) {
+        post({ type: 'ttsError', message: tr('That voice is missing. Re-create it from the Voices panel.') });
+        return;
+      }
+      tlog(`req#${reqId} received (engine=chatterbox, voice=${voice}, exaggeration=${exaggeration})`);
+      // A dropped connection (idle-timeout, OS killed, crash) → the daemon died. Restart and retry once.
+      const isConnLost = (e: unknown): boolean => /ECONNREFUSED|ECONNRESET|socket hang up|timed out|did not respond/i.test(errMsg(e));
+      try {
+        progress(0, '🔊 ' + tr('Preparing the voice…'));
+        let baseUrl = await chatterbox.ensureServer((m) => progress(0, '🔊 ' + m));
+        if (cancelled()) return;
+        // The voice carries its own language (set when it was created) — the multilingual model speaks
+        // the clone in that language. No chat-level language config. The English-only model ignores it.
+        const cfg = vscode.workspace.getConfiguration('jotflow');
+        const modelRaw = cfg.get<string>('tts.chatterboxModel', CHATTERBOX_DEFAULT_MODEL);
+        const isMultilingual = (isChatterboxModel(modelRaw) ? modelRaw : CHATTERBOX_DEFAULT_MODEL) === 'multilingual';
+        const voiceLang = chatterboxVoiceLanguage(chatterbox.voicesDir(), voice);
+        const languageId = isMultilingual ? (voiceLang && isChatterboxLanguage(voiceLang) ? voiceLang : 'en') : undefined;
+        // Chatterbox is slow (~real-time on GPU, several× slower on CPU/MPS) and the model caps how
+        // much it generates per call. Synthesise sentence-by-sentence (short chunks) so no single
+        // request times out, then concatenate. Smaller chunks than Piper, since each is much slower.
+        const chunks = splitForTTS(t, 180);
+        const bufs: Buffer[] = [];
+        for (let i = 0; i < chunks.length; i++) {
+          if (cancelled()) return;
+          const label = '🔊 ' + tr('Generating audio…') + (chunks.length > 1 ? ` (${i + 1}/${chunks.length})` : '');
+          const onChunkPct = (p: number): void => { if (!cancelled()) progress((i + p) / chunks.length, label); };
+          onChunkPct(0);
+          let wav: Buffer;
+          try {
+            wav = await chatterbox.synthViaServer(baseUrl, chunks[i], refWav, exaggeration, 0.5, languageId, onChunkPct);
+          } catch (e) {
+            if (!isConnLost(e) || cancelled()) throw e;
+            tlog(`req#${reqId} daemon lost (${errMsg(e)}); restarting and retrying chunk ${i}`);
+            progress((i) / chunks.length, '🔊 ' + tr('Restarting the engine…'));
+            baseUrl = await chatterbox.ensureServer((m) => progress((i) / chunks.length, '🔊 ' + m));
+            if (cancelled()) return;
+            wav = await chatterbox.synthViaServer(baseUrl, chunks[i], refWav, exaggeration, 0.5, languageId, onChunkPct);
+          }
+          if (cancelled()) return;
+          bufs.push(wav);
+        }
+        if (!bufs.length) { post({ type: 'ttsError', message: tr('Chatterbox produced no audio.') }); return; }
+        const wav = concatWavs(bufs);
+        tlog(`req#${reqId} OK via chatterbox: ${bufs.length} chunk(s) → WAV ${wav.length} bytes`);
+        post({ type: 'ttsAudio', data: wav.toString('base64'), last: true });
+        post({ type: 'ttsDone' });
+      } catch (e) {
+        if (cancelled()) return;
+        tlog(`req#${reqId} chatterbox failed: ${errMsg(e)}`);
+        post({ type: 'ttsError', message: tr('Chatterbox failed: ') + errMsg(e) });
+      }
+    };
+  return { synthPiper, synthChatterbox, killPiper, tlog };
 }

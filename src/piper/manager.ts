@@ -5,14 +5,15 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as cp from 'child_process';
 import * as http from 'http';
-import * as net from 'net';
 import { downloadFile, sha256File } from '../download';
 import { killProcessTree } from '../procKill';
 import { tr } from '../i18n';
+import { PythonEnv } from '../pyenv';
+import { freePort, waitForHttp } from '../ttsDaemon';
 
 import {
-  PIPER_RELEASE, PIPER_ASSET_SHA256, PIPER_TTS_VERSION, PYTHON_STANDALONE_SHA256, PYTHON_STANDALONE_TAG,
-  pythonStandaloneAsset, piperAsset, PIPER_VOICE_SHA256, piperVoiceUrls, PIPER_VOICE_CATALOG,
+  PIPER_RELEASE, PIPER_ASSET_SHA256, PIPER_TTS_VERSION,
+  piperAsset, PIPER_VOICE_SHA256, piperVoiceUrls, PIPER_VOICE_CATALOG,
 } from './assets';
 import type { Notify, PiperVoiceInfo } from './assets';
 import { errMsg } from '../chatHelpers';
@@ -33,15 +34,18 @@ export class PiperManager {
   // Notifies daemon state changes (start/stop) to refresh the tree.
   private readonly _onChange = new vscode.EventEmitter<void>();
   readonly onDidChange = this._onChange.event;
+  private readonly py: PythonEnv;
 
-  constructor(private readonly context: vscode.ExtensionContext) {}
+  constructor(private readonly context: vscode.ExtensionContext) {
+    this.py = new PythonEnv(context.globalStorageUri);
+  }
 
   private dir(sub: string): string {
     return vscode.Uri.joinPath(this.context.globalStorageUri, sub).fsPath;
   }
   /** Path to the `piper` binary in the pip venv. */
   venvBinPath(): string {
-    return path.join(this.dir('piper-venv'), process.platform === 'win32' ? 'Scripts' : 'bin', process.platform === 'win32' ? 'piper.exe' : 'piper');
+    return this.py.venvBin('piper-venv', 'piper');
   }
   private standaloneBinPath(): string {
     return path.join(this.dir('piper-bin'), 'piper', process.platform === 'win32' ? 'piper.exe' : 'piper');
@@ -88,95 +92,15 @@ export class PiperManager {
     return onnx;
   }
 
-  private runCmd(cmd: string, args: string[]): Promise<void> {
-    return new Promise((resolve, reject) => {
-      const p = cp.spawn(cmd, args);
-      let err = '';
-      p.stderr?.on('data', (d: Buffer) => { err += d.toString(); });
-      p.on('error', reject);
-      p.on('close', (c: number) => (c === 0 ? resolve() : reject(new Error(err.trim() || `exit ${c}`))));
-    });
-  }
-
-  // Looks for a Python compatible with piper-tts (3.9–3.13).
-  private findCompatiblePython(): string | null {
-    const cands = [
-      'python3.13', 'python3.12', 'python3.11', 'python3.10', 'python3.9',
-      '/opt/homebrew/bin/python3.13', '/opt/homebrew/bin/python3.12', '/opt/homebrew/bin/python3.11',
-      '/usr/local/bin/python3.13', '/usr/local/bin/python3.12', '/usr/bin/python3', 'python3',
-      'py', 'python',
-    ];
-    for (const c of cands) {
-      try {
-        const r = cp.spawnSync(c, ['-c', 'import sys;print(sys.version_info[1])'], { encoding: 'utf8' });
-        if (r.status === 0) {
-          const minor = parseInt((r.stdout || '').trim(), 10);
-          if (minor >= 9 && minor <= 13) return c;
-        }
-      } catch { /* next */ }
-    }
-    return null;
-  }
-
-  // Downloads (if missing) a self-contained Python; returns its executable.
-  private async ensureStandalonePython(notify?: Notify): Promise<string> {
-    const dir = this.dir('python');
-    const exe = process.platform === 'win32'
-      ? path.join(dir, 'python', 'python.exe')
-      : path.join(dir, 'python', 'bin', 'python3');
-    if (fs.existsSync(exe)) return exe;
-    const asset = pythonStandaloneAsset(process.platform, process.arch);
-    if (!asset) throw new Error(`no self-contained Python for ${process.platform}/${process.arch}`);
-    fs.mkdirSync(dir, { recursive: true });
-    const archive = path.join(dir, asset);
-    const url = `https://github.com/astral-sh/python-build-standalone/releases/download/${PYTHON_STANDALONE_TAG}/${asset}`;
-    notify?.(tr('Downloading a self-contained Python (one-time)…'));
-    await downloadFile(url, archive);
-    const expected = PYTHON_STANDALONE_SHA256[asset];
-    if (!expected) { try { fs.unlinkSync(archive); } catch { /* noop */ } throw new Error(`self-contained Python has no pinned SHA256: ${asset}`); }
-    const got = sha256File(archive);
-    if (got !== expected) { try { fs.unlinkSync(archive); } catch { /* noop */ } throw new Error('Python integrity check failed'); }
-    await new Promise<void>((resolve, reject) => {
-      const p = cp.spawn('tar', ['-xzf', archive, '-C', dir]);
-      let err = '';
-      p.stderr?.on('data', (d: Buffer) => { err += d.toString(); });
-      p.on('error', reject);
-      p.on('close', (c: number) => (c === 0 ? resolve() : reject(new Error('tar: ' + (err.trim() || c)))));
-    });
-    try { fs.unlinkSync(archive); } catch { /* noop */ }
-    if (!fs.existsSync(exe)) throw new Error('python not found after extracting');
-    return exe;
-  }
-
   // Creates (if missing) a venv with piper-tts and returns the path to its `piper` executable.
+  // [http] includes flask for the HTTP daemon (synthesis without reloading the model each time).
   private async ensurePiperVenv(notify?: Notify): Promise<string> {
-    const venvDir = this.dir('piper-venv');
     const piperBin = this.venvBinPath();
-    if (fs.existsSync(piperBin)) return piperBin;
-    let py: string;
-    try {
-      py = await this.ensureStandalonePython(notify);
-    } catch (e) {
-      // Fallback to a Python resolved via PATH (python3/py/python). Spawning a PATH-resolved
-      // interpreter is command execution, so gate it behind Workspace Trust — same posture as the
-      // filesystem tools and MCP servers (L7). The SHA-pinned standalone above is always tried first
-      // and is unaffected; this only blocks the fallback in an untrusted workspace.
-      if (!vscode.workspace.isTrusted) {
-        throw new Error(tr('Could not set up the bundled Python and the system-Python fallback is disabled in an untrusted workspace. Trust this workspace (Workspace Trust) to enable Piper TTS.'));
-      }
-      const sys = this.findCompatiblePython();
-      if (!sys) throw e;
-      py = sys;
-    }
-    const venvPy = this.venvPython();
-    notify?.(tr('Setting up the Piper engine (one-time, ~1–2 min)…'));
-    fs.mkdirSync(this.context.globalStorageUri.fsPath, { recursive: true });
-    await this.runCmd(py, ['-m', 'venv', venvDir]);
-    // `python -m pip` (not the `pip` script): on Windows upgrading pip.exe while it runs fails
-    // with WinError 5, and the standalone/venv pip can be too old to install the wheels below.
-    await this.runCmd(venvPy, ['-m', 'pip', 'install', '--upgrade', 'pip']);
-    // [http] includes flask for the HTTP daemon (synthesis without reloading the model each time).
-    await this.runCmd(venvPy, ['-m', 'pip', 'install', `piper-tts[http]==${PIPER_TTS_VERSION}`]);
+    await this.py.ensureVenv('piper-venv', [`piper-tts[http]==${PIPER_TTS_VERSION}`], {
+      notify,
+      setupMsg: tr('Setting up the Piper engine (one-time, ~1–2 min)…'),
+      isInstalled: () => fs.existsSync(piperBin),
+    });
     if (!fs.existsSync(piperBin)) throw new Error('piper not found after install');
     return piperBin;
   }
@@ -243,23 +167,12 @@ export class PiperManager {
 
   /** Is the daemon alive? */
   isServerRunning(): boolean { return !!this.serverProc; }
+  /** PID of the daemon (for RAM sampling), if running. */
+  serverPid(): number | undefined { return this.serverProc?.pid; }
 
   /** Path to `python` in the venv. */
   private venvPython(): string {
-    return path.join(this.dir('piper-venv'), process.platform === 'win32' ? 'Scripts' : 'bin', process.platform === 'win32' ? 'python.exe' : 'python');
-  }
-
-  /** Asks the OS for a free TCP port on 127.0.0.1. */
-  private freePort(): Promise<number> {
-    return new Promise((resolve, reject) => {
-      const srv = net.createServer();
-      srv.on('error', reject);
-      srv.listen(0, '127.0.0.1', () => {
-        const addr = srv.address();
-        const port = typeof addr === 'object' && addr ? addr.port : 0;
-        srv.close(() => (port ? resolve(port) : reject(new Error('no free port'))));
-      });
-    });
+    return this.py.venvPython('piper-venv');
   }
 
   /** Resets the idle timer: after SERVER_IDLE_MS without activity, shuts down the daemon. */
@@ -285,7 +198,7 @@ export class PiperManager {
     if (!fs.existsSync(python)) throw new Error('venv python not found');
     await this.ensureHttpDeps(python, notify); // old installs: adds flask on-demand
     const voicesDir = this.dir('piper-voices');
-    const port = await this.freePort();
+    const port = await freePort();
     const args = ['-m', 'piper.http_server', '-m', defaultModel, '--data-dir', voicesDir, '--host', '127.0.0.1', '--port', String(port)];
     const proc = cp.spawn(python, args, { cwd: path.dirname(python) });
     let stderr = '';
@@ -298,7 +211,7 @@ export class PiperManager {
     // of waiting out the full 20s waitForServer timeout.
     const spawnErr = new Promise<never>((_, rej) => proc.once('error', (e) => rej(e instanceof Error ? e : new Error(String(e)))));
     try {
-      await Promise.race([this.waitForServer(port, 20000), spawnErr]);
+      await Promise.race([waitForHttp(port, 20000), spawnErr]);
     } catch (e) {
       killProcessTree(proc);
       throw new Error((stderr.trim().split('\n').slice(-3).join(' ') || errMsg(e)) ?? 'piper http_server did not respond');
@@ -316,31 +229,8 @@ export class PiperManager {
     const check = cp.spawnSync(python, ['-c', 'import flask']);
     if (check.status === 0) { this.httpDepsOk = true; return; }
     notify?.(tr('Setting up the Piper engine (one-time, ~1–2 min)…'));
-    await this.runCmd(python, ['-m', 'pip', 'install', `piper-tts[http]==${PIPER_TTS_VERSION}`]);
+    await this.py.runCmd(python, ['-m', 'pip', 'install', `piper-tts[http]==${PIPER_TTS_VERSION}`]);
     this.httpDepsOk = true;
-  }
-
-  /** Polls GET / until the server responds (or times out). */
-  private waitForServer(port: number, timeoutMs: number): Promise<void> {
-    const deadline = Date.now() + timeoutMs;
-    const tryOnce = (): Promise<void> => new Promise((resolve, reject) => {
-      const req = http.get({ host: '127.0.0.1', port, path: '/', timeout: 1500 }, (res) => {
-        res.resume();
-        resolve();
-      });
-      req.on('timeout', () => req.destroy(new Error('timeout')));
-      req.on('error', reject);
-    });
-    const loop = async (): Promise<void> => {
-      for (;;) {
-        try { await tryOnce(); return; }
-        catch {
-          if (Date.now() > deadline) throw new Error('timeout waiting for piper http_server');
-          await new Promise((r) => setTimeout(r, 300));
-        }
-      }
-    };
-    return loop();
   }
 
   /** Synthesizes via the daemon: POST /synthesize → WAV Buffer. `voice` = curated voice id. */
@@ -390,18 +280,19 @@ export class PiperManager {
     this.httpDepsOk = false;
     const venvPy = this.venvPython();
     if (fs.existsSync(venvPy)) {
-      await this.runCmd(venvPy, ['-m', 'pip', 'install', '--upgrade', `piper-tts[http]==${PIPER_TTS_VERSION}`]);
+      await this.py.runCmd(venvPy, ['-m', 'pip', 'install', '--upgrade', `piper-tts[http]==${PIPER_TTS_VERSION}`]);
     } else {
       try { fs.rmSync(this.dir('piper-bin'), { recursive: true, force: true }); } catch { /* noop */ }
     }
     notify?.(tr('Piper updated.'));
   }
 
-  /** Deletes the ENTIRE engine (venv + self-contained Python + standalone binary) and its downloaded voices. */
+  /** Deletes the engine (venv + standalone binary) and its downloaded voices. The shared
+   *  self-contained Python is left in place (other engines may use it; PythonEnv owns it). */
   delete(): void {
     this.stopServer();
     this.httpDepsOk = false;
-    for (const d of ['piper-venv', 'piper-bin', 'python', 'piper-voices']) {
+    for (const d of ['piper-venv', 'piper-bin', 'piper-voices']) {
       try { fs.rmSync(this.dir(d), { recursive: true, force: true }); } catch { /* noop */ }
     }
     this.setupPromise = null;

@@ -14,7 +14,7 @@ import {
   toolCall, toolResult,
 } from '../chat/conversation.js';
 import { setStreaming, setSummarizing } from '../chat/composer.js';
-import { notice, showSummarizing, hideSummarizing } from '../ui/notifications.js';
+import { notice, showSummarizing, hideSummarizing, showTtsProgress, hideTtsProgress } from '../ui/notifications.js';
 
 const providerSelect = /** @type {HTMLSelectElement} */ ($('providerSelect'));
 const spellSelect = /** @type {HTMLSelectElement} */ ($('spellSelect'));
@@ -45,6 +45,11 @@ export function handleMessage(msg) {
     case 'piperVoices':
       // Downloaded Piper voices: the chat selector only offers these (+ Custom).
       tts.downloadedVoices = new Set(msg.ids || []);
+      if (getDoc() && !configPanel.classList.contains('hidden')) renderConfig();
+      break;
+    case 'chatterboxVoices':
+      // Cloned Chatterbox voices available in the selector.
+      tts.chatterboxVoices = Array.isArray(msg.voices) ? msg.voices : [];
       if (getDoc() && !configPanel.classList.contains('hidden')) renderConfig();
       break;
     case 'doc': {
@@ -114,12 +119,19 @@ export function handleMessage(msg) {
       streamError();
       setStreaming(false);
       break;
+    case 'ttsProgress':
+      // Slow neural TTS (Chatterbox): show a fill bar while the audio is synthesised.
+      if (msg.id === undefined || msg.id === tts.reqId) showTtsProgress(msg.pct, msg.text);
+      break;
     case 'ttsAudio':
+      hideTtsProgress(); // synthesis finished → about to play
       tts.playWav(msg.data, msg.id);
       break;
     case 'ttsDone':
-      break; // backend signalled completion (debug-only in the old build)
+      hideTtsProgress();
+      break;
     case 'ttsError':
+      hideTtsProgress();
       if (msg.id === undefined || msg.id === tts.reqId) { // ignore errors from stale requests
         tts.stop();
         notice(msg.message, true);

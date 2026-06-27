@@ -2,7 +2,7 @@
   "name": "jotflow",
   "displayName": "Jotflow",
   "description": "%ext.description%",
-  "version": "2.1.2",
+  "version": "2.3.0",
   "publisher": "enavarre",
   "license": "MIT",
   "engines": {
@@ -143,6 +143,36 @@
         "title": "%cmd.engine.delete.title%",
         "category": "Jotflow",
         "icon": "$(trash)"
+      },
+      {
+        "command": "jotflow.chatterbox.startServer",
+        "title": "%cmd.chatterbox.startServer.title%",
+        "category": "Jotflow",
+        "icon": "$(play)"
+      },
+      {
+        "command": "jotflow.chatterbox.stopServer",
+        "title": "%cmd.chatterbox.stopServer.title%",
+        "category": "Jotflow",
+        "icon": "$(debug-stop)"
+      },
+      {
+        "command": "jotflow.chatterbox.update",
+        "title": "%cmd.chatterbox.update.title%",
+        "category": "Jotflow",
+        "icon": "$(sync)"
+      },
+      {
+        "command": "jotflow.chatterbox.removeVoice",
+        "title": "%cmd.chatterbox.removeVoice.title%",
+        "category": "Jotflow",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "jotflow.engines.manage",
+        "title": "%cmd.engines.manage.title%",
+        "category": "Jotflow",
+        "icon": "$(settings-gear)"
       }
     ],
     "viewsContainers": {
@@ -194,6 +224,11 @@
           "command": "jotflow.tts.openVoices",
           "when": "view == jotflow.voices",
           "group": "navigation"
+        },
+        {
+          "command": "jotflow.engines.manage",
+          "when": "view == jotflow.engines",
+          "group": "navigation"
         }
       ],
       "view/item/context": [
@@ -209,7 +244,7 @@
         },
         {
           "command": "jotflow.engine.install",
-          "when": "view == jotflow.engines && viewItem =~ /engine\\.(ollama|piper)\\.notinstalled/",
+          "when": "view == jotflow.engines && viewItem =~ /engine\\.(ollama|piper|chatterbox)\\.notinstalled/",
           "group": "inline@1"
         },
         {
@@ -223,8 +258,23 @@
           "group": "inline@1"
         },
         {
+          "command": "jotflow.chatterbox.startServer",
+          "when": "view == jotflow.engines && viewItem == engine.chatterbox.stopped",
+          "group": "inline@1"
+        },
+        {
+          "command": "jotflow.chatterbox.stopServer",
+          "when": "view == jotflow.engines && viewItem == engine.chatterbox.running",
+          "group": "inline@1"
+        },
+        {
+          "command": "jotflow.chatterbox.update",
+          "when": "view == jotflow.engines && viewItem =~ /engine\\.chatterbox\\.(stopped|running)/",
+          "group": "inline@2"
+        },
+        {
           "command": "jotflow.engine.delete",
-          "when": "view == jotflow.engines && viewItem =~ /engine\\.(ollama|piper)\\.(stopped|running)/",
+          "when": "view == jotflow.engines && viewItem =~ /engine\\.(ollama|piper|chatterbox)\\.(stopped|running)/",
           "group": "inline@3"
         },
         {
@@ -265,6 +315,11 @@
         {
           "command": "jotflow.tts.removeVoice",
           "when": "view == jotflow.voices && viewItem == piperVoice",
+          "group": "inline"
+        },
+        {
+          "command": "jotflow.chatterbox.removeVoice",
+          "when": "view == jotflow.voices && viewItem == chatterboxVoice",
           "group": "inline"
         }
       ],
@@ -313,6 +368,22 @@
         },
         {
           "command": "jotflow.engine.delete",
+          "when": "false"
+        },
+        {
+          "command": "jotflow.chatterbox.startServer",
+          "when": "false"
+        },
+        {
+          "command": "jotflow.chatterbox.stopServer",
+          "when": "false"
+        },
+        {
+          "command": "jotflow.chatterbox.update",
+          "when": "false"
+        },
+        {
+          "command": "jotflow.chatterbox.removeVoice",
           "when": "false"
         }
       ]
@@ -579,6 +650,45 @@
             "type": "boolean",
             "default": false,
             "description": "%config.tts.debug.desc%"
+          },
+          "jotflow.tts.chatterboxModel": {
+            "type": "string",
+            "enum": [
+              "english",
+              "multilingual"
+            ],
+            "default": "multilingual",
+            "markdownDescription": "%config.tts.chatterboxModel.desc%"
+          },
+          "jotflow.tts.chatterboxDevice": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "mps",
+              "cuda",
+              "cpu"
+            ],
+            "default": "auto",
+            "markdownDescription": "%config.tts.chatterboxDevice.desc%"
+          },
+          "jotflow.tts.chatterboxExaggeration": {
+            "type": "number",
+            "default": 0.5,
+            "minimum": 0,
+            "maximum": 1,
+            "markdownDescription": "%config.tts.chatterboxExaggeration.desc%"
+          },
+          "jotflow.tts.youtubeMaxSeconds": {
+            "type": "number",
+            "default": 30,
+            "minimum": 3,
+            "maximum": 60,
+            "markdownDescription": "%config.tts.youtubeMaxSeconds.desc%"
+          },
+          "jotflow.tts.youtubeAllowAnyUrl": {
+            "type": "boolean",
+            "default": false,
+            "markdownDescription": "%config.tts.youtubeAllowAnyUrl.desc%"
           }
         }
       }
@@ -639,6 +749,6 @@
   },
   "homepage": "https://github.com/enavarre-cl/jotflow#readme",
   "dependencies": {
-    "undici": "^6.26.0"
+    "undici": "^6.27.0"
   }
 }

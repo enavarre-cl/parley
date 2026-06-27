@@ -56,6 +56,8 @@ export class OllamaManager {
   get status(): OllamaStatus { return this._status; }
   get detail(): string { return this._detail; }
   baseUrl(): string | undefined { return this._baseUrl; }
+  /** PID of the managed `ollama serve` process (for RAM sampling), if running. */
+  serverPid(): number | undefined { return this.proc?.pid; }
 
   private set(status: OllamaStatus, detail = ''): void {
     this._status = status; this._detail = detail;

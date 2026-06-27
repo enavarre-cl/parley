@@ -68,5 +68,15 @@
   "view.dictionary.name": "Dictionary",
   "view.engines.name": "Engines",
   "view.models.name": "Models",
-  "view.voices.name": "Voices"
+  "view.voices.name": "Voices",
+  "cmd.chatterbox.startServer.title": "Start Chatterbox server",
+  "cmd.chatterbox.stopServer.title": "Stop Chatterbox server",
+  "cmd.chatterbox.update.title": "Update Chatterbox",
+  "cmd.chatterbox.removeVoice.title": "Delete voice",
+  "config.tts.chatterboxModel.desc": "Chatterbox model: **multilingual** (default — 23 languages; each voice speaks its own language automatically) or **english** (lighter, English only).",
+  "config.tts.chatterboxDevice.desc": "Compute device for Chatterbox: **auto** (MPS on Apple Silicon, CUDA if available, else CPU), or force one. CPU is slow.",
+  "config.tts.chatterboxExaggeration.desc": "Chatterbox emotion/intensity (0–1). Higher is more expressive.",
+  "config.tts.youtubeMaxSeconds.desc": "Maximum length (seconds) of a reference clip extracted from YouTube or a file.",
+  "config.tts.youtubeAllowAnyUrl.desc": "Allow voice-sample URLs from any host, not only YouTube. Off by default (safer).",
+  "cmd.engines.manage.title": "Manage engines"
 }

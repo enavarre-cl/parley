@@ -5,6 +5,44 @@ All notable changes to Jotflow. Format based on
 
 ## [Unreleased]
 
+## [2.3.0] - 2026-06-27
+
+### Added
+- **Chatterbox (Resemble AI) — a third "read aloud" engine** with **zero-shot voice cloning**,
+  alongside System voices and Piper (opt-in; Piper stays the default). It installs a self-contained
+  pip env reusing the shared SHA-pinned Python and runs a resident-model daemon on `127.0.0.1`.
+  **On Apple Silicon** it uses a **4-bit multilingual** model via `mlx-audio` (Apple's MLX):
+  **~4× faster** (≈0.8× real-time — faster than real-time) and far lighter (no PyTorch; ~0.5 GB venv
+  + ~1 GB weights). **Other platforms** use the `chatterbox-tts` (PyTorch) backend on MPS/CUDA/CPU.
+  Settings: `jotflow.tts.chatterboxModel` / `…chatterboxDevice` / `…chatterboxExaggeration`.
+- **Create a cloned voice from a YouTube fragment** — paste a YouTube URL and an `mm:ss` time range;
+  only that section is downloaded (yt-dlp) and trimmed (ffmpeg) to a mono reference clip used for
+  cloning. Also **"Add from file…"** for a local audio sample. Each voice stores its **language**
+  (picked at creation) and the multilingual model speaks the clone in that language automatically —
+  no chat-level config. URL is host-allowlisted (`jotflow.tts.youtubeAllowAnyUrl` off by default),
+  the range capped (`jotflow.tts.youtubeMaxSeconds`, 30 s), with a rights-reminder in the form.
+- **Engines management panel** (the gear in the Engines view, or click an engine): install / start /
+  stop / update / delete each engine with buttons, the download sources & versions, a **live
+  progress bar**, and the **RAM** each running engine uses — replacing the cramped tree icons + toast.
+- **Read-aloud progress bar** for the slow neural path (model loading + per-sentence `Sampling …%`),
+  plus **auto-restart + retry** if the synthesis daemon dies mid-request (idle-kill / crash).
+
+### Changed
+- **Voices panel & sidebar reworked**: Piper voices are now a **language combo + Download button +
+  downloaded list** (like Chatterbox); the **Voices tree groups by engine › language › voice**.
+- **Shared TTS internals**: the Python bootstrap (`src/pyenv.ts`), the HTTP-daemon primitives
+  (`src/ttsDaemon.ts`) and the progress-percent parser (`src/progress.ts`) are shared across engines,
+  so the self-contained Python is downloaded once. Piper's uninstall leaves the shared interpreter in
+  place; the daemon starts **offline** (no HF network checks) once a model has loaded before.
+
+### Security
+- Threat-model + residual-risk entries for the Chatterbox path (host-side URL allowlist anti-SSRF,
+  argv-array spawns with no shell, Workspace-Trust gating, pinned pip packages, single-threaded
+  loopback daemon, offline cache marker; accepted residuals: YouTube ToS, uncurated clips,
+  non-hash-pinned HF weights, PerTh watermark) — see SECURITY.md.
+- **Bumped `undici`** (the sole production dependency) to **6.27.0**, clearing a high-severity
+  advisory — `npm audit` reports **0 vulnerabilities**.
+
 ## [2.1.2] - 2026-06-25
 
 ### Build

@@ -1,0 +1,100 @@
+* { box-sizing: border-box; }
+body {
+  font-family: var(--vscode-font-family);
+  font-size: var(--vscode-font-size, 13px);
+  color: var(--vscode-foreground);
+  background: var(--vscode-editor-background);
+  padding: 16px 20px;
+  max-width: 720px;
+}
+h2 { margin: 0 0 4px; font-size: 16px; }
+.sub { opacity: .65; font-size: 12px; margin: 0 0 16px; }
+
+.eng-cards { display: flex; flex-direction: column; gap: 14px; }
+
+.eng-card {
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 8px;
+  padding: 14px 16px;
+  background: var(--vscode-editorWidget-background, transparent);
+}
+.eng-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.eng-title { display: flex; align-items: baseline; gap: 10px; }
+.eng-name { font-size: 14px; font-weight: 600; }
+.eng-kind { font-size: 11px; opacity: .6; }
+
+.eng-badge {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  white-space: nowrap;
+}
+.eng-running { background: var(--vscode-testing-iconPassed, #2ea043); color: #fff; }
+.eng-stopped { background: var(--vscode-badge-background); color: var(--vscode-badge-foreground); }
+.eng-busy { background: var(--vscode-progressBar-background, #0078d4); color: #fff; }
+.eng-notinstalled { background: transparent; color: var(--vscode-descriptionForeground); border: 1px solid var(--vscode-panel-border); }
+
+.eng-sources { margin: 10px 0 4px; }
+.eng-sources-label { font-size: 10px; text-transform: uppercase; letter-spacing: .04em; opacity: .5; margin-bottom: 3px; }
+.eng-source { font-size: 12px; opacity: .8; line-height: 1.5; }
+
+.eng-ram { font-size: 12px; opacity: .85; margin: 6px 0; }
+
+.eng-bar {
+  position: relative;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--vscode-panel-border);
+  overflow: hidden;
+  margin: 10px 0 4px;
+}
+.eng-bar-fill {
+  position: relative;
+  height: 100%;
+  background: var(--vscode-progressBar-background, #0078d4);
+  transition: width .45s cubic-bezier(.4, 0, .2, 1);
+  overflow: hidden;
+}
+/* A sweeping highlight keeps the bar alive even when the % is momentarily static (e.g. the model
+ * load phase, which has no progress signal) — so it never looks frozen. */
+.eng-bar-fill::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .28), transparent);
+  animation: eng-sweep 1.4s ease-in-out infinite;
+}
+.eng-bar.indeterminate .eng-bar-fill {
+  width: 35%;
+  animation: eng-indet 1.2s ease-in-out infinite;
+}
+.eng-bar.indeterminate .eng-bar-fill::after { display: none; } /* the marquee already moves */
+@keyframes eng-indet {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(300%); }
+}
+@keyframes eng-sweep {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+.eng-progress-msg { font-size: 11px; opacity: .7; margin: 2px 0 4px; word-break: break-word; }
+
+.eng-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+.btn-primary, .btn-secondary {
+  padding: 5px 14px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.btn-primary { background: var(--vscode-button-background); color: var(--vscode-button-foreground); }
+.btn-primary:hover { background: var(--vscode-button-hoverBackground); }
+.btn-secondary { background: var(--vscode-button-secondaryBackground, var(--vscode-button-background)); color: var(--vscode-button-secondaryForeground, var(--vscode-button-foreground)); }
+.btn-secondary:hover { opacity: .9; }

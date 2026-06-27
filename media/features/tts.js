@@ -3,7 +3,7 @@
  */
 import { t } from '../core/i18n.js';
 import { vscode } from '../core/vscode.js';
-import { notice } from '../ui/notifications.js';
+import { notice, hideTtsProgress } from '../ui/notifications.js';
 import { ICONS } from '../core/icons.js';
 import { render as renderMarkdown } from '../render/markdown.js';
 
@@ -32,12 +32,15 @@ export const tts = {
     supported: 'speechSynthesis' in window,
     voices: [],
     piperVoices: PIPER_VOICES,
+    // Chatterbox reference voices (cloned clips): [{id,label}], refreshed via the 'chatterboxVoices' message.
+    chatterboxVoices: [],
+    rateForPlayback: 1, // speed applied client-side for engines that don't bake it server-side (Chatterbox)
     // Set of downloaded voice ids: injected into the HTML (window.DOWNLOADED_VOICES) so it is
     // ready from the first render; the 'piperVoices' message updates it live.
     downloadedVoices: new Set(Array.isArray(window.DOWNLOADED_VOICES) ? window.DOWNLOADED_VOICES : []),
     customSet: !!window.PIPER_CUSTOM_SET, // is there a custom .onnx path configured in Settings?
     // Preferences persisted in the webview state.
-    prefs: Object.assign({ engine: 'system', voiceURI: '', rate: 1, piperVoice: 'es_MX-claude-high' }, (vscode.getState() && vscode.getState().tts) || {}),
+    prefs: Object.assign({ engine: 'system', voiceURI: '', rate: 1, piperVoice: 'es_MX-claude-high', chatterboxVoice: '', exaggeration: 0.5 }, (vscode.getState() && vscode.getState().tts) || {}),
     speakingBtn: null, // active 🔊 button (to toggle the icon)
     msgId: null,       // id of the message being read (to stop if deleted)
     ctx: null,         // AudioContext (Web Audio): unlocked on click
@@ -101,6 +104,7 @@ export const tts = {
       if (this.supported) window.speechSynthesis.cancel();
       if (this.source) { try { this.source.onended = null; this.source.stop(); } catch { /* best-effort; ignore failures */ } this.source = null; }
       this.msgId = null;
+      hideTtsProgress();
       if (wasPiper) vscode.postMessage({ type: 'ttsStop' }); // aborts any pending synthesis in the backend
       this.resetBtn();
     },
@@ -121,9 +125,23 @@ export const tts = {
         this.reqId++;
         this.awaiting = true;
         this.playing = false;
+        this.rateForPlayback = 1; // Piper bakes the rate into the WAV server-side (length_scale)
         const voice = this.prefs.piperVoice && this.prefs.piperVoice !== 'custom' ? this.prefs.piperVoice : '';
         ttsLog('speak→piper', { reqId: this.reqId, voice, rate: this.prefs.rate || 1, chars: plain.length, ctxState: ctx && ctx.state });
         vscode.postMessage({ type: 'tts', text: plain, rate: this.prefs.rate || 1, voice, id: this.reqId });
+        return;
+      }
+      if ((this.prefs.engine || 'system') === 'chatterbox') {
+        const ctx = this.ensureCtx(); // unlock inside the click gesture!
+        this.reqId++;
+        this.awaiting = true;
+        this.playing = false;
+        // Chatterbox has no server-side speed control → apply the slider on playback.
+        this.rateForPlayback = this.prefs.rate || 1;
+        const voice = this.prefs.chatterboxVoice || '';
+        const exaggeration = typeof this.prefs.exaggeration === 'number' ? this.prefs.exaggeration : 0.5;
+        ttsLog('speak→chatterbox', { reqId: this.reqId, voice, exaggeration, chars: plain.length, ctxState: ctx && ctx.state });
+        vscode.postMessage({ type: 'tts', engine: 'chatterbox', text: plain, voice, exaggeration, id: this.reqId });
         return;
       }
       // System engine (Web Speech API).
@@ -161,6 +179,7 @@ export const tts = {
       ttsLog('playWav: decoded OK', { seconds: +buf.duration.toFixed(1), channels: buf.numberOfChannels, ctxState: ctx.state });
       const src = ctx.createBufferSource();
       src.buffer = buf;
+      if (this.rateForPlayback && this.rateForPlayback !== 1) src.playbackRate.value = this.rateForPlayback;
       src.connect(ctx.destination);
       src.onended = () => {
         if (this.source === src) { ttsLog('playWav: onended (end)'); this.source = null; this.playing = false; this.awaiting = false; this.resetBtn(); }

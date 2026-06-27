@@ -11,3 +11,4 @@ media/icon-jotflow-full*.png
 # secretos locales (API keys) — NUNCA commitear
 jotflow-settings.local.json
 *.local.json
+__pycache__/

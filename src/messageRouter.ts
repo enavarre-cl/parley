@@ -13,6 +13,7 @@ import { routeSysPrompt } from './messageRouterSysPrompt';
 import { routeEdit } from './messageRouterEdit';
 import { removePiperVoice } from './piperVoices';
 import { PiperManager } from './piper/manager';
+import { ChatterboxManager } from './chatterbox/manager';
 
 /**
  * A message sent webview→host. The discriminator is `type`; the rest are per-message payload fields,
@@ -43,6 +44,8 @@ export interface WebviewMessage {
   title?: string;
   html?: string;
   confirm?: boolean;
+  engine?: string;       // TTS engine for a 'tts' request: 'piper' | 'chatterbox'
+  exaggeration?: number; // Chatterbox emotion/intensity control
 }
 
 /** Everything the message router needs — one explicit context object (low coupling). */
@@ -63,6 +66,7 @@ export interface RouterCtx {
   deleteVariant: (index: number, variant: number) => Promise<void>;
   ensureSummary: (doc: ChatDoc, history: ChatMessage[], upTo: number) => Promise<string>;
   synthPiper: (text: string, rate: number, voice: string, id: number) => Promise<void>;
+  synthChatterbox: (text: string, voice: string, exaggeration: number, id: number) => Promise<void>;
   killPiper: () => void;
   resolveSystemPrompt: (doc: ChatDoc) => string;
   tlog: (s: string) => void;
@@ -72,7 +76,9 @@ export interface RouterCtx {
   ttsTokenRef: { value: number };
   spellWords: SpellWordsStore;
   downloadedVoiceIds: () => string[];
+  downloadedChatterboxVoices: () => { id: string; label: string }[];
   piper: PiperManager;
+  chatterbox: ChatterboxManager;
   globalStorageUri: vscode.Uri;
   document: vscode.TextDocument;
   searchFiles: (q: string) => Promise<string[]>;
@@ -89,6 +95,7 @@ export async function routeMessage(msg: WebviewMessage, ctx: RouterCtx): Promise
           ctx.pushDoc();
           ctx.webview.postMessage({ type: 'spellWords', words: await ctx.spellWords.all() });
           ctx.webview.postMessage({ type: 'piperVoices', ids: ctx.downloadedVoiceIds() });
+          ctx.webview.postMessage({ type: 'chatterboxVoices', voices: ctx.downloadedChatterboxVoices() });
           await ctx.loadModels();
           break;
         case 'spellAddWord':
@@ -151,7 +158,11 @@ export async function routeMessage(msg: WebviewMessage, ctx: RouterCtx): Promise
           ctx.abortRef.current?.abort();
           break;
         case 'tts':
-          await ctx.synthPiper(String(msg.text ?? ''), Number(msg.rate) || 1, String(msg.voice ?? ''), Number(msg.id) || 0);
+          if (msg.engine === 'chatterbox') {
+            await ctx.synthChatterbox(String(msg.text ?? ''), String(msg.voice ?? ''), Number(msg.exaggeration) || 0.5, Number(msg.id) || 0);
+          } else {
+            await ctx.synthPiper(String(msg.text ?? ''), Number(msg.rate) || 1, String(msg.voice ?? ''), Number(msg.id) || 0);
+          }
           break;
         case 'ttsStop':
           ctx.tlog('ttsStop (cancel)');

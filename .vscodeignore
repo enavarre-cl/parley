@@ -32,3 +32,4 @@ media/vid*.gif
 **/*.attach
 **/*.sysprompt
 scripts/**
+**/__pycache__/**

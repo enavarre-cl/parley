@@ -9,13 +9,15 @@ import { formatBytes } from './ollama/parse';
 import { SpellWordsStore, SPELL_LANGS, SPELL_LANG_NAMES } from './spellWords';
 import { listPiperVoices } from './piperVoices';
 import { PiperManager } from './piper/manager';
+import { ChatterboxManager } from './chatterbox/manager';
+import { listChatterboxVoices } from './chatterboxVoices';
 import { tr } from './i18n';
 import { errMsg } from './chatHelpers';
 
 export type Section = 'engines' | 'models' | 'voices' | 'dictionary';
 
 type Kind = 'engine' | 'model' | 'download' | 'dict-lang' | 'voice' | 'empty'
-  | 'group-models' | 'group-downloads';
+  | 'group-models' | 'group-downloads' | 'voice-engine' | 'voice-lang';
 
 export class ModelsTreeItem extends vscode.TreeItem {
   constructor(
@@ -39,6 +41,7 @@ export class ModelsTreeProvider implements vscode.TreeDataProvider<ModelsTreeIte
     private readonly spell: SpellWordsStore,
     private readonly voicesDir: string,
     private readonly piper: PiperManager,
+    private readonly chatterbox: ChatterboxManager,
     private readonly section: Section,
     onVoicesChanged: vscode.Event<void>
   ) {
@@ -48,6 +51,7 @@ export class ModelsTreeProvider implements vscode.TreeDataProvider<ModelsTreeIte
     downloads.onDidChangeState(() => this.refresh());
     spell.onDidChange(() => this.refresh());
     piper.onDidChange(() => this.refresh());
+    chatterbox.onDidChange(() => this.refresh());
     onVoicesChanged(() => this.refresh());
   }
 
@@ -74,11 +78,17 @@ export class ModelsTreeProvider implements vscode.TreeDataProvider<ModelsTreeIte
       if (el.kind === 'group-downloads') return this.downloadItems();
       return [];
     }
+    // "Voices" view: 3 levels — engine › language › voice.
+    if (this.section === 'voices') {
+      if (!el) return this.voiceEngineGroups();
+      if (el.kind === 'voice-engine') return this.voiceLangGroups(el.word || '');
+      if (el.kind === 'voice-lang') { const [eng, lang] = (el.word || '').split(':'); return this.voicesForEngineLang(eng, lang); }
+      return [];
+    }
     // Flat views: items go directly to the root (the view heading IS the section).
     if (el) return [];
     switch (this.section) {
-      case 'engines': return [this.ollamaEngine(), this.piperEngine()];
-      case 'voices': return this.voiceItems();
+      case 'engines': return [this.ollamaEngine(), this.piperEngine(), this.chatterboxEngine()];
       case 'dictionary': return this.dictItems();
     }
     return [];
@@ -97,6 +107,7 @@ export class ModelsTreeProvider implements vscode.TreeDataProvider<ModelsTreeIte
     it.contextValue = `engine.ollama.${state}`;
     it.tooltip = this.manager.detail || state;
     it.iconPath = new vscode.ThemeIcon(icon);
+    it.command = { command: 'jotflow.engines.manage', title: tr('Engines') };
     return it;
   }
 
@@ -109,6 +120,20 @@ export class ModelsTreeProvider implements vscode.TreeDataProvider<ModelsTreeIte
     else { state = 'stopped'; it.description = tr('stopped'); icon = 'circle-outline'; }
     it.contextValue = `engine.piper.${state}`;
     it.iconPath = new vscode.ThemeIcon(icon);
+    it.command = { command: 'jotflow.engines.manage', title: tr('Engines') };
+    return it;
+  }
+
+  private chatterboxEngine(): ModelsTreeItem {
+    const it = new ModelsTreeItem('engine', 'Chatterbox (TTS)', undefined, undefined, 'chatterbox');
+    let state: string;
+    let icon: string;
+    if (!this.chatterbox.isInstalled()) { state = 'notinstalled'; it.description = tr('not installed'); icon = 'cloud-download'; }
+    else if (this.chatterbox.isServerRunning()) { state = 'running'; it.description = tr('running'); icon = 'pass-filled'; }
+    else { state = 'stopped'; it.description = tr('stopped'); icon = 'circle-outline'; }
+    it.contextValue = `engine.chatterbox.${state}`;
+    it.iconPath = new vscode.ThemeIcon(icon);
+    it.command = { command: 'jotflow.engines.manage', title: tr('Engines') };
     return it;
   }
 
@@ -181,18 +206,54 @@ export class ModelsTreeProvider implements vscode.TreeDataProvider<ModelsTreeIte
     });
   }
 
-  // ── Voices ──
-  private voiceItems(): ModelsTreeItem[] {
-    const voices = listPiperVoices(this.voicesDir);
-    if (!voices.length) {
+  // ── Voices: engine › language › voice ──
+  /** All downloaded voices flattened, each tagged with its engine and language. */
+  private allVoices(): { id: string; label: string; sizeBytes: number; lang: string; engine: 'piper' | 'chatterbox'; source?: string }[] {
+    const out: { id: string; label: string; sizeBytes: number; lang: string; engine: 'piper' | 'chatterbox'; source?: string }[] = [];
+    for (const v of listPiperVoices(this.voicesDir)) {
+      out.push({ id: v.id, label: v.id, sizeBytes: v.sizeBytes, lang: v.id.split('_')[0] || '?', engine: 'piper' });
+    }
+    for (const v of listChatterboxVoices(this.chatterbox.voicesDir())) {
+      out.push({ id: v.id, label: v.label, sizeBytes: v.sizeBytes, lang: v.language || '?', engine: 'chatterbox', source: v.source });
+    }
+    return out;
+  }
+  /** Level 1: an engine node per engine that has voices. */
+  private voiceEngineGroups(): ModelsTreeItem[] {
+    const all = this.allVoices();
+    if (!all.length) {
       const empty = new ModelsTreeItem('empty', tr('No voices downloaded'));
       empty.iconPath = new vscode.ThemeIcon('info');
       return [empty];
     }
-    return voices.map((v) => {
-      const it = new ModelsTreeItem('voice', v.id, undefined, undefined, v.id);
+    const engines: ('piper' | 'chatterbox')[] = ['piper', 'chatterbox'];
+    return engines.filter((e) => all.some((v) => v.engine === e)).map((e) => {
+      const it = new ModelsTreeItem('voice-engine', e === 'piper' ? 'Piper' : 'Chatterbox', undefined, undefined, e);
+      it.description = String(all.filter((v) => v.engine === e).length);
+      it.collapsibleState = vscode.TreeItemCollapsibleState.Expanded;
+      it.iconPath = new vscode.ThemeIcon('layers');
+      return it;
+    });
+  }
+  /** Level 2: a language node per language present for that engine. */
+  private voiceLangGroups(engine: string): ModelsTreeItem[] {
+    const all = this.allVoices().filter((v) => v.engine === engine);
+    return [...new Set(all.map((v) => v.lang))].sort().map((lang) => {
+      const name = (SPELL_LANG_NAMES as Record<string, string>)[lang] || lang;
+      const it = new ModelsTreeItem('voice-lang', name, undefined, undefined, `${engine}:${lang}`);
+      it.description = String(all.filter((v) => v.lang === lang).length);
+      it.collapsibleState = vscode.TreeItemCollapsibleState.Expanded;
+      it.iconPath = new vscode.ThemeIcon('globe');
+      return it;
+    });
+  }
+  /** Level 3: the voices for an engine+language. */
+  private voicesForEngineLang(engine: string, lang: string): ModelsTreeItem[] {
+    return this.allVoices().filter((v) => v.engine === engine && v.lang === lang).map((v) => {
+      const it = new ModelsTreeItem('voice', v.label, undefined, undefined, v.id);
       it.description = formatBytes(v.sizeBytes);
-      it.contextValue = 'piperVoice';
+      it.tooltip = v.source ? `${v.label}\n${v.source}` : v.label;
+      it.contextValue = v.engine === 'piper' ? 'piperVoice' : 'chatterboxVoice';
       it.iconPath = new vscode.ThemeIcon('mic');
       return it;
     });

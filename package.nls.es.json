@@ -368,5 +368,17 @@
   "Pan right": "Desplazar a la derecha",
   "Could not render this Mermaid diagram": "No se pudo renderizar este diagrama Mermaid",
   "of": "de",
-  "Something went wrong handling that action.": "Algo salió mal al procesar esa acción."
+  "Something went wrong handling that action.": "Algo salió mal al procesar esa acción.",
+  "cmd.chatterbox.startServer.title": "Iniciar servidor Chatterbox",
+  "cmd.chatterbox.stopServer.title": "Detener servidor Chatterbox",
+  "cmd.chatterbox.update.title": "Actualizar Chatterbox",
+  "cmd.chatterbox.removeVoice.title": "Eliminar voz",
+  "config.tts.chatterboxModel.desc": "Modelo de Chatterbox: **multilingual** (por defecto — 23 idiomas; cada voz habla su propio idioma automáticamente) o **english** (más liviano, solo inglés).",
+  "config.tts.chatterboxDevice.desc": "Dispositivo de cómputo para Chatterbox: **auto** (MPS en Apple Silicon, CUDA si está disponible, si no CPU), o fuerza uno. La CPU es lenta.",
+  "config.tts.chatterboxExaggeration.desc": "Emoción/intensidad de Chatterbox (0–1). Más alto = más expresivo.",
+  "config.tts.youtubeMaxSeconds.desc": "Duración máxima (segundos) del clip de referencia extraído de YouTube o de un archivo.",
+  "config.tts.youtubeAllowAnyUrl.desc": "Permitir URLs de muestra de voz desde cualquier host, no solo YouTube. Desactivado por defecto (más seguro).",
+  "cmd.engines.manage.title": "Gestionar motores",
+  "All voices downloaded": "Todas las voces descargadas",
+  "No voices downloaded yet.": "Aún no hay voces descargadas."
 }

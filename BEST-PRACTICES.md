@@ -219,7 +219,11 @@ dispersos por componente.
 
 ## P. CSS — selectores y especificidad
 
-**P1.** **Cero IDs en selectores** (especificidad infinita, no reutilizable).
+**P1.** **Cero IDs en selectores** para elementos **reutilizables o estilados por contexto**
+(especificidad alta que provoca guerras de cascada). **Excepción acotada:** un **singleton** del
+documento (un único `#messages`, `#sendBtn`, `#notices`) puede estilarse por su `id` — el motivo de
+la regla (evitar guerras de especificidad y reutilización accidental) no aplica a un elemento único.
+Toda **vista/componente nuevo** usa **clases** (los paneles `engines`/`voices` ya lo hacen).
 **P2.** **Cero estilos inline** (`style="…"`): mezclan contenido y presentación.
 **P3.** **Sin selectores cualificados**: `.nav`, no `ul.nav`.
 **P4.** **Sin cadenas largas/innecesarias**: `.someclass li`, no `body #wrap .someclass ul li`.

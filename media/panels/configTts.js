@@ -19,9 +19,9 @@ export function renderTtsConfig() {
 
   const engine = tts.prefs.engine || 'system';
 
-  // Engine selector: system voices vs neural Piper.
+  // Engine selector: system voices vs neural Piper vs Chatterbox (voice cloning).
   const eng = document.createElement('select');
-  [['system', t('System (Web Speech)')], ['piper', t('Piper (neural, better quality)')]].forEach(([val, label]) => {
+  [['system', t('System (Web Speech)')], ['piper', t('Piper (neural, better quality)')], ['chatterbox', t('Chatterbox (voice cloning)')]].forEach(([val, label]) => {
     const o = document.createElement('option');
     o.value = val; o.textContent = label;
     if (val === engine) o.selected = true;
@@ -59,7 +59,7 @@ export function renderTtsConfig() {
     }
     sel.addEventListener('change', () => { tts.prefs.voiceURI = sel.value; tts.save(); });
     configFields.appendChild(fieldRow(t('Voice'), sel));
-  } else {
+  } else if (engine === 'piper') {
     // Piper: the selector offers ONLY DOWNLOADED voices. The Custom option appears only if there
     // is a .onnx path configured in Settings (or if it is the current selection) — for a
     // normal user without a custom path, the dropdown shows exclusively downloaded voices.
@@ -93,9 +93,46 @@ export function renderTtsConfig() {
         ? t('No voices downloaded. Add one from the Jotflow panel (Voices ➕).')
         : t('Downloaded voices work offline. Add more from the Jotflow panel (Voices ➕).');
     configFields.appendChild(note);
+  } else {
+    // Chatterbox: voices are cloned reference clips, created from the Voices panel (YouTube/file).
+    const voices = tts.chatterboxVoices || [];
+    if (!voices.length) {
+      const note = document.createElement('div');
+      note.className = 'cfg-note';
+      note.textContent = t('No Chatterbox voices yet. Create one from the Jotflow panel (Voices ➕): paste a YouTube URL and a time range.');
+      configFields.appendChild(note);
+    } else {
+      if (!voices.some((v) => v.id === tts.prefs.chatterboxVoice)) { tts.prefs.chatterboxVoice = voices[0].id; tts.save(); }
+      const sel = document.createElement('select');
+      for (const v of voices) {
+        const o = document.createElement('option');
+        o.value = v.id; o.textContent = v.label || v.id;
+        if (v.id === tts.prefs.chatterboxVoice) o.selected = true;
+        sel.appendChild(o);
+      }
+      sel.addEventListener('change', () => { tts.prefs.chatterboxVoice = sel.value; tts.save(); tts.stop(); });
+      configFields.appendChild(fieldRow(t('Voice'), sel));
+      // Expressiveness (Chatterbox exaggeration, 0–1).
+      const exWrap = document.createElement('div');
+      exWrap.className = 'tts-rate';
+      const ex = document.createElement('input');
+      ex.type = 'range'; ex.min = '0'; ex.max = '1'; ex.step = '0.05';
+      ex.value = String(typeof tts.prefs.exaggeration === 'number' ? tts.prefs.exaggeration : 0.5);
+      const exVal = document.createElement('span');
+      exVal.className = 'tts-rate-val';
+      exVal.textContent = Number(ex.value).toFixed(2);
+      ex.addEventListener('input', () => { exVal.textContent = Number(ex.value).toFixed(2); });
+      ex.addEventListener('change', () => { tts.prefs.exaggeration = Number(ex.value); tts.save(); });
+      exWrap.appendChild(ex); exWrap.appendChild(exVal);
+      configFields.appendChild(fieldRow(t('Expressiveness'), exWrap));
+      const note = document.createElement('div');
+      note.className = 'cfg-note';
+      note.textContent = t('Cloned voices run locally. Add more from the Jotflow panel (Voices ➕).');
+      configFields.appendChild(note);
+    }
   }
 
-  // Speed (shared by both engines).
+  // Speed (shared by all engines).
   const rateWrap = document.createElement('div');
   rateWrap.className = 'tts-rate';
   const rate = document.createElement('input');

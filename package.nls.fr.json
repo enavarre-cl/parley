@@ -368,5 +368,17 @@
   "Pan right": "Déplacer vers la droite",
   "Could not render this Mermaid diagram": "Impossible de générer ce diagramme Mermaid",
   "of": "sur",
-  "Something went wrong handling that action.": "Une erreur s'est produite lors du traitement de cette action."
+  "Something went wrong handling that action.": "Une erreur s'est produite lors du traitement de cette action.",
+  "cmd.chatterbox.startServer.title": "Démarrer le serveur Chatterbox",
+  "cmd.chatterbox.stopServer.title": "Arrêter le serveur Chatterbox",
+  "cmd.chatterbox.update.title": "Mettre à jour Chatterbox",
+  "cmd.chatterbox.removeVoice.title": "Supprimer la voix",
+  "config.tts.chatterboxModel.desc": "Modèle Chatterbox : **multilingual** (par défaut — 23 langues ; chaque voix parle sa langue automatiquement) ou **english** (plus léger, anglais seulement).",
+  "config.tts.chatterboxDevice.desc": "Périphérique de calcul pour Chatterbox : **auto** (MPS sur Apple Silicon, CUDA si disponible, sinon CPU), ou en forcer un. Le CPU est lent.",
+  "config.tts.chatterboxExaggeration.desc": "Émotion/intensité de Chatterbox (0–1). Plus élevé = plus expressif.",
+  "config.tts.youtubeMaxSeconds.desc": "Durée maximale (secondes) de l'extrait de référence tiré de YouTube ou d'un fichier.",
+  "config.tts.youtubeAllowAnyUrl.desc": "Autoriser les URL d'échantillons vocaux de n'importe quel hôte, pas seulement YouTube. Désactivé par défaut (plus sûr).",
+  "cmd.engines.manage.title": "Gérer les moteurs",
+  "All voices downloaded": "Toutes les voix téléchargées",
+  "No voices downloaded yet.": "Aucune voix téléchargée pour l'instant."
 }

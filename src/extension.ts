@@ -27,6 +27,8 @@ import { SpellWordsStore } from './spellWords';
 import { openDictionaryPanel } from './dictionaryPanel';
 import { listPiperVoices } from './piperVoices';
 import { PiperManager } from './piper/manager';
+import { ChatterboxManager } from './chatterbox/manager';
+import { listChatterboxVoices } from './chatterboxVoices';
 import { errMsg } from './chatHelpers';
 import { registerApiKeys } from './apiKeys';
 
@@ -37,6 +39,7 @@ export function activate(context: vscode.ExtensionContext) {
   const spellWords = new SpellWordsStore(context);
   context.subscriptions.push(spellWords);
   const piper = new PiperManager(context);
+  const chatterbox = new ChatterboxManager(context);
   // Notifies open chats when the set of downloaded voices changes (panel/tree) so that
   // the chat's voice selector only shows downloaded ones.
   const voicesChanged = new vscode.EventEmitter<void>();
@@ -44,7 +47,7 @@ export function activate(context: vscode.ExtensionContext) {
   // Notifies open chats when jotflow.language changes, so the UI re-translates live (no reload).
   const langChanged = new vscode.EventEmitter<void>();
   context.subscriptions.push(langChanged);
-  const provider = new ChatEditorProvider(context, spellWords, piper, voicesChanged.event, langChanged.event);
+  const provider = new ChatEditorProvider(context, spellWords, piper, chatterbox, voicesChanged.event, langChanged.event);
 
   registerCompare(context); // version comparison command (Timeline / palette)
 
@@ -69,7 +72,7 @@ export function activate(context: vscode.ExtensionContext) {
     })
   );
 
-  registerLocalModels(context, { piper, spellWords, voicesChanged, getActiveApply: () => ChatEditorProvider.activeApply() });
+  registerLocalModels(context, { piper, chatterbox, spellWords, voicesChanged, getActiveApply: () => ChatEditorProvider.activeApply() });
 }
 
 export function deactivate() {
@@ -112,6 +115,7 @@ class ChatEditorProvider implements vscode.CustomTextEditorProvider {
     private readonly context: vscode.ExtensionContext,
     private readonly spellWords: SpellWordsStore,
     private readonly piper: PiperManager,
+    private readonly chatterbox: ChatterboxManager,
     private readonly onVoicesChanged: vscode.Event<void>,
     private readonly onLangChanged: vscode.Event<void>
   ) {}
@@ -119,6 +123,11 @@ class ChatEditorProvider implements vscode.CustomTextEditorProvider {
   /** Downloaded Piper voice ids, so the chat only offers those in its selector. */
   private downloadedVoiceIds(): string[] {
     return listPiperVoices(vscode.Uri.joinPath(this.context.globalStorageUri, 'piper-voices').fsPath).map((v) => v.id);
+  }
+
+  /** Chatterbox reference voices (id + label) available in the chat's selector. */
+  private downloadedChatterboxVoices(): { id: string; label: string }[] {
+    return listChatterboxVoices(this.chatterbox.voicesDir()).map((v) => ({ id: v.id, label: v.language ? `${v.label} · ${v.language}` : v.label }));
   }
 
   resolveCustomTextEditor(
@@ -137,7 +146,7 @@ class ChatEditorProvider implements vscode.CustomTextEditorProvider {
     const abortRef: { current: AbortController | undefined } = { current: undefined };
     const busyRef = { value: false };
     const ttsTokenRef = { value: 0 };
-    const { synthPiper, killPiper, tlog } = makeTtsBackend({ webview, piper: this.piper, ttsTokenRef });
+    const { synthPiper, synthChatterbox, killPiper, tlog } = makeTtsBackend({ webview, piper: this.piper, chatterbox: this.chatterbox, ttsTokenRef });
     const modelContextsRef = { value: {} as Record<string, number> };
     // Cache of document parsing by version: parseDoc validates/normalises on every call and
     // getDoc is invoked many times per operation. We return a clone to avoid corrupting the cache.
@@ -287,9 +296,11 @@ class ChatEditorProvider implements vscode.CustomTextEditorProvider {
     const onMsg = webview.onDidReceiveMessage((msg: WebviewMessage) => void routeMessage(msg, {
       webview, getDoc, writeDoc, pushDoc, pushLang, sendHistory, loadModels,
       handleSend, handleGenerate, handleFork, handleContinue, handleRegenerate, setVariant, deleteVariant,
-      ensureSummary, synthPiper, killPiper, resolveSystemPrompt, tlog, applyPatch,
+      ensureSummary, synthPiper, synthChatterbox, killPiper, resolveSystemPrompt, tlog, applyPatch,
       abortRef, busyRef, ttsTokenRef,
-      spellWords: this.spellWords, downloadedVoiceIds: () => this.downloadedVoiceIds(), piper: this.piper,
+      spellWords: this.spellWords, downloadedVoiceIds: () => this.downloadedVoiceIds(),
+      downloadedChatterboxVoices: () => this.downloadedChatterboxVoices(),
+      piper: this.piper, chatterbox: this.chatterbox,
       globalStorageUri: this.context.globalStorageUri,
       document, searchFiles, sysPromptPathAllowed, confirmDelete, resolveAttachment: attachStore.resolve,
     }).catch((err) => {
@@ -349,8 +360,11 @@ class ChatEditorProvider implements vscode.CustomTextEditorProvider {
 
     // Any change to the personal dictionary (panel, another chat) → refreshes this webview.
     const onSpell = this.spellWords.onDidChange(async () => webview.postMessage({ type: 'spellWords', words: await this.spellWords.all() }));
-    // Change in downloaded voices (voices panel, tree) → re-filters the chat selector.
-    const onVoices = this.onVoicesChanged(() => webview.postMessage({ type: 'piperVoices', ids: this.downloadedVoiceIds() }));
+    // Change in downloaded voices (voices panel, tree) → re-filters the chat selector (both engines).
+    const onVoices = this.onVoicesChanged(() => {
+      webview.postMessage({ type: 'piperVoices', ids: this.downloadedVoiceIds() });
+      webview.postMessage({ type: 'chatterboxVoices', voices: this.downloadedChatterboxVoices() });
+    });
     // jotflow.language changed in settings → re-translate the UI live (no reload needed).
     const onLang = this.onLangChanged(() => pushLang());
     panel.onDidDispose(() => {
