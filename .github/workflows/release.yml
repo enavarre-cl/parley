@@ -1,9 +1,13 @@
 # CI/CD for GitHub Actions — equivalent to the old azure-pipelines.yml.
 # Manual only: runs ONLY when triggered from the Actions tab ("Run workflow"). Never on push/PR.
-# Jobs: build (lint · compile · test · package → .vsix artifact) → publish-marketplace ∥ publish-openvsx.
+# Jobs: build (lint · compile · test · package → .vsix artifact) → tag (move vX.Y.Z onto this commit)
+#       → publish-marketplace ∥ publish-openvsx.
 #   - Run it on `master` to publish; both publish jobs are gated by MANUAL APPROVAL and run in
 #     PARALLEL, so a failure in one is retried on its own (re-run that job) without re-approving or
 #     touching the other registry.
+#   - `tag` runs right before the two deploys: it (re)creates the `v<package.json version>` tag on the
+#     commit being released — deleting it first if it already pointed elsewhere — so the tag always
+#     tracks the published commit. Needs `contents: write` (granted only on that job).
 #   - Run it on any other branch to just build/test/package (publish is skipped off master).
 #
 # Targets BOTH registries, each with its OWN environment gate + token:
@@ -54,12 +58,40 @@ jobs:
           name: vsix
           path: jotflow.vsix
 
-  # The two publishes are SEPARATE, PARALLEL jobs (both `needs: build`), each behind its OWN
+  # (Re)create the release tag on the commit being published, right before the two deploys. If the
+  # tag already exists (anywhere), it is deleted and re-pointed at this commit, so `v<version>` always
+  # tracks the published commit. Only on master; needs write access to push the tag.
+  tag:
+    name: Tag release commit
+    needs: build
+    if: github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # required to push (and overwrite) the tag
+    steps:
+      - uses: actions/checkout@v5
+      - name: Create or move v<version> to this commit
+        run: |
+          set -euo pipefail
+          VER=$(node -p "require('./package.json').version")
+          TAG="v$VER"
+          SHA=$(git rev-parse --short HEAD)
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # If it exists, delete it (local + remote) so it can be re-pointed at the current commit.
+          git tag -d "$TAG" 2>/dev/null || true
+          git push origin ":refs/tags/$TAG" 2>/dev/null || true
+          # Create it fresh on this commit and push.
+          git tag -a "$TAG" -m "Release $TAG"
+          git push origin "refs/tags/$TAG"
+          echo "Tagged $SHA as $TAG"
+
+  # The two publishes are SEPARATE, PARALLEL jobs (both `needs: [build, tag]`), each behind its OWN
   # environment gate and its OWN token. If one fails, re-run just that job — no re-approval, and the
   # other registry is untouched. Both publishes are idempotent (skip if the version already exists).
   publish-marketplace:
     name: Publish · VS Code Marketplace
-    needs: build
+    needs: [build, tag]
     if: github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     environment: marketplace # approval gate + VSCE_PAT
@@ -89,7 +121,7 @@ jobs:
 
   publish-openvsx:
     name: Publish · Open VSX
-    needs: build
+    needs: [build, tag]
     if: github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     environment: open-vsx # approval gate + OVSX_PAT
