@@ -15,6 +15,9 @@ updates:
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-major"]
+      # @types/vscode MUST equal engines.vscode (the min VS Code we support), NOT float to latest —
+      # otherwise `vsce package` fails ("@types/vscode > engines.vscode"). Bump it by hand with engines.
+      - dependency-name: "@types/vscode"
     groups:
       npm-minor-patch:
         update-types: ["minor", "patch"]

@@ -5,10 +5,6 @@ All notable changes to Jotflow. Format based on
 
 ## [Unreleased]
 
-### Docs
-- README: corrected post-2.6.13 phrasing (API keys are **SecretStorage-only**, no plain-settings
-  option) and extended the changelog summary through 2.6.14.
-
 ## [2.6.14] - 2026-06-28
 
 ### Added
@@ -17,6 +13,18 @@ All notable changes to Jotflow. Format based on
   a short note (in all 6 languages) with a clickable **[set it securely](command:jotflow.setApiKey)**
   link, telling them to use the **Set API Key** command (stored encrypted in SecretStorage). Closes the
   discoverability gap.
+
+### Fixed
+- **Release packaging.** A Dependabot bump of `@types/vscode` to 1.125 made `vsce package` fail
+  (`@types/vscode > engines.vscode ^1.85.0`), which blocked the release. Pinned `@types/vscode` to
+  **1.85.0** (it must track `engines.vscode`, the minimum VS Code we support — not float to latest, so
+  the broad `≥ 1.85` compatibility is kept). Hardened against recurrence: Dependabot now **ignores**
+  `@types/vscode`, and **CI runs `vsce package`** so packaging breaks are caught on the PR, not at
+  release time.
+
+### Docs
+- README: corrected post-2.6.13 phrasing (API keys are **SecretStorage-only**, no plain-settings
+  option) and extended the changelog summary through 2.6.14.
 
 ## [2.6.13] - 2026-06-28
 

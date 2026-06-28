@@ -33,3 +33,6 @@ jobs:
       - run: npm run typecheck:webview
       - run: npm run build:webview
       - run: npm test
+      # Package the .vsix too — catches release-only errors (e.g. @types/vscode > engines.vscode)
+      # on every push/PR instead of at `Release` time.
+      - run: npx --yes @vscode/vsce package -o /tmp/jotflow-ci.vsix
