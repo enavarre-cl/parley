@@ -1,5 +1,5 @@
 // Neural-voice panel: Piper curated catalogue (download/delete) + Chatterbox (install engine,
-// create a cloned voice from a YouTube fragment or a local file, delete). One small IIFE panel.
+// create a cloned voice from a local audio/video file with a start/end trim, delete). One IIFE panel.
 (function () {
   const vscode = acquireVsCodeApi();
   const T = window.VOICES_T || {};
@@ -146,26 +146,23 @@
   }
 
   function wireForm() {
-    const name = $('cbName'), url = $('cbUrl'), start = $('cbStart'), end = $('cbEnd'), lang = $('cbLang');
-    const createUrl = $('cbCreateUrl'), createFile = $('cbCreateFile'), err = $('cbError');
+    const name = $('cbName'), start = $('cbStart'), end = $('cbEnd'), lang = $('cbLang');
+    const createFile = $('cbCreateFile'), err = $('cbError');
     const showErr = (m) => { if (err) err.textContent = m || ''; };
-    const setBusy = () => { cbBusy = true; createUrl.disabled = true; createFile.disabled = true; createUrl.textContent = T.creating; showErr(''); };
     const language = () => (lang && lang.value) || 'en';
-    createUrl.addEventListener('click', () => {
-      const nm = (name.value || '').trim();
-      if (!nm) { showErr(T.badName); return; }
-      const u = (url.value || '').trim();
-      if (!/^https?:\/\//i.test(u)) { showErr(T.badUrl); return; }
-      const a = parseTc(start.value), b = parseTc(end.value);
-      if (a === null || b === null || b <= a) { showErr(T.badRange); return; }
-      setBusy();
-      vscode.postMessage({ type: 'chatterboxCreateUrl', name: nm, language: language(), url: u, start: start.value.trim(), end: end.value.trim() });
-    });
+    // Don't disable the button here: the host opens the native file picker AFTER this, and only sends
+    // a 'busy' message once a file is actually chosen — so a cancelled pick must leave the button live.
     createFile.addEventListener('click', () => {
       const nm = (name.value || '').trim();
       if (!nm) { showErr(T.badName); return; }
-      setBusy();
-      vscode.postMessage({ type: 'chatterboxCreateFile', name: nm, language: language() });
+      const s = (start.value || '').trim(), e = (end.value || '').trim();
+      // The range is optional, but if either field is filled both must form a valid window.
+      if (s || e) {
+        const a = parseTc(s), b = parseTc(e);
+        if (a === null || b === null || b <= a) { showErr(T.badRange); return; }
+      }
+      showErr('');
+      vscode.postMessage({ type: 'chatterboxCreateFile', name: nm, language: language(), start: s, end: e });
     });
   }
 
@@ -174,15 +171,13 @@
     if (!d) return;
     if (d.type === 'state') {
       piperBusy.clear(); cbBusy = false;
-      const createUrl = $('cbCreateUrl');
-      if (createUrl) { createUrl.disabled = false; createUrl.textContent = T.create || 'Create from YouTube'; }
       const createFile = $('cbCreateFile');
       if (createFile) createFile.disabled = false;
       renderPiper(d.piper || []);
       renderChatterbox(d.chatterbox || { installed: false, voices: [] });
     } else if (d.type === 'busy') {
       if (d.scope === 'piper' && d.id) piperBusy.add(d.id);
-      else if (d.scope === 'chatterbox') cbBusy = true;
+      else if (d.scope === 'chatterbox') { cbBusy = true; const cf = $('cbCreateFile'); if (cf) cf.disabled = true; }
     }
   });
 

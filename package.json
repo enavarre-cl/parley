@@ -2,7 +2,7 @@
   "name": "jotflow",
   "displayName": "Jotflow",
   "description": "%ext.description%",
-  "version": "2.5.0",
+  "version": "2.6.0",
   "publisher": "enavarre",
   "license": "MIT",
   "engines": {
@@ -662,18 +662,6 @@
             "minimum": 0,
             "maximum": 1,
             "markdownDescription": "%config.tts.chatterboxExaggeration.desc%"
-          },
-          "jotflow.tts.youtubeMaxSeconds": {
-            "type": "number",
-            "default": 30,
-            "minimum": 3,
-            "maximum": 60,
-            "markdownDescription": "%config.tts.youtubeMaxSeconds.desc%"
-          },
-          "jotflow.tts.youtubeAllowAnyUrl": {
-            "type": "boolean",
-            "default": false,
-            "markdownDescription": "%config.tts.youtubeAllowAnyUrl.desc%"
           }
         }
       }
@@ -683,6 +671,7 @@
     "vscode:prepublish": "npm run bundle",
     "compile": "tsc -p ./",
     "bundle": "esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node --target=node18 --minify --sourcemap",
+    "dev": "npm run compile && npm run bundle",
     "watch": "tsc -watch -p ./",
     "test": "npm run compile && node --test out/test/*.test.js",
     "lint": "eslint src",

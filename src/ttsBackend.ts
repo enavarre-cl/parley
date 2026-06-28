@@ -162,7 +162,7 @@ export function makeTtsBackend(deps: TtsBackendDeps) {
       const post = (m: Record<string, unknown>): Thenable<boolean> => webview.postMessage({ ...m, id: reqId });
       const progress = (pct: number, text: string): void => { post({ type: 'ttsProgress', pct, text }); };
       if (!voice || !isSafeVoiceId(voice)) {
-        post({ type: 'ttsError', message: tr('No Chatterbox voice selected. Create one from the Voices panel (YouTube fragment or a local clip).') });
+        post({ type: 'ttsError', message: tr('No Chatterbox voice selected. Create one from the Voices panel (from a local audio/video file).') });
         return;
       }
       const refWav = chatterboxVoicePath(chatterbox.voicesDir(), voice);

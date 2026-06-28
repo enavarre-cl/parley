@@ -50,7 +50,7 @@ export class PythonEnv {
     const bin = process.platform === 'win32' ? 'Scripts' : 'bin';
     return path.join(this.dir(venvSub), bin, process.platform === 'win32' ? 'python.exe' : 'python');
   }
-  /** Path to an executable installed by a venv's packages (e.g. `piper`, `yt-dlp`). */
+  /** Path to an executable installed by a venv's packages (e.g. `piper`, `ffmpeg`). */
   venvBin(venvSub: string, name: string): string {
     const bin = process.platform === 'win32' ? 'Scripts' : 'bin';
     return path.join(this.dir(venvSub), bin, process.platform === 'win32' ? name + '.exe' : name);

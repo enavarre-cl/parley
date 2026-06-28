@@ -40,10 +40,10 @@ management and neural text‑to‑speech without leaving the editor.
   progress** (shows size and free disk space first; retry/cancel).
 - 🔧 **Tools (function calling)**: native **workspace filesystem** + **MCP servers** — agentic loop.
 - 🗣️ **Read aloud (TTS)**: system voices (Web Speech), neural **Piper** (local, managed daemon), or
-  **Chatterbox (Resemble AI)** with **zero‑shot voice cloning** — create a voice from a **YouTube
-  fragment** (paste a URL + a `mm:ss` range) or a local audio clip, and read messages aloud in it.
-  Each cloned voice carries its language (multilingual). On **Apple Silicon** it runs a fast 4‑bit
-  model via MLX; other platforms use PyTorch.
+  **Chatterbox (Resemble AI)** with **zero‑shot voice cloning** — create a voice by cloning a short
+  sample from a **local audio/video file** (ogg · mp4 · mp3 · wav) with a start/end trim, and read
+  messages aloud in it. Each cloned voice carries its language (multilingual). On **Apple Silicon** it
+  runs a fast 4‑bit model via MLX; other platforms use PyTorch.
 - 🎛️ **Engines panel**: install / start / stop / delete each local engine (Ollama · Piper ·
   Chatterbox) from one view, with download sources, a live progress bar and the RAM each engine uses.
 - 🔎 **Find & replace in chat** (`Ctrl/Cmd+F` find · `Ctrl/Cmd+H` replace), 🔍 **zoom** (`Alt`/`Option` + wheel,
@@ -140,9 +140,8 @@ ending only when the model stops requesting tools or you press Stop).
 - Your **API keys** can be stored in VS Code **SecretStorage** (not plain settings).
 - The managed Ollama server and the Piper / Chatterbox TTS daemons bind to **`127.0.0.1`** only.
 - **No telemetry** — Jotflow does not phone home. Network traffic goes only to the LLM backend
-  you configure and, on demand, to Hugging Face / PyPI to download models and the TTS engines, plus
-  **YouTube** if you create a Chatterbox voice from a YouTube fragment (host‑allowlisted; you supply
-  the URL and are responsible for the audio rights).
+  you configure and, on demand, to Hugging Face / PyPI to download models and the TTS engines.
+  Chatterbox voice cloning uses a **local audio/video file you pick** — no external download.
 
 ## Configuration
 
@@ -177,8 +176,6 @@ Settings under `Settings → Jotflow`:
 | `jotflow.tts.chatterboxModel` | `multilingual` | Chatterbox model: `multilingual` (23 languages) or `english` (lighter). Ignored on Apple Silicon (always the MLX multilingual model) |
 | `jotflow.tts.chatterboxDevice` | `auto` | Compute device for the PyTorch Chatterbox backend: `auto` / `mps` / `cuda` / `cpu` |
 | `jotflow.tts.chatterboxExaggeration` | `0.5` | Chatterbox emotion/intensity (0–1) |
-| `jotflow.tts.youtubeMaxSeconds` | `30` | Max length of a reference clip extracted from YouTube/a file |
-| `jotflow.tts.youtubeAllowAnyUrl` | `false` | Allow voice‑sample URLs from any host (off = YouTube only) |
 
 ## Third‑party components & licenses
 
@@ -191,7 +188,7 @@ Jotflow is **MIT** licensed. It bundles or downloads third‑party components un
 | [Mermaid](https://github.com/mermaid-js/mermaid) (`media/mermaid.min.js`) | bundled (diagram rendering, lazy‑loaded) | MIT |
 | [Piper](https://github.com/OHF-Voice/piper1-gpl) (`piper-tts`) | **downloaded at runtime** for neural TTS | **GPL** |
 | [Chatterbox](https://github.com/resemble-ai/chatterbox) (`chatterbox-tts` / [`mlx-audio`](https://github.com/Blaizzy/mlx-audio) on Apple Silicon) | **downloaded at runtime** for voice‑cloning TTS | MIT |
-| [`yt-dlp`](https://github.com/yt-dlp/yt-dlp) + ffmpeg ([`imageio-ffmpeg`](https://github.com/imageio/imageio-ffmpeg)) | downloaded at runtime (extract a YouTube fragment for a cloned voice) | Unlicense / LGPL |
+| ffmpeg ([`imageio-ffmpeg`](https://github.com/imageio/imageio-ffmpeg)) | downloaded at runtime (trim a local file into a cloned-voice reference clip) | LGPL |
 | [Ollama](https://ollama.com) | **downloaded at runtime** (managed server) | MIT |
 | Python (astral‑sh build‑standalone) | downloaded at runtime (for Piper / Chatterbox) | PSF / per upstream |
 
@@ -200,7 +197,10 @@ Jotflow is **MIT** licensed. It bundles or downloads third‑party components un
 
 ## Changelog
 
-See [CHANGELOG.md](CHANGELOG.md) for the release history. **2.5.0** reorganises the ⚙ settings into
+See [CHANGELOG.md](CHANGELOG.md) for the release history. **2.6.0** drops the YouTube path for
+Chatterbox voice cloning (removing yt-dlp entirely): a reference voice is now cloned from a **local
+audio/video file** you pick (ogg/mp4/mp3/wav) with a start/end trim — no network fetch, no ToS gray
+area. **2.5.0** reorganises the ⚙ settings into
 **collapsible sections** (collapsed by default, state remembered per conversation) and **remembers the
 chat zoom** per `.chat`. **2.4.0** makes the system prompt a
 **layered** one — an open inline base plus multiple ordered `.md` files you can add, reorder and

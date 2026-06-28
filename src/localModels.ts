@@ -136,8 +136,8 @@ export function registerLocalModels(context: vscode.ExtensionContext, deps: Loca
     {
       key: 'chatterbox', name: 'Chatterbox', kind: tr('Neural TTS · voice cloning'),
       sources: (process.platform === 'darwin' && process.arch === 'arm64')
-        ? [`PyPI · mlx-audio==${MLX_AUDIO_VERSION} (Apple Silicon, ~4× faster)`, `Weights · Hugging Face (${CHATTERBOX_MLX_MODEL}, 4-bit ~1 GB)`, 'yt-dlp (latest) + ffmpeg']
-        : [`PyPI · chatterbox-tts==${CHATTERBOX_TTS_VERSION} + PyTorch`, 'Weights · Hugging Face (ResembleAI/chatterbox, ~3 GB)', 'yt-dlp (latest) + ffmpeg'],
+        ? [`PyPI · mlx-audio==${MLX_AUDIO_VERSION} (Apple Silicon, ~4× faster)`, `Weights · Hugging Face (${CHATTERBOX_MLX_MODEL}, 4-bit ~1 GB)`, 'ffmpeg (imageio-ffmpeg)']
+        : [`PyPI · chatterbox-tts==${CHATTERBOX_TTS_VERSION} + PyTorch`, 'Weights · Hugging Face (ResembleAI/chatterbox, ~3 GB)', 'ffmpeg (imageio-ffmpeg)'],
       state: () => chatterbox.isInstalled() ? { status: chatterbox.isServerRunning() ? 'running' : 'stopped' } : { status: 'notinstalled' },
       pid: () => chatterbox.serverPid(),
       install: async (report) => { await chatterbox.install(report); refreshTrees(); }, // install emits stepped %

@@ -86,21 +86,19 @@ export function openVoicesPanel(
   <table><tbody id="piperRows"></tbody></table>
 
   <h2 class="cb-head">Chatterbox (TTS) · ${esc(tr('voice cloning'))}</h2>
-  <p class="sub">${esc(tr('Create a voice by cloning a short sample. Paste a YouTube URL and pick a time range, or use a local audio file.'))}</p>
+  <p class="sub">${esc(tr('Create a voice by cloning a short sample from a local audio or video file (ogg · mp4 · mp3 · wav). Set a start and end (in seconds), then pick the file.'))}</p>
   <div id="cbEngine"></div>
   <div id="cbForm" class="hidden">
     <div class="cb-range">
       <div class="cb-field"><label for="cbName">${esc(tr('Voice name'))}</label><input id="cbName" type="text" placeholder="${esc(tr('e.g. Morgan'))}" /></div>
       <div class="cb-field"><label for="cbLang">${esc(tr('Language'))}</label><select id="cbLang">${langOptions}</select></div>
     </div>
-    <div class="cb-field"><label for="cbUrl">${esc(tr('YouTube URL'))}</label><input id="cbUrl" type="text" placeholder="https://www.youtube.com/watch?v=…" /></div>
     <div class="cb-range">
-      <div class="cb-field"><label for="cbStart">${esc(tr('Start'))} (mm:ss)</label><input id="cbStart" type="text" placeholder="00:30" /></div>
-      <div class="cb-field"><label for="cbEnd">${esc(tr('End'))} (mm:ss)</label><input id="cbEnd" type="text" placeholder="00:45" /></div>
+      <div class="cb-field"><label for="cbStart">${esc(tr('Start'))} (s)</label><input id="cbStart" type="text" inputmode="numeric" placeholder="0" /></div>
+      <div class="cb-field"><label for="cbEnd">${esc(tr('End'))} (s)</label><input id="cbEnd" type="text" inputmode="numeric" placeholder="12" /></div>
     </div>
     <div class="cb-actions">
-      <button id="cbCreateUrl" class="btn-primary">${esc(tr('Create from YouTube'))}</button>
-      <button id="cbCreateFile" class="btn-secondary">${esc(tr('Add from file…'))}</button>
+      <button id="cbCreateFile" class="btn-primary">${esc(tr('Add from file…'))}</button>
     </div>
     <div id="cbError" class="cb-error"></div>
     <p class="cb-warn">${esc(tr('Only use audio you have the rights to. Clips are capped at 30s.'))}</p>
@@ -116,14 +114,12 @@ export function openVoicesPanel(
     noneDownloaded: tr('No voices downloaded yet.'),
     install: tr('Install Chatterbox engine + model'),
     installing: tr('Installing…'),
-    create: tr('Create from YouTube'),
     creating: tr('Creating voice…'),
     running: tr('running'),
     stopped: tr('stopped'),
     noVoices: tr('No voices yet.'),
     badName: tr('Enter a voice name.'),
-    badUrl: tr('Enter a valid YouTube URL.'),
-    badRange: tr('Enter a valid time range (mm:ss), end after start, ≤ 30s.'),
+    badRange: tr('Enter a valid range in seconds, end after start, ≤ 30s.'),
   })};</script>
   <script nonce="${nonce}" src="${media('voices.js')}"></script>
 </body>
@@ -133,7 +129,7 @@ export function openVoicesPanel(
 
   const fail = (e: unknown) => { vscode.window.showErrorMessage(tr('Could not create the voice: ') + errMsg(e)); };
 
-  panel.webview.onDidReceiveMessage(async (m: { type?: string; id?: string; url?: string; start?: string; end?: string; name?: string; language?: string }) => {
+  panel.webview.onDidReceiveMessage(async (m: { type?: string; id?: string; start?: string; end?: string; name?: string; language?: string }) => {
     if (m?.type === 'ready') { send(); return; }
 
     // ── Piper ──
@@ -167,31 +163,19 @@ export function openVoicesPanel(
     if (m?.type === 'chatterboxRemove' && typeof m.id === 'string') {
       removeChatterboxVoice(chatterbox.voicesDir(), m.id); send(); onChanged(); return;
     }
-    if (m?.type === 'chatterboxCreateUrl' && typeof m.url === 'string' && typeof m.name === 'string') {
-      const id = uniqueVoiceId(chatterbox.voicesDir(), m.name);
-      if (!id) { vscode.window.showErrorMessage(tr('Enter a voice name.')); return; }
-      panel.webview.postMessage({ type: 'busy', scope: 'chatterbox' });
-      try {
-        await vscode.window.withProgress(
-          { location: vscode.ProgressLocation.Notification, title: tr('Creating voice…') },
-          (p) => chatterbox.createVoice({ id, label: m.name!.trim(), language: m.language, url: m.url, start: m.start, end: m.end }, (msg) => p.report({ message: msg }))
-        );
-      } catch (e) { fail(e); }
-      send(); onChanged(); return;
-    }
     if (m?.type === 'chatterboxCreateFile' && typeof m.name === 'string') {
       const id = uniqueVoiceId(chatterbox.voicesDir(), m.name);
       if (!id) { vscode.window.showErrorMessage(tr('Enter a voice name.')); return; }
       const picked = await vscode.window.showOpenDialog({
         canSelectMany: false, openLabel: tr('Use as voice sample'),
-        filters: { Audio: ['wav', 'mp3', 'm4a', 'flac', 'ogg', 'opus', 'aac'] },
+        filters: { [tr('Audio / video')]: ['ogg', 'mp4', 'mp3', 'wav'] },
       });
       if (!picked || !picked[0]) return;
       panel.webview.postMessage({ type: 'busy', scope: 'chatterbox' });
       try {
         await vscode.window.withProgress(
           { location: vscode.ProgressLocation.Notification, title: tr('Creating voice…') },
-          (p) => chatterbox.createVoice({ id, label: m.name!.trim(), language: m.language, filePath: picked[0].fsPath }, (msg) => p.report({ message: msg }))
+          (p) => chatterbox.createVoice({ id, label: m.name!.trim(), language: m.language, filePath: picked[0].fsPath, start: m.start, end: m.end }, (msg) => p.report({ message: msg }))
         );
       } catch (e) { fail(e); }
       send(); onChanged(); return;

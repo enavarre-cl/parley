@@ -13,8 +13,8 @@ webview (browser sandbox). It processes:
 - **Tools** (per-chat opt-in): the workspace filesystem, `web_fetch`, and **MCP** servers defined
   in `.mcp.json` / `.mcp/*.json` in the repo.
 - **TTS models/binaries (Piper, Chatterbox)** and the **Ollama binary** downloaded from Hugging Face,
-  GitHub and PyPI. Chatterbox can build a **reference voice** by extracting a short fragment of a
-  **YouTube** URL the user supplies (yt-dlp + ffmpeg) or a local audio file.
+  GitHub and PyPI. Chatterbox builds a **reference voice** by trimming a short fragment of a **local
+  audio/video file** the user picks (ffmpeg) — no network/URL fetch.
 
 Trusted: VS Code, the user-configured LLM provider, and (with Workspace Trust) the workspace
 content. **Not** trusted: remote content read by the model (web pages via `web_fetch`, untrusted
@@ -44,9 +44,9 @@ files) or repositories opened without trust.
 | **Untrusted model-catalog content (ollama.com)** | The Ollama model explorer scrapes ollama.com (search / tags / model pages) over a **fixed host** with `encodeURIComponent`-encoded path & query (no user-controlled host → no SSRF), via `httpFetch` with a timeout. Scraped names/metadata are **HTML-escaped** before display; the README is **tag-stripped → re-rendered to a limited Markdown/HTML subset → a DOM-allowlist `sanitizeHtml`** (parsed in an inert `<template>`; only known-safe tags/attributes kept — not a regex denylist), with the panel's strict CSP (`script-src 'nonce-…'`, no `unsafe-inline`) as the backstop. |
 | **Untrusted attachment bytes (images)** | Image attachments (base64 from a possibly hand-crafted `.attach`) are shown via a **`Blob` object URL** (`URL.createObjectURL`, revoked on load), **not** a `data:` URL built by concatenating the `mime`/`data` — so untrusted bytes never reach a URL string sink. The `mime` is validated as `image/…` and the payload as base64 (`setImageSrc`). |
 | **Supply chain (pip package)** | `piper-tts` is installed at a **pinned version** (`==1.4.2`); pip verifies its hash against the PyPI index (immutable files). |
-| **SSRF / arbitrary download via the voice-sample URL** (Chatterbox) | The URL is validated **on the host** (never trusting the webview): `http(s)` only and the host must be in the **YouTube allowlist** (`youtube.com`/`youtu.be`/subdomains) unless the user opts into `jotflow.tts.youtubeAllowAnyUrl` (default **off**, fail-closed). The time range is validated (start<end, duration ≤ `jotflow.tts.youtubeMaxSeconds`). yt-dlp is spawned with an **argv array, never a shell**, so the URL cannot inject a command. |
-| **RCE via yt-dlp / ffmpeg / Python** (Chatterbox) | Spawning these interpreters is command execution → the bundled Python is tried first (SHA-pinned); the system-Python fallback and all engine spawns run **only in a trusted Workspace** (same gate as Piper and the tools). |
-| **Supply chain (Chatterbox pip packages)** | The TTS lib is installed at a **pinned version** (`==`): `mlx-audio` on Apple Silicon (the fast MLX backend, no PyTorch), `chatterbox-tts` elsewhere. `imageio-ffmpeg` (bundles a static ffmpeg) is also pinned, so ffmpeg needs **no hand-pinned binary hash** — same posture as `piper-tts`. **`yt-dlp` is intentionally unpinned** (see residual risks): pip still hash-verifies whatever version it resolves. |
+| **Voice-sample source** (Chatterbox) | The reference clip is a **local file the user picks** via the native dialog — there is **no URL fetch / network download** at all (so no SSRF surface). The host validates the time range (start<end, duration ≤ 30 s) and the safe voice id, and trims with ffmpeg spawned as an **argv array, never a shell**. The user's source file is never modified. |
+| **RCE via ffmpeg / Python** (Chatterbox) | Spawning these interpreters is command execution → the bundled Python is tried first (SHA-pinned); the system-Python fallback and all engine spawns run **only in a trusted Workspace** (same gate as Piper and the tools). |
+| **Supply chain (Chatterbox pip packages)** | The TTS lib is installed at a **pinned version** (`==`): `mlx-audio` on Apple Silicon (the fast MLX backend, no PyTorch), `chatterbox-tts` elsewhere. `imageio-ffmpeg` (bundles a static ffmpeg) is also pinned, so ffmpeg needs **no hand-pinned binary hash** — same posture as `piper-tts`. |
 | **Chatterbox synthesis daemon** | Loads the model once and listens **only on `127.0.0.1`** (ephemeral port); the child process is managed and **killed on deactivate**. Not exposed to the network. (MLX's Metal stream is thread-local, so the daemon is single-threaded.) |
 | **Model weights (Hugging Face)** | Downloaded into the extension's storage (`HF_HOME` pointed at globalStorage): a **4-bit multilingual MLX** model on Apple Silicon, the `chatterbox-tts` weights elsewhere. Reused offline after the first load (a marker gates a no-network start). See residual risks below. |
 
@@ -65,10 +65,9 @@ files) or repositories opened without trust.
   this tool. The **pinned version** already covers the realistic vectors.
 - **Uncurated Piper voices.** If the user points `jotflow.tts.piperModel` at their own `.onnx`,
   its checksum is not verified (it is the user's choice).
-- **Uncurated Chatterbox reference clips.** A clip the user creates from a YouTube fragment or a
-  local file is not hash-verified — it is, by design, their own sample.
-- **YouTube ToS / copyright.** Extracting audio from YouTube is a local action and the user is
-  responsible for having the rights to the audio they clone; the create-voice form warns about this.
+- **Uncurated Chatterbox reference clips.** A clip the user creates from a local file is not
+  hash-verified — it is, by design, their own sample. The user is responsible for having the rights
+  to clone the voice; the create-voice form warns about this.
 - **Chatterbox model weights are not SHA-pinned.** The TTS lib (`mlx-audio` on Apple Silicon,
   `chatterbox-tts` elsewhere) resolves and downloads its own weights from Hugging Face via
   `huggingface_hub` — for MLX, a fixed 4-bit model repo. We pin the **package** version and confine
@@ -76,14 +75,6 @@ files) or repositories opened without trust.
   "full pip dependency pinning NOT implemented" above.
 - **Neural watermark (PerTh).** Audio generated by Chatterbox carries Resemble AI's inaudible
   watermark by design; this is a property of the upstream model, noted for transparency.
-- **`yt-dlp` is installed unpinned (latest).** YouTube actively breaks older yt-dlp releases (nsig /
-  SABR changes), so a pinned version ships a feature that stops working within weeks; yt-dlp's own
-  guidance is to always run the latest. A **failed extraction auto-upgrades yt-dlp to the latest and
-  retries once** (there is no manual "update engine" button), so the engine self-heals when YouTube
-  changes — this only ever installs from PyPI through the same `pip` path. pip still verifies the
-  resolved version's hash against the immutable PyPI index, the spawn uses an argv array (no shell),
-  and the URL is host-allowlisted — so the residual is "a future yt-dlp release on PyPI is itself
-  malicious", the same class as the unpinned-transitive-deps risk already accepted above.
 
 ## Static analysis (CodeQL)
 

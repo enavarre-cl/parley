@@ -391,8 +391,6 @@
   "config.tts.chatterboxModel.desc": "Modello Chatterbox: **multilingual** (predefinito — 23 lingue; ogni voce parla la propria lingua) o **english** (più leggero, solo inglese).",
   "config.tts.chatterboxDevice.desc": "Dispositivo di calcolo per Chatterbox: **auto** (MPS su Apple Silicon, CUDA se disponibile, altrimenti CPU), o forzane uno. La CPU è lenta.",
   "config.tts.chatterboxExaggeration.desc": "Emozione/intensità di Chatterbox (0–1). Più alto = più espressivo.",
-  "config.tts.youtubeMaxSeconds.desc": "Durata massima (secondi) del clip di riferimento estratto da YouTube o da un file.",
-  "config.tts.youtubeAllowAnyUrl.desc": "Consenti URL di campioni vocali da qualsiasi host, non solo YouTube. Disattivato per impostazione predefinita (più sicuro).",
   "cmd.engines.manage.title": "Gestisci motori",
   "All voices downloaded": "Tutte le voci scaricate",
   "No voices downloaded yet.": "Nessuna voce ancora scaricata."

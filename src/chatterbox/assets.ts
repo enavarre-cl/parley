@@ -1,6 +1,6 @@
-/** Chatterbox engine (Resemble AI): pinned pip versions, model ids, the YouTube host allowlist,
- *  and pure validators (timecode parsing, URL/range validation, voice-id sanitization). No I/O and
- *  no vscode dependency, so the validators are unit-testable and reusable on both sides. */
+/** Chatterbox engine (Resemble AI): pinned pip versions, model ids, and pure validators (timecode
+ *  parsing, range validation, voice-id sanitization). No I/O and no vscode dependency, so the
+ *  validators are unit-testable and reusable on both sides. */
 
 // Pinned PyPI versions (fail-closed posture matches piper-tts: pip verifies hashes vs the index).
 // Bump deliberately when reviewing releases.
@@ -10,11 +10,6 @@ export const IMAGEIO_FFMPEG_VERSION = '0.6.0';
 // (~4x faster than the torch path, no PyTorch). Used automatically on darwin/arm64.
 export const MLX_AUDIO_VERSION = '0.4.4';
 export const CHATTERBOX_MLX_MODEL = 'litmudoc/Chatterbox-Multilingual-MLX-v2-Q4';
-// yt-dlp is intentionally UNPINNED: YouTube routinely breaks older releases (nsig/SABR changes), and
-// yt-dlp's own guidance is to always run the latest — a pinned version ships a feature that's broken
-// within weeks. pip still verifies the resolved version's hash against the PyPI index, and
-// `update()` re-pulls the latest. (Accepted residual — see SECURITY.md.)
-export const YT_DLP_SPEC = 'yt-dlp';
 
 // 'multilingual' = the 23-language model (default, so each voice's language works automatically);
 // 'english' = the lighter English-only ChatterboxTTS. The server only branches on 'multilingual'.
@@ -44,26 +39,8 @@ export type ChatterboxDevice = 'auto' | 'mps' | 'cuda' | 'cpu';
 export const CHATTERBOX_DEFAULT_DEVICE: ChatterboxDevice = 'auto';
 
 // Max length of a reference clip. Chatterbox clones well from ~5–15 s; longer adds no quality and
-// bloats the download/extract.
+// bloats the stored clip.
 export const REF_CLIP_MAX_SECONDS = 30;
-
-// Hosts allowed as a voice-sample source (fail-closed). YouTube only by default.
-const YOUTUBE_HOSTS = new Set(['youtube.com', 'www.youtube.com', 'm.youtube.com', 'music.youtube.com', 'youtu.be']);
-
-export interface UrlCheck { ok: boolean; error?: string }
-
-/** Validates a media-source URL. Default: only YouTube hosts over https (anti-SSRF, fail-closed).
- *  `allowAny` (a user setting) relaxes the host allowlist but still requires http(s). */
-export function validateSourceUrl(raw: string, allowAny = false): UrlCheck {
-  let u: URL;
-  try { u = new URL(raw.trim()); } catch { return { ok: false, error: 'invalid URL' }; }
-  if (u.protocol !== 'https:' && u.protocol !== 'http:') return { ok: false, error: 'only http(s) URLs are allowed' };
-  if (allowAny) return { ok: true };
-  if (u.protocol !== 'https:') return { ok: false, error: 'YouTube URLs must be https' };
-  const host = u.hostname.toLowerCase();
-  if (YOUTUBE_HOSTS.has(host) || host.endsWith('.youtube.com')) return { ok: true };
-  return { ok: false, error: 'host not allowed (only YouTube)' };
-}
 
 /** Parses a timecode `ss`, `mm:ss` or `hh:mm:ss` into total seconds. Returns null if malformed. */
 export function parseTimecode(s: string): number | null {
@@ -87,15 +64,6 @@ export function validateRange(startRaw: string, endRaw: string, maxSeconds = REF
   if (end <= start) return { ok: false, error: 'end must be after start' };
   if (end - start > maxSeconds) return { ok: false, error: `clip must be ≤ ${maxSeconds}s` };
   return { ok: true, start, end };
-}
-
-/** Formats a range as the `*HH:MM:SS-HH:MM:SS` token yt-dlp's `--download-sections` expects. */
-export function formatSections(start: number, end: number): string {
-  const hms = (n: number): string => {
-    const h = Math.floor(n / 3600), m = Math.floor((n % 3600) / 60), s = n % 60;
-    return [h, m, s].map((x) => String(x).padStart(2, '0')).join(':');
-  };
-  return `*${hms(start)}-${hms(end)}`;
 }
 
 /** Turns a user-supplied voice name into a safe id (single path component): lowercase, letters/

@@ -5,6 +5,38 @@ All notable changes to Jotflow. Format based on
 
 ## [Unreleased]
 
+## [2.6.0] - 2026-06-28
+
+### Removed
+- **YouTube as a Chatterbox voice-cloning source — and `yt-dlp` entirely.** A reference voice is now
+  cloned **only from a local audio/video file you pick** (ogg · mp4 · mp3 · wav) with a start/end
+  trim, not from a YouTube URL. This drops the most fragile, externally-dependent and tangential
+  branch of the app: no more yt-dlp (which YouTube routinely broke), no URL host-allowlist, no
+  network fetch in the create-voice path. The Chatterbox engine venv no longer installs yt-dlp
+  (ffmpeg via `imageio-ffmpeg` stays, for the trim). Existing cloned voices keep working unchanged.
+- **Settings `jotflow.tts.youtubeMaxSeconds` and `jotflow.tts.youtubeAllowAnyUrl`** (and their nls
+  keys) — obsolete with the URL path gone. The clip cap is the fixed `REF_CLIP_MAX_SECONDS` (30 s).
+
+### Changed
+- **Create-voice form is now file-first:** name + language + **Start/End in seconds** + **Add from
+  file…** (native picker filtered to ogg/mp4/mp3/wav). The host trims the picked file to `[start,end]`
+  with ffmpeg (`-ss`/`-t`) and normalizes to mono 24 kHz; the user's source file is never modified.
+  The range is optional — empty takes the first 30 s.
+
+### Security
+- SECURITY.md updated: the "SSRF / arbitrary download via the voice-sample URL" threat row is gone
+  (there is no URL fetch anymore), the RCE row is now "ffmpeg / Python" (no yt-dlp), and the residual
+  risks lose the "YouTube ToS / copyright" and "yt-dlp installed unpinned" entries.
+
+### Internal
+- `chatterbox/assets.ts` drops `validateSourceUrl`/`UrlCheck`/the YouTube host allowlist,
+  `formatSections` and `YT_DLP_SPEC`; `ChatterboxManager` drops `ytDlpBin`/`upgradeYtDlp` and the
+  download branch of `createVoice`. `chatterbox.test.ts` drops the URL/format-token cases (the kept
+  pure validators — timecode, range, voice-id — still tested).
+- **Dev-loop fix (W1):** F5 runs `main` = `dist/extension.js` (the esbuild bundle), but the
+  `preLaunchTask` only built `out/`, so host changes silently ran stale code. New `npm run dev`
+  (compile + bundle); `launch.json` `preLaunchTask` → `npm: dev` and `outFiles` includes `dist`.
+
 ## [2.5.0] - 2026-06-28
 
 ### Added

@@ -92,12 +92,12 @@ export function renderTtsConfig(container) {
         : t('Downloaded voices work offline. Add more from the Jotflow panel (Voices ➕).');
     parent.appendChild(note);
   } else {
-    // Chatterbox: voices are cloned reference clips, created from the Voices panel (YouTube/file).
+    // Chatterbox: voices are cloned reference clips, created from the Voices panel (from a local file).
     const voices = tts.chatterboxVoices || [];
     if (!voices.length) {
       const note = document.createElement('div');
       note.className = 'cfg-note';
-      note.textContent = t('No Chatterbox voices yet. Create one from the Jotflow panel (Voices ➕): paste a YouTube URL and a time range.');
+      note.textContent = t('No Chatterbox voices yet. Create one from the Jotflow panel (Voices ➕): pick a local audio/video file and a time range.');
       parent.appendChild(note);
     } else {
       if (!voices.some((v) => v.id === tts.prefs.chatterboxVoice)) { tts.prefs.chatterboxVoice = voices[0].id; tts.save(); }

@@ -9,6 +9,15 @@
       "label": "npm: compile"
     },
     {
+      // F5 runs `main` = dist/extension.js (the esbuild bundle), so the launch task must rebuild dist —
+      // not just out/. `dev` = compile (type-check + out/) then bundle (dist/).
+      "type": "npm",
+      "script": "dev",
+      "problemMatcher": "$tsc",
+      "group": "build",
+      "label": "npm: dev"
+    },
+    {
       "type": "npm",
       "script": "watch",
       "problemMatcher": "$tsc-watch",

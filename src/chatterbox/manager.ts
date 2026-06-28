@@ -1,13 +1,13 @@
 /** Chatterbox engine (Resemble AI, neural TTS with zero-shot voice cloning). Self-contained:
- *  a pip venv (chatterbox-tts + yt-dlp + imageio-ffmpeg), a resident HTTP daemon serving synthesis,
- *  and reference-voice creation by trimming a YouTube fragment (or a local file). Mirrors the shape
+ *  a pip venv (chatterbox-tts + imageio-ffmpeg), a resident HTTP daemon serving synthesis, and
+ *  reference-voice creation by trimming a local audio/video file the user picks. Mirrors the shape
  *  of PiperManager; shares the Python bootstrap (pyenv) and daemon primitives (ttsDaemon).
  *
  *  Security: pip versions are pinned (pip verifies hashes vs the PyPI index, same as piper-tts). The
- *  YouTube URL is validated against a host allowlist BEFORE spawning yt-dlp (anti-SSRF), and every
- *  child is spawned with an argv array (never a shell), so a URL can't inject a command. Spawning
- *  these interpreters is command execution, gated behind Workspace Trust by pyenv. The daemon binds
- *  to 127.0.0.1 only and is killed on deactivate. */
+ *  voice source is a local file chosen via the native picker — no network/URL fetch — and ffmpeg is
+ *  spawned with an argv array (never a shell). Spawning these interpreters is command execution,
+ *  gated behind Workspace Trust by pyenv. The daemon binds to 127.0.0.1 only and is killed on
+ *  deactivate. */
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -20,9 +20,9 @@ import { freePort, waitForHttp } from '../ttsDaemon';
 import { parseProgressPct as linePct } from '../progress';
 import { errMsg } from '../chatHelpers';
 import {
-  CHATTERBOX_TTS_VERSION, YT_DLP_SPEC, IMAGEIO_FFMPEG_VERSION, MLX_AUDIO_VERSION, CHATTERBOX_MLX_MODEL,
+  CHATTERBOX_TTS_VERSION, IMAGEIO_FFMPEG_VERSION, MLX_AUDIO_VERSION, CHATTERBOX_MLX_MODEL,
   CHATTERBOX_DEFAULT_MODEL, CHATTERBOX_DEFAULT_DEVICE, REF_CLIP_MAX_SECONDS, isChatterboxModel,
-  isChatterboxLanguage, validateSourceUrl, validateRange, formatSections, isSafeVoiceId,
+  isChatterboxLanguage, validateRange, isSafeVoiceId,
 } from './assets';
 import { writeChatterboxVoiceMeta, chatterboxVoicePath } from '../chatterboxVoices';
 
@@ -33,7 +33,7 @@ const VOICES_DIR = 'chatterbox-voices';   // reference clips
 // Apple Silicon uses the fast MLX backend (mlx-audio, no PyTorch); everything else uses torch.
 const IS_APPLE_SILICON = process.platform === 'darwin' && process.arch === 'arm64';
 
-export interface CreateVoiceRequest { id: string; label: string; language?: string; url?: string; start?: string; end?: string; filePath?: string }
+export interface CreateVoiceRequest { id: string; label: string; language?: string; start?: string; end?: string; filePath: string }
 
 export class ChatterboxManager {
   private setupPromise: Promise<void> | null = null;
@@ -42,7 +42,7 @@ export class ChatterboxManager {
   private serverStarting: Promise<string> | null = null;
   private idleTimer: ReturnType<typeof setTimeout> | null = null;
   private ffmpegBin: string | null = null;
-  private currentJob: cp.ChildProcess | null = null; // yt-dlp/ffmpeg in flight (to cancel)
+  private currentJob: cp.ChildProcess | null = null; // the ffmpeg trim in flight (to cancel)
   private synthOnLine: ((line: string) => void) | null = null; // routes the daemon's per-synthesis "Sampling …%" lines
   private static readonly SERVER_IDLE_MS = 10 * 60 * 1000;
   // The first start downloads the weights (~3 GB) inside the server process and only answers once
@@ -63,7 +63,6 @@ export class ChatterboxManager {
     return vscode.Uri.joinPath(this.context.globalStorageUri, sub).fsPath;
   }
   voicesDir(): string { return this.dir(VOICES_DIR); }
-  private ytDlpBin(): string { return this.py.venvBin(VENV, 'yt-dlp'); }
   private venvPython(): string { return this.py.venvPython(VENV); }
 
   /** Is a Python package present in the venv's site-packages (version-dir agnostic)? */
@@ -77,9 +76,10 @@ export class ChatterboxManager {
     return fs.existsSync(path.join(this.dir(VENV), 'Lib', 'site-packages', pkg)); // Windows
   }
 
-  /** Is the engine installed for the CURRENT backend (so an old torch venv re-installs mlx-audio)? */
+  /** Is the engine installed for the CURRENT backend (so an old torch venv re-installs mlx-audio)?
+   *  Requires the TTS package + imageio-ffmpeg (used to trim the reference clip). */
   isInstalled(): boolean {
-    return fs.existsSync(this.ytDlpBin()) && this.hasPkg(IS_APPLE_SILICON ? 'mlx_audio' : 'chatterbox');
+    return this.hasPkg(IS_APPLE_SILICON ? 'mlx_audio' : 'chatterbox') && this.hasPkg('imageio_ffmpeg');
   }
   /** Is the synthesis daemon alive? */
   isServerRunning(): boolean { return !!this.serverProc; }
@@ -88,7 +88,7 @@ export class ChatterboxManager {
 
   // ───────────────────────── Engine bootstrap ─────────────────────────
 
-  /** Ensures the venv (chatterbox-tts + yt-dlp + imageio-ffmpeg). Concurrency-guarded.
+  /** Ensures the venv (chatterbox-tts + imageio-ffmpeg). Concurrency-guarded.
    *  `onStep(label, index)` marks the venv-create (0) and package-install (1) phases. */
   async ensureEngine(notify?: Notify, onStep?: (label: string, index: number) => void): Promise<void> {
     if (this.isInstalled()) return;
@@ -100,7 +100,7 @@ export class ChatterboxManager {
         : [`chatterbox-tts==${CHATTERBOX_TTS_VERSION}`, 'setuptools<81'];
       this.setupPromise = this.py.ensureVenv(
         VENV,
-        [...ttsPkgs, YT_DLP_SPEC, `imageio-ffmpeg==${IMAGEIO_FFMPEG_VERSION}`],
+        [...ttsPkgs, `imageio-ffmpeg==${IMAGEIO_FFMPEG_VERSION}`],
         { notify, setupMsg: tr('Setting up the Chatterbox engine (one-time)…'), isInstalled: () => this.isInstalled(), onStep },
       );
       const clear = (): void => { this.setupPromise = null; };
@@ -130,7 +130,7 @@ export class ChatterboxManager {
     at(3, tr('Ready.'));                                    // → 100%
   }
 
-  /** Resolves the bundled ffmpeg (from imageio-ffmpeg) for yt-dlp/transcoding. */
+  /** Resolves the bundled ffmpeg (from imageio-ffmpeg) used to trim/normalize the reference clip. */
   private async ensureFfmpeg(notify?: Notify): Promise<string> {
     if (this.ffmpegBin && fs.existsSync(this.ffmpegBin)) return this.ffmpegBin;
     await this.ensureEngine(notify);
@@ -275,7 +275,7 @@ export class ChatterboxManager {
 
   // ───────────────────────── Reference-voice creation ─────────────────────────
 
-  /** Spawns a child (yt-dlp/ffmpeg) with an argv array (never a shell) and a hard timeout. */
+  /** Spawns ffmpeg with an argv array (never a shell) and a hard timeout. */
   private run(bin: string, args: string[], timeoutMs: number): Promise<void> {
     return new Promise((resolve, reject) => {
       let proc: cp.ChildProcess;
@@ -295,80 +295,47 @@ export class ChatterboxManager {
     });
   }
 
-  /** Cancels an in-flight voice-creation job (yt-dlp/ffmpeg). */
+  /** Cancels an in-flight voice-creation job (the ffmpeg trim). */
   cancelJob(): void { if (this.currentJob) { try { this.currentJob.kill(); } catch { /* noop */ } this.currentJob = null; } }
 
-  /** Creates a reference voice from a YouTube fragment or a local file. Validates everything on the
-   *  host (URL allowlist, time range, safe id) regardless of any client-side checks. */
+  /** Creates a reference voice from a local audio/video file, trimmed to the [start,end] the user
+   *  gave (seconds or mm:ss) and normalized to a mono 24 kHz WAV. Validates everything on the host
+   *  (file exists, range, safe id) regardless of any client-side checks. The user's source file is
+   *  never modified or deleted. */
   async createVoice(req: CreateVoiceRequest, notify?: Notify): Promise<void> {
     const id = req.id;
     if (!isSafeVoiceId(id)) throw new Error('invalid voice id');
+    if (!req.filePath || !fs.existsSync(req.filePath)) throw new Error('file not found');
     const voicesDir = this.voicesDir();
     fs.mkdirSync(voicesDir, { recursive: true });
     const finalWav = chatterboxVoicePath(voicesDir, id);
-    const cfg = vscode.workspace.getConfiguration('jotflow');
-    const maxSeconds = cfg.get<number>('tts.youtubeMaxSeconds', REF_CLIP_MAX_SECONDS);
     const ffmpeg = await this.ensureFfmpeg(notify);
 
-    let srcWav: string;
-    if (req.url) {
-      const allowAny = cfg.get<boolean>('tts.youtubeAllowAnyUrl', false);
-      const urlCheck = validateSourceUrl(req.url, allowAny);
-      if (!urlCheck.ok) throw new Error(tr('URL not allowed: ') + (urlCheck.error || ''));
-      const range = validateRange(req.start || '', req.end || '', maxSeconds);
-      if (!range.ok || range.start === undefined || range.end === undefined) throw new Error(tr('Invalid time range: ') + (range.error || ''));
-      srcWav = path.join(voicesDir, id + '.src.wav');
-      try { fs.unlinkSync(srcWav); } catch { /* noop */ }
-      notify?.(tr('Downloading the audio fragment…'));
-      // Download ONLY the requested section, extract to WAV via the bundled ffmpeg. argv array → the
-      // URL never reaches a shell.
-      const ytArgs = [
-        '--no-playlist', '--no-progress',
-        '--download-sections', formatSections(range.start, range.end),
-        '--force-keyframes-at-cuts',
-        '-x', '--audio-format', 'wav', '--audio-quality', '0',
-        '--ffmpeg-location', ffmpeg,
-        '-o', path.join(voicesDir, id + '.src.%(ext)s'),
-        req.url,
-      ];
-      try {
-        await this.run(this.ytDlpBin(), ytArgs, 180000);
-      } catch {
-        // YouTube routinely breaks older yt-dlp (nsig/SABR). Auto-upgrade it and retry once.
-        notify?.(tr('Updating yt-dlp and retrying…'));
-        await this.upgradeYtDlp(notify);
-        await this.run(this.ytDlpBin(), ytArgs, 180000);
+    // Optional [start,end]: if given, trim to it; otherwise take the first REF_CLIP_MAX_SECONDS.
+    let seekStart = 0;
+    let duration = REF_CLIP_MAX_SECONDS;
+    if (req.start || req.end) {
+      const range = validateRange(req.start || '', req.end || '', REF_CLIP_MAX_SECONDS);
+      if (!range.ok || range.start === undefined || range.end === undefined) {
+        throw new Error(tr('Invalid time range: ') + (range.error || ''));
       }
-      if (!fs.existsSync(srcWav)) throw new Error('yt-dlp produced no audio');
-    } else if (req.filePath) {
-      if (!fs.existsSync(req.filePath)) throw new Error('file not found');
-      srcWav = req.filePath;
-    } else {
-      throw new Error('no source (url or file) given');
+      seekStart = range.start;
+      duration = range.end - range.start;
     }
 
-    // Normalize to a small mono 24 kHz clip (Chatterbox's reference rate); cap the duration.
+    // Trim + normalize to a small mono 24 kHz clip (Chatterbox's reference rate). `-ss` before `-i`
+    // seeks; `-t duration` caps the length. Output to a temp file, then atomically rename into place.
     notify?.(tr('Preparing the voice sample…'));
     const tmpOut = path.join(voicesDir, id + '.norm.wav');
     try { fs.unlinkSync(tmpOut); } catch { /* noop */ }
-    await this.run(ffmpeg, ['-y', '-i', srcWav, '-ac', '1', '-ar', '24000', '-t', String(maxSeconds), tmpOut], 60000);
+    await this.run(ffmpeg, ['-y', '-ss', String(seekStart), '-i', req.filePath, '-t', String(duration), '-ac', '1', '-ar', '24000', tmpOut], 60000);
     try { fs.renameSync(tmpOut, finalWav); } catch (e) { throw new Error('could not save clip: ' + errMsg(e)); }
-    if (req.url) { try { fs.unlinkSync(srcWav); } catch { /* noop */ } } // remove the raw download
     // Validate the language at the boundary (L4/U5): only store a supported code, else leave it unset.
     const language = req.language && isChatterboxLanguage(req.language) ? req.language : undefined;
-    writeChatterboxVoiceMeta(voicesDir, id, { label: req.label || id, source: req.url || 'file', language });
+    writeChatterboxVoiceMeta(voicesDir, id, { label: req.label || id, source: 'file', language });
   }
 
   // ───────────────────────── Lifecycle ─────────────────────────
-
-  /** Upgrades yt-dlp to the latest. YouTube routinely breaks older releases (nsig/SABR), so this is
-   *  called to auto-recover when an extraction fails — the engine itself is version-pinned. */
-  private async upgradeYtDlp(notify?: Notify): Promise<void> {
-    const venvPy = this.venvPython();
-    if (!fs.existsSync(venvPy)) return;
-    await this.py.runCmd(venvPy, ['-m', 'pip', 'install', '--upgrade', YT_DLP_SPEC],
-      (l) => { if (/downloading|installing|\d+\s*%|\bMB\b/i.test(l)) notify?.(l.slice(0, 140)); });
-  }
 
   /** Deletes the engine (venv), the downloaded weights and the reference clips. The shared
    *  self-contained Python is left in place (PythonEnv owns it; other engines may use it). */
