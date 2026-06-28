@@ -5,6 +5,22 @@ All notable changes to Jotflow. Format based on
 
 ## [Unreleased]
 
+## [2.3.5] - 2026-06-27
+
+### Fixed
+- **A chat whose `.attach` sidecar was deleted no longer fails every turn with a provider `400` / `502`.**
+  Images and documents are stored in the `.chat` as `{kind, name, mime, ref}` with their bytes in the
+  `.attach` sidecar; deleting the sidecar orphans those refs, so they resolve to an attachment with
+  **no `data`**. The extension still sent them as empty image/document parts
+  (`data:…;base64,undefined`), which every provider rejects — and since the whole history replays each
+  turn, the error stuck. Unresolved attachments are now **dropped before the request** (filtered in the
+  shared `imageAttachments` / `documentAttachments` helpers, so all four providers are covered) and the
+  model is told with an `[Attachment unavailable: <name>]` note instead of an empty image.
+
+### Tests
+- New `src/test/multimodal.test.ts` (4 cases): data-less / empty image & document attachments are
+  excluded, and `dataUrl` / `parseDataUrl` round-trip. Suite: **99 tests, all passing**.
+
 ## [2.3.4] - 2026-06-27
 
 ### Fixed

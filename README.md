@@ -190,8 +190,9 @@ Jotflow is **MIT** licensed. It bundles or downloads third‑party components un
 
 ## Changelog
 
-See [CHANGELOG.md](CHANGELOG.md) for the release history. **2.3.4** fixes a scroll jump when deleting
-a message that has an image. **2.3.3** makes the **Reasoning / Tools** panels remember their
+See [CHANGELOG.md](CHANGELOG.md) for the release history. **2.3.5** stops a chat whose `.attach`
+sidecar was deleted from failing every turn with a provider `400`/`502`. **2.3.4** fixes a scroll jump
+when deleting a message that has an image. **2.3.3** makes the **Reasoning / Tools** panels remember their
 open/closed state **per conversation** (so they stop popping back open while streaming), fixes the
 previously‑dead `jotflow.tts.chatterboxExaggeration` setting, and shows chat images at full bubble
 width. **2.3.x** adds **Chatterbox** voice‑cloning

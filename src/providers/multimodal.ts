@@ -1,13 +1,20 @@
 import { Attachment, ChatMessage } from './types';
 
-/** Image attachments of a message. */
-export function imageAttachments(m: ChatMessage): Attachment[] {
-  return (m.attachments ?? []).filter((a) => a.kind === 'image');
+/** A `ref`-only attachment whose blob couldn't be resolved (e.g. the `.attach` sidecar was deleted)
+ *  arrives with no `data`. It must never be sent: an empty image/document makes the provider reject
+ *  the whole request (400/502). */
+function hasData(a: Attachment): boolean {
+  return typeof a.data === 'string' && a.data.length > 0;
 }
 
-/** Document attachments (PDF, etc.) of a message. */
+/** Image attachments of a message (only those whose bytes actually resolved). */
+export function imageAttachments(m: ChatMessage): Attachment[] {
+  return (m.attachments ?? []).filter((a) => a.kind === 'image' && hasData(a));
+}
+
+/** Document attachments (PDF, etc.) of a message (only those whose bytes actually resolved). */
 export function documentAttachments(m: ChatMessage): Attachment[] {
-  return (m.attachments ?? []).filter((a) => a.kind === 'document');
+  return (m.attachments ?? []).filter((a) => a.kind === 'document' && hasData(a));
 }
 
 /** data URL for an image (OpenAI/Gemini format in image_url). */

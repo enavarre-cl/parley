@@ -104,9 +104,15 @@ export async function runInference(
       wire.push(...history.map((m) => {
         let content = m.content;
         const resolved = (m.attachments ?? []).map(resolveAttachment);
-        const media = resolved.filter((a) => a.kind === 'image' || a.kind === 'document');
-        for (const f of resolved.filter((a) => a.kind === 'text')) {
-          content += `\n\n[Attached file: ${f.name}]\n${f.data ?? ''}`;
+        const hasData = (a: Attachment): boolean => typeof a.data === 'string' && a.data.length > 0;
+        // A `ref`-only attachment whose blob can't be resolved (e.g. the `.attach` sidecar was
+        // deleted) arrives with no `data`. Sending it empty makes the provider reject the whole
+        // request (400/502), and the broken message replays every turn — so drop it and leave the
+        // model a note instead of an empty image.
+        for (const a of resolved.filter((x) => !hasData(x))) content += `\n\n[Attachment unavailable: ${a.name}]`;
+        const media = resolved.filter((a) => (a.kind === 'image' || a.kind === 'document') && hasData(a));
+        for (const f of resolved.filter((a) => a.kind === 'text' && hasData(a))) {
+          content += `\n\n[Attached file: ${f.name}]\n${f.data}`;
         }
         const wm: ChatMessage = { role: m.role, content };
         if (media.length) wm.attachments = media;
