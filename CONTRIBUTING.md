@@ -30,10 +30,11 @@ sandbox (the browser runs JS, not TS):
   `media/dist/app.js` — the chat module graph — plus one IIFE bundle per classic global / standalone
   panel (`i18n`, `spell`, `models`, `modelsFormat`, `voices`, `compare`, `dictionary`, `engines`).
   esbuild resolves `.js` import specifiers to their `.ts` sources, so imports never need touching.
-- The panels' HTML loads from `media/dist/`. `media/dist/` is **git-ignored** (built on dev/publish).
-- Type-checking is a **separate gate**: `tsc -p media/jsconfig.json` (the chat module graph). Vendored
-  libs (`mermaid.min.js`, `spell-engine.js`) and the generated bundles are the only `.js` left — they
-  are third-party / compiled output, never source.
+- The panels' HTML loads from `media/dist/`, which also holds `spell-engine.js` (the `nspell` engine
+  bundled from npm). `media/dist/` is **git-ignored** (built on dev/publish).
+- Type-checking is a **separate gate**: `tsc -p media/jsconfig.json` (the chat module graph). The only
+  committed `.js` is the vendored `mermaid.min.js`; everything in `media/dist/` is generated output —
+  none of it is source.
 
 ## Validation (run after changes)
 
@@ -100,16 +101,17 @@ splitter), `multimodal.ts` (attachments + image-output), `httpError.ts` and `htt
 
 ## Spell‑check & language assets
 
-Regenerate the bundled Hunspell dictionaries (`media/dict/<lang>.{aff,dic,LICENSE}` for
-`en, es, pt, fr, de, it`) and the webview `nspell` engine (`media/spell-engine.js`) with:
+Refresh the Hunspell dictionary **data** (`media/dict/<lang>.{aff,dic,LICENSE}` for
+`en, es, pt, fr, de, it`) from the npm `dictionary-*` packages with:
 
 ```bash
-npm run build:spell      # → tsx scripts/build-spell.ts
+npm run build:spell      # → tsx scripts/build-spell.ts   (copies the .aff/.dic/.LICENSE only)
 ```
 
-Dev deps: `nspell`, `dictionary-{en,es,pt,fr,de,it}`, `esbuild`. The `.aff/.dic` and each
-`<lang>.LICENSE` are copied from the npm `dictionary-*` packages and **must** ship alongside the
-dictionaries.
+The `nspell` **engine** itself is a generated bundle (`media/dist/spell-engine.js`) built by
+`build:webview`, not here — so it's git-ignored like the other webview bundles. Dev deps: `nspell`,
+`dictionary-{en,es,pt,fr,de,it}`, `esbuild`. The `.aff/.dic` and each `<lang>.LICENSE` are licensed
+data copied from the npm packages and **must** ship alongside the dictionaries.
 
 > UI translations live in `package.nls.<lang>.json` (English is the key). To add a language,
 > add its bundle, extend the `jotflow.language` enum, and `SPELL_LANGS` in `src/spellWords.ts`.

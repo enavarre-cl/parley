@@ -229,7 +229,7 @@ export function renderWebviewHtml(
   window.JOTFLOW_NONCE = '${nonce}';                // so the lazy <script> passes the CSP</script>
   <!-- Classic scripts set window globals (LangI18n / LangSpell) consumed by the modules. -->
   <script nonce="${nonce}" src="${uri('dist/i18n.js')}"></script>
-  <script nonce="${nonce}" src="${uri('spell-engine.js')}"></script>
+  <script nonce="${nonce}" src="${uri('dist/spell-engine.js')}"></script>
   <script nonce="${nonce}" src="${uri('dist/spell.js')}"></script>
   <!-- ES module entry: the esbuild-bundled chat module graph (built from media/app/main + its
        imports; runs after the classic globals above). Built by scripts/build-webview.js. -->

@@ -5,6 +5,16 @@ All notable changes to Jotflow. Format based on
 
 ## [Unreleased]
 
+## [2.6.9] - 2026-06-28
+
+### Internal
+- **Stopped committing a generated bundle.** `media/spell-engine.js` (the third-party `nspell` engine,
+  esbuild output) was tracked in the source tree — a W3 violation (no versioned generated artifacts).
+  It now builds to `media/dist/spell-engine.js` (git-ignored, like every other webview bundle):
+  `build:webview` produces it on `npm run dev` and `vscode:prepublish`, so F5 and packaging cover it.
+  `build:spell` is now purely a **data** step — it only refreshes the licensed Hunspell dictionaries
+  (`media/dict/*`), which stay committed. The only committed `.js` left is the vendored `mermaid.min.js`.
+
 ## [2.6.8] - 2026-06-28
 
 ### Security
