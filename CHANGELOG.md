@@ -5,6 +5,17 @@ All notable changes to Jotflow. Format based on
 
 ## [Unreleased]
 
+## [2.6.8] - 2026-06-28
+
+### Security
+- **Cleared a CodeQL `js/incomplete-sanitization` (high) alert** in `media/panels/models.ts`.
+  Inserting the accessibility `<title>` into a capability-badge SVG used `ICONS[…].replace('>', …)`,
+  which CodeQL flags as incomplete sanitization (a string `.replace` hits only the first match). It
+  was never sanitization — the `label` is already `escapeHtml`-escaped — but per **W7** the fix
+  refactors to a pattern CodeQL accepts (explicit `indexOf('>')` + `slice` splice, no `.replace('>')`)
+  rather than dismissing it. The alert surfaced in 2.6.5 when a no-op 3rd `.replace(…, 1)` argument
+  was removed, exposing the 2-arg form to the query. Webview gate green, bundle valid, 127 tests pass.
+
 ## [2.6.7] - 2026-06-28
 
 ### Docs
