@@ -161,7 +161,7 @@ import { t } from '../core/i18n.js';
   function copyMermaidImage(svg, btn) {
     svgToPngBlob(svg).then((blob) => {
       if (!blob || !navigator.clipboard || !window.ClipboardItem) return;
-      return navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]).then(() => {
+      return navigator.clipboard.write([new ClipboardItem({ 'image/png': blob as Blob })]).then(() => {
         const prev = btn.innerHTML;
         btn.innerHTML = MM_ICON.check; // brief ✓ confirmation
         setTimeout(() => { btn.innerHTML = prev; }, 1200);
@@ -207,7 +207,7 @@ import { t } from '../core/i18n.js';
   // Pan/zoom controller over `canvas` (CSS transform) inside the clipped `viewport`.
   // opts.wheelZoomAlways: zoom on any wheel (fullscreen). Default: only pinch / Ctrl/⌘+wheel, so a
   // plain two-finger trackpad scroll keeps scrolling the chat history instead of zooming.
-  function makePanZoom(viewport, canvas, opts) {
+  function makePanZoom(viewport, canvas, opts?) {
     let scale = 1, tx = 0, ty = 0;
     const MIN = 0.2, MAX = 8;
     const clamp = (v) => Math.min(MAX, Math.max(MIN, v));

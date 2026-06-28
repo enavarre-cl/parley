@@ -12,13 +12,13 @@ import { resetScroll, resetTools } from './conversation.js';
 import { renderSpell, scheduleSpell } from '../features/spell.js';
 import { handleFileKeydown, handleSuggestKeydown } from '../features/autocomplete.js';
 
-const inputEl = /** @type {HTMLTextAreaElement} */ ($('input'));
+const inputEl = $('input') as HTMLTextAreaElement;
 const inputBackdrop = $('inputBackdrop');
 const sendBtn = $('sendBtn');
 const stopBtn = $('stopBtn');
 const attachmentsEl = $('attachments');
 const attachBtn = $('attachBtn');
-const fileInput = /** @type {HTMLInputElement} */ ($('fileInput'));
+const fileInput = $('fileInput') as HTMLInputElement;
 const inputBox = $('inputBox');
 const messagesEl = $('messages');
 
@@ -36,7 +36,7 @@ let isSummarizing = false;
 export function setSummarizing(on) {
   isSummarizing = on;
   if (inputEl) inputEl.disabled = on;
-  if (sendBtn) /** @type {HTMLButtonElement} */ (sendBtn).disabled = on;
+  if (sendBtn) (sendBtn as HTMLButtonElement).disabled = on;
   if (inputBox) inputBox.classList.toggle('busy', on);
 }
 

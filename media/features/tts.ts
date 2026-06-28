@@ -8,7 +8,7 @@ import { ICONS } from '../core/icons.js';
 import { render as renderMarkdown } from '../render/markdown.js';
 
 // TTS debug trace (visible in the webview console and forwarded to the backend).
-const ttsLog = (msg, data) => {
+const ttsLog = (msg, data?) => {
   try { console.log('[TTS]', msg, data !== undefined ? data : ''); } catch { /* best-effort; ignore failures */ }
   try { vscode.postMessage({ type: 'ttsLog', message: msg, data: data === undefined ? null : data }); } catch { /* best-effort; ignore failures */ }
 };
@@ -30,6 +30,8 @@ const ttsLog = (msg, data) => {
 
 export const tts = {
     supported: 'speechSynthesis' in window,
+    triedVoices: false, // true once system-voice loading was attempted
+    pollVoices: (() => {}) as () => void, // replaced with a real poller if system voices load slowly
     voices: [],
     piperVoices: PIPER_VOICES,
     // Chatterbox reference voices (cloned clips): [{id,label}], refreshed via the 'chatterboxVoices' message.
@@ -113,7 +115,7 @@ export const tts = {
     resetBtn() {
       if (this.speakingBtn) { this.speakingBtn.innerHTML = ICONS.speaker; this.speakingBtn = null; }
     },
-    speak(text, btn, msgId) {
+    speak(text, btn, msgId?) {
       // Click on the same button that is playing/loading → stop.
       const same = this.speakingBtn === btn && this.busy();
       this.stop();

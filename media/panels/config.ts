@@ -103,7 +103,7 @@ const SLIDER_STEP = 0.01; // decimal precision for fractional sliders/number inp
     // Parameter sections, filtered by the active backend (a fully-filtered section is skipped).
     const provider = doc.provider;
     for (const group of SCHEMA) {
-      const items = group.items.filter((it) => !it.only || it.only.includes(provider));
+      const items = group.items.filter((it) => { const o = it as { only?: string[] }; return !o.only || o.only.includes(provider); });
       if (!items.length) continue;
       const sec = cfgSection(group.id, group.title, group.hint);
       for (const item of items) sec.body.appendChild(paramRow(item));

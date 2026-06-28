@@ -5,7 +5,7 @@
 import { $, escapeHtml } from '../core/dom.js';
 import { vscode } from '../core/vscode.js';
 
-const inputEl = /** @type {HTMLTextAreaElement} */ ($('input'));
+const inputEl = $('input') as HTMLTextAreaElement;
 const emojiBtn = $('emojiBtn');
 const emojiPicker = $('emojiPicker');
 
@@ -292,7 +292,7 @@ export function initAutocomplete() {
     emojiPicker.classList.toggle('hidden');
   });
   document.addEventListener('click', (ev) => {
-    const tgt = /** @type {any} */ (ev.target);
+    const tgt = ev.target as any;
     if (!emojiPicker.classList.contains('hidden') && !emojiPicker.contains(tgt) && tgt !== emojiBtn && !emojiBtn.contains(tgt)) {
       emojiPicker.classList.add('hidden');
     }

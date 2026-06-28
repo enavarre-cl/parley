@@ -8,7 +8,7 @@ import { vscode } from '../core/vscode.js';
 const messagesEl = $('messages');
   // ---- In-chat search (Ctrl/Cmd+F) ----
   const findBar = $('findBar');
-  const findInput = /** @type {HTMLInputElement} */ ($('findInput'));
+  const findInput = $('findInput') as HTMLInputElement;
   const findCount = $('findCount');
   let findHits = [];   // <mark> highlights, in document order
   let findIdx = -1;    // index of the "current" hit
@@ -70,7 +70,7 @@ const messagesEl = $('messages');
 
   // Searches for `query` in the message bubbles. opts.keepPos preserves the current hit and skips scroll
   // (used when re-rendering while the bar is open, e.g. after a new message arrives).
-  function runFind(query, opts) {
+  function runFind(query, opts?) {
     opts = opts || {};
     const prevIdx = findIdx;
     clearFindMarks();
@@ -163,7 +163,7 @@ const messagesEl = $('messages');
   bindFindOpt('optPreserveCase', 'preserveCase', false);
 
   // ---- Replace (find's second row; like VS Code) ----
-  const replaceInput = /** @type {HTMLInputElement} */ ($('replaceInput'));
+  const replaceInput = $('replaceInput') as HTMLInputElement;
   const findReplaceRow = $('findReplaceRow');
   const findToggleReplace = $('findToggleReplace');
   function setReplaceVisible(v) {

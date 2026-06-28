@@ -21,7 +21,7 @@ const messagesEl = $('messages');
 let armedDelBtn = null;
 export function disarmDelete() { if (armedDelBtn) { armedDelBtn.classList.remove('armed'); armedDelBtn = null; } }
 // Any click outside the armed trash, or pressing Escape, cancels the pending delete.
-document.addEventListener('click', (e) => { const tgt = /** @type {any} */ (e.target); if (armedDelBtn && !armedDelBtn.contains(tgt)) disarmDelete(); });
+document.addEventListener('click', (e) => { const tgt = e.target as any; if (armedDelBtn && !armedDelBtn.contains(tgt)) disarmDelete(); });
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') disarmDelete(); });
 
 // Copies an image attachment to the system clipboard. base64 → Blob directly (no fetch: the CSP
@@ -39,7 +39,7 @@ document.addEventListener('keydown', (e) => { if (e.key === 'Escape') disarmDele
 export function addMessage(role, content, opts) {
   const doc = getDoc();
     opts = opts || {};
-    const el = /** @type {any} */ (document.createElement('div'));
+    const el = document.createElement('div') as any;
     el.className = 'msg ' + role + (opts.preSummary ? ' pre-summary' : '') + (opts.dropped ? ' dropped' : '');
     if (Number.isInteger(opts.index)) el.dataset.msgIndex = opts.index; // lets find/replace map a hit → message
 

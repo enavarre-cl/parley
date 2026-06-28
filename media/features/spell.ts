@@ -7,9 +7,9 @@ import { vscode } from '../core/vscode.js';
 import { $, escapeHtml } from '../core/dom.js';
 import { patchConfig } from '../panels/config.js';
 
-const inputEl = /** @type {HTMLTextAreaElement} */ ($('input'));
+const inputEl = $('input') as HTMLTextAreaElement;
 const inputBackdrop = $('inputBackdrop');
-const spellSelect = /** @type {HTMLSelectElement} */ ($('spellSelect'));
+const spellSelect = $('spellSelect') as HTMLSelectElement;
 
 // ---- Spell checker (live underline via overlay; nspell engine in spell-engine.js) ----
   const WORD_RE = /[\p{L}\p{M}]+/gu; // words (letters + marks/diacritics); ignores numbers/symbols

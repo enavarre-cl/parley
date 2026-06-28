@@ -5,6 +5,15 @@ All notable changes to Jotflow. Format based on
 
 ## [Unreleased]
 
+## [2.6.3] - 2026-06-28
+
+### Internal
+- **Entire chat-webview module graph migrated `.js`→`.ts`** (18 files: `app/ ui/ render/ features/
+  chat/ panels/`), on top of `core/` from 2.6.2. Load-bearing JSDoc casts became `as`; a few helpers
+  got trailing params marked optional; `iconButton`'s `onClick` typed. `tsc -p media/jsconfig.json`
+  green (non-strict); esbuild bundle valid; 127 host tests pass; no behavior change. Still `.js`: the
+  classic globals (`zoom/i18n/spell`) and the standalone-panel webviews (voices/models/compare/…).
+
 ## [2.6.2] - 2026-06-28
 
 Start of the **webview TypeScript migration** (toward zero hand-written `.js` in the chat webview).

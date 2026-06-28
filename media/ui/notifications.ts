@@ -45,7 +45,7 @@ let ttsEl = null;
 export function showTtsProgress(pct, text) {
   if (!ttsEl || !ttsEl.isConnected) {
     // Cast to `any`: we hang `_span`/`_fill` refs on the element (same pattern as message.js).
-    ttsEl = /** @type {any} */ (document.createElement('div'));
+    ttsEl = document.createElement('div') as any;
     ttsEl.className = 'banner tts-progress';
     const spin = document.createElement('span');
     spin.className = 'banner-spin';

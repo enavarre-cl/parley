@@ -17,8 +17,8 @@ import { setStreaming, setSummarizing, applyDocZoom } from '../chat/composer.js'
 import { applyPanelState } from '../chat/panels.js';
 import { notice, showSummarizing, hideSummarizing, showTtsProgress, hideTtsProgress } from '../ui/notifications.js';
 
-const providerSelect = /** @type {HTMLSelectElement} */ ($('providerSelect'));
-const spellSelect = /** @type {HTMLSelectElement} */ ($('spellSelect'));
+const providerSelect = $('providerSelect') as HTMLSelectElement;
+const spellSelect = $('spellSelect') as HTMLSelectElement;
 const configPanel = $('config');
 
 // Applies a language: translates static HTML and re-renders dynamic content. `bundle` is the

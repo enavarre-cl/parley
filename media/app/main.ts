@@ -17,12 +17,12 @@ import { openThink, openTools, dismissThink, dismissTools } from '../chat/panels
 import { openFind, closeFind, setReplaceVisible } from '../features/find.js';
 import { handleMessage } from './protocol.js';
 
-const providerSelect = /** @type {HTMLSelectElement} */ ($('providerSelect'));
+const providerSelect = $('providerSelect') as HTMLSelectElement;
 const configPanel = $('config');
 const thinkPanel = $('thinking');
 const toolsPanel = $('tools');
 const findBar = $('findBar');
-const replaceInput = /** @type {HTMLInputElement} */ ($('replaceInput'));
+const replaceInput = $('replaceInput') as HTMLInputElement;
 
 // ---- Initialize feature modules (each wires its own DOM events) ----
 initComposer();
@@ -42,7 +42,7 @@ window.addEventListener('keydown', (e) => {
   if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z' || e.key === 'y' || e.key === 'Y')) {
     e.preventDefault();
     e.stopPropagation();
-    const el = /** @type {any} */ (e.target);
+    const el = e.target as any;
     const editable = el && (el.tagName === 'TEXTAREA' || el.tagName === 'INPUT' || el.isContentEditable);
     if (editable) {
       const redo = (e.key === 'y' || e.key === 'Y') || e.shiftKey;

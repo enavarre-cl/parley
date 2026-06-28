@@ -9,7 +9,7 @@ import { getDoc } from '../ui/store.js';
 
 const statusDot = $('statusDot');
 const statusText = $('statusText');
-const modelSelect = /** @type {HTMLSelectElement} */ ($('modelSelect'));
+const modelSelect = $('modelSelect') as HTMLSelectElement;
 const modelCtxEl = $('modelCtx');
 const modelCapsEl = $('modelCaps');
 const usageChipEl = $('usageChip');

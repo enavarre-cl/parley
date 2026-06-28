@@ -30,7 +30,7 @@ export function setImageSrc(img: HTMLImageElement, mime: string, data: string): 
 
 // An icon button with a custom tooltip (data-tip → CSS) instead of the slow/unreliable native
 // `title`; aria-label for a11y.
-export function iconButton(svg: string, title: string, onClick?: () => void): HTMLButtonElement {
+export function iconButton(svg: string, title: string, onClick?: (e: MouseEvent) => void): HTMLButtonElement {
   const b = document.createElement('button');
   b.className = 'icon-act';
   b.dataset.tip = title;

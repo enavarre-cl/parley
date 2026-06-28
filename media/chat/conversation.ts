@@ -86,7 +86,7 @@ let toolsLive = []; // tool activity for the current turn
     requestAnimationFrame(flushStreamRender);
   }
 
-  function banner(text, isError) {
+  function banner(text, isError?) {
     const el = document.createElement('div');
     el.className = 'banner' + (isError ? ' error' : '');
     el.textContent = text;
@@ -129,7 +129,7 @@ export function renderConversation() {
     if (!atBottom) {
       const viewTop = messagesEl.getBoundingClientRect().top;
       for (const el of messagesEl.querySelectorAll('.msg[data-msg-index]')) {
-        const a = /** @type {HTMLElement} */ (el);
+        const a = el as HTMLElement;
         const r = a.getBoundingClientRect();
         if (r.bottom > viewTop + 1) { scrollAnchor = { index: a.dataset.msgIndex, offset: r.top - viewTop }; break; }
       }
@@ -336,8 +336,7 @@ export function renderConversation() {
     // Image attachments load asynchronously with no reserved height (width:100%; height:auto), so one
     // above the viewport growing after the rebuild would push the anchor down and the view would jump
     // back several messages. Re-pin as each image settles (load or error), until the user scrolls away.
-    const pendingImgs = /** @type {HTMLImageElement[]} */ (
-      [...messagesEl.querySelectorAll('.msg-attachments img')]).filter((im) => !im.complete);
+    const pendingImgs = ([...messagesEl.querySelectorAll('.msg-attachments img')] as HTMLImageElement[]).filter((im) => !im.complete);
     if (pendingImgs.length) {
       let remaining = pendingImgs.length;
       const release = () => { remaining = 0; messagesEl.removeEventListener('wheel', release); };
