@@ -5,6 +5,27 @@ All notable changes to Jotflow. Format based on
 
 ## [Unreleased]
 
+## [2.6.10] - 2026-06-28
+
+### Internal
+- **Unified all source under `src/`, split by runtime.** Source no longer lives in two top-level
+  trees. The webview's hand-written TypeScript moved out of `media/` into `src/webview/**`; the
+  extension host moved to `src/host/**`; the one pure isomorphic module (`zoomMath`) is now
+  `src/shared/`. `media/` is now **assets only** — what's actually served to the webview at runtime:
+  CSS, images, the vendored `mermaid.min.js`, `dict/` data, and the generated `dist/` bundles. The
+  runtime boundary (host = Node, webview = browser sandbox, talking over `postMessage`) is unchanged;
+  this only makes it obvious in the tree, with two tsconfigs carving the DOM-lib webview apart from
+  the Node-lib host.
+- Mechanics: `git mv` preserved history across 114 renames. Build wiring updated — esbuild host entry
+  `src/host/extension.ts`, `build:webview` bundles `src/webview/**` → `media/dist/`, host `tsconfig`
+  compiles `src/host` + `src/shared` (excludes `src/webview`), tests run from `out/host/test/`, new
+  `npm run typecheck:webview` (`tsc -p src/webview/tsconfig.json`). Only **2** cross-boundary imports
+  needed touching; everything else was intra-subtree and survived the move.
+- Validation all green: tsc (host) 0 · typecheck:webview 0 · eslint src 0/0 · 127 tests · build:webview
+  emits all 10 bundles valid · host bundle valid · no file > 500 lines. Docs (ARCHITECTURE, CONTRIBUTING,
+  BEST-PRACTICES) updated to the new layout — and ARCHITECTURE §11's stale "webview is not bundled"
+  claim (false since the 2.6.2 esbuild migration) corrected.
+
 ## [2.6.9] - 2026-06-28
 
 ### Internal

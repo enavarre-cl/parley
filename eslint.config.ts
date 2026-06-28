@@ -5,8 +5,8 @@ import parser from '@typescript-eslint/parser';
 
 export default [
   {
-    files: ['src/**/*.ts'],
-    ignores: ['src/test/**'],
+    files: ['src/host/**/*.ts', 'src/shared/**/*.ts'],
+    ignores: ['src/host/test/**'],
     languageOptions: {
       parser,
       parserOptions: { project: './tsconfig.json' },

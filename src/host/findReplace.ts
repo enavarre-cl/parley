@@ -1,6 +1,6 @@
 /**
  * Pure find/replace helpers (no VS Code dependency), shared by the host's replace handlers and
- * testable in isolation. The webview builds an equivalent highlight regex (media/main.js); keep the
+ * testable in isolation. The webview builds an equivalent highlight regex (src/webview/features/find.ts); keep the
  * two `buildFindRegex` definitions semantically identical so highlight and replace never diverge.
  */
 

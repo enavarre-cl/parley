@@ -1,7 +1,7 @@
 /**
- * Chat-zoom math (pure). Lives in `src/` so it has a single source of truth for BOTH the host unit
- * test (`node:test`, compiled to `out/`) and the webview (esbuild bundles it into the chat graph via
- * `media/chat/composer`). No DOM/VS Code dependency.
+ * Chat-zoom math (pure). Lives in `src/shared/` so it has a single source of truth for BOTH the host
+ * unit test (`node:test`, compiled to `out/`) and the webview (esbuild bundles it into the chat graph
+ * via `src/webview/chat/composer`). No DOM/VS Code dependency.
  */
 export const ZOOM_MIN = 0.6;
 export const ZOOM_MAX = 2.5;

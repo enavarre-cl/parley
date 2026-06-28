@@ -13,7 +13,7 @@ interface VsCodeApi {
 }
 declare function acquireVsCodeApi(): VsCodeApi;
 
-/** The classic i18n bridge (window.LangI18n), set by media/i18n before the module bundle runs. */
+/** The classic i18n bridge (window.LangI18n), set by src/webview/i18n before the module bundle runs. */
 interface LangI18nApi {
   t(s: string): string;
   get(): string;

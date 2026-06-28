@@ -203,8 +203,9 @@ Toda vista o panel es un **módulo cerrado**, no un script monolítico. Piezas, 
 `switch` gigantes duplicados a ambos lados.
 **N7.** **ES modules reales** (`import`/`export`), nunca globals colgando de `window`; namespacea lo
 inevitable (`const App = App || {}`).
-**N8.** El webview es **TypeScript** (`media/**/*.ts`), bundleado por esbuild (`scripts/build-webview.ts`)
-a `media/dist/`. Red de tipos: **`tsc -p media/jsconfig.json`** tras cada cambio (gate separado del build).
+**N8.** El webview es **TypeScript** (`src/webview/**`), bundleado por esbuild (`scripts/build-webview.ts`)
+a `media/dist/` (servido al webview). Red de tipos: **`npm run typecheck:webview`** (`tsc -p
+src/webview/tsconfig.json`) tras cada cambio (gate separado del build).
 **N9.** **Distingue entry-point de módulo por convención** (`*.entry.js` o carpeta `app/`), no por
 dejar dos archivos del mismo nombre en carpetas distintas.
 
@@ -280,8 +281,10 @@ micro-optimizar lo invisible.
 
 ## T. Extensiones VS Code
 
-**T1.** Layout estándar: `src/extension.ts` (entry), `package.json` (manifiesto), `tsconfig.json`,
-`.vscode/{launch,tasks}.json`.
+**T1.** Layout: todo el source bajo `src/` dividido por runtime — `src/host/` (Node; entry
+`src/host/extension.ts`), `src/webview/` (sandbox), `src/shared/` (puro). `media/` queda solo para
+assets servidos al webview (CSS, imágenes, `mermaid.min.js` vendored, `dict/`, `dist/` generado). Más
+`package.json` (manifiesto), `tsconfig.json`, `.vscode/{launch,tasks}.json`.
 **T2.** **`@types/vscode`** para tipos (el paquete `vscode` está deprecado).
 **T3.** `activate(context)` al disparo; `deactivate()` para limpieza.
 **T4.** **Activación perezosa**: dispara por contribución concreta (comando, lenguaje, view), **no**
@@ -371,8 +374,8 @@ justificado. Las reglas U7–U12 codifican los hallazgos ya vistos.
 ```bash
 npm run compile              # host: tsc → out/   (0 errores)
 npm run lint                 # eslint src   (0 errores / 0 warnings)
-tsc -p media/jsconfig.json   # webview: type-check del grafo .ts (0 errores)
-npm run build:webview        # webview: esbuild → media/dist/*.js
+npm run typecheck:webview    # webview: tsc -p src/webview/tsconfig.json (0 errores)
+npm run build:webview        # webview: esbuild src/webview → media/dist/*.js
 npm test                     # compile + node:test
 ```
 

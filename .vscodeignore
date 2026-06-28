@@ -16,8 +16,6 @@ CONTRIBUTING.md
 SECURITY.md
 BEST-PRACTICES.md
 ARCHITECTURE.md
-media/jsconfig.json
-media/globals.d.ts
 **/*.map
 **/*.ts
 .vscode-test/**

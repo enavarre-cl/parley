@@ -4,7 +4,7 @@
  */
 import { t } from '../core/i18n.js';
 import { vscode } from '../core/vscode.js';
-import { clampZoom, stepZoom } from '../../src/zoomMath.js';
+import { clampZoom, stepZoom } from '../../shared/zoomMath.js';
 import { $, setImageSrc } from '../core/dom.js';
 import { getDoc } from '../ui/store.js';
 import { notice, clearNotices } from '../ui/notifications.js';

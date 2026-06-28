@@ -15,14 +15,15 @@ neural text-to-speech.
 
 Everything runs in two worlds that talk over `postMessage`:
 
-- **Extension host** (Node.js, `src/**`): owns the document, the network, processes
+- **Extension host** (Node.js, `src/host/**`): owns the document, the network, processes
   (Ollama, Piper, MCP), secrets, and the filesystem.
-- **Webviews** (browser sandbox, `media/**`): render the chat UI and the model browser.
-  They have **no** filesystem/network access of their own — they ask the host.
+- **Webviews** (browser sandbox, source in `src/webview/**`, bundled to `media/dist/`): render the
+  chat UI and the model browser. They have **no** filesystem/network access of their own — they ask
+  the host. Pure isomorphic logic shared by both worlds lives in `src/shared/` (e.g. `zoomMath.ts`).
 
 ```mermaid
 graph TB
-  subgraph Host["Extension host — Node (src/**)"]
+  subgraph Host["Extension host — Node (src/host/**)"]
     EXT["extension.ts<br/>activate · ChatEditorProvider · commands"]
     PROV["providers/**<br/>LLM abstraction"]
     TOOLS["tools.ts + mcp.ts<br/>built-in tools · MCP client"]
@@ -32,11 +33,11 @@ graph TB
     SEC["SecretStorage<br/>API keys"]
   end
 
-  subgraph Web["Webviews — sandbox (media/**)"]
-    MAIN["app/main.js (ES modules)<br/>chat editor UI"]
-    MODELS["models.js<br/>model browser (Ollama/HF)"]
-    SPELL["spell.js + spell-engine.js<br/>nspell"]
-    I18N["i18n.js<br/>UI translation"]
+  subgraph Web["Webviews — sandbox (src/webview/** → media/dist/)"]
+    MAIN["app/main.ts (ES modules)<br/>chat editor UI"]
+    MODELS["models.ts<br/>model browser (Ollama/HF)"]
+    SPELL["spell.ts + spell-engine.js<br/>nspell"]
+    I18N["i18n.ts<br/>UI translation"]
   end
 
   subgraph Ext["External"]
@@ -132,7 +133,7 @@ graph LR
   openai & gemini & ocat --> httpTs
 ```
 
-**Pure, testable cores** (no VS Code / no network, unit-tested in `src/test/`):
+**Pure, testable cores** (no VS Code / no network, unit-tested in `src/host/test/`):
 `chatHelpers.ts`, `findReplace.ts`, `ollama/parse.ts`, `ollama/assets.ts`, `ollama/htmlMarkdown.ts`,
 `providers/multimodal.ts`, `net.ts`, `audio.ts`, `download.ts`. The HTML-scraping parsers in
 `ollama/library.ts` (search / tags / cloud / README) are pure and unit-tested too; only its fetch
@@ -336,8 +337,8 @@ The **entry** is `app/main.js`; classic scripts that publish window globals
 load **first**, then the deferred module graph. **State has single owners**: `ui/store.js`
 owns `doc`; `chat/conversation.js` owns the streaming/tool state; `chat/composer.js` owns the
 send busy-state. The **protocol** dispatches host messages by calling feature functions — it
-never mutates another module's state directly. A `media/jsconfig.json` + `globals.d.ts`
-type-check the whole graph with `checkJs` (the webview has no runtime tests, so this catches
+never mutates another module's state directly. A `src/webview/tsconfig.json` + `globals.d.ts`
+type-check the whole graph (the webview has no runtime tests, so this catches
 broken imports / undefined identifiers).
 
 Other webviews stay single classic scripts: **model browser** (`models.js` + `models.css`),
@@ -400,16 +401,20 @@ graph LR
 
 ## 11. Build & packaging
 
-- TypeScript (`src/**` → `out/**`) via `tsc` (type-check + `node:test`); ESLint. `src/` carries
-  **no `any`-as-a-type** — external JSON / VS Code boundaries use `unknown` with explicit narrowing
-  or a named `Raw*`/response interface, so a typo on a parsed shape is a compile error.
+- All hand-written source lives under `src/`, split by runtime: `src/host/**` (Node), `src/webview/**`
+  (browser sandbox), `src/shared/**` (pure, isomorphic). TypeScript (`src/host/**` + `src/shared/**`
+  → `out/**`) via `tsc` (type-check + `node:test`); ESLint. The code carries **no `any`-as-a-type** —
+  external JSON / VS Code boundaries use `unknown` with explicit narrowing or a named `Raw*`/response
+  interface, so a typo on a parsed shape is a compile error.
 - The shipped extension host is **bundled with esbuild** (`npm run bundle` → a single minified
   `dist/extension.js`, `main`; `undici` inlined, `vscode` external). `.vscodeignore` then excludes
-  `out/`, `node_modules/` and `src/` from the `.vsix` (T12 — a small, fast package; no unbundled-files
-  warning). The webview (`media/**`) is **not** bundled (see §8).
-- Webview assets (`media/**`) ship as-is — the chat UI is hand-authored **ES modules** served
-  via `asWebviewUri` (no bundler). They are type-checked (not emitted) by `media/jsconfig.json`
-  (`checkJs` + `globals.d.ts`); run `npx tsc -p media/jsconfig.json` to validate the graph.
+  `out/`, `node_modules/` and `src/` from the `.vsix` (T12 — a small, fast package).
+- The webview is **also bundled with esbuild** (`npm run build:webview` → `media/dist/`: `app.js`
+  for the chat module graph + one IIFE per classic/standalone panel + `spell-engine.js`). Source is
+  `src/webview/**`; only `media/` (CSS, images, the vendored `mermaid.min.js`, `dict/` data, and the
+  generated `dist/`) is served to the webview via `asWebviewUri`. `media/dist/` is git-ignored and
+  built on dev/publish. Type-checking is a separate gate, not emitted: `npm run typecheck:webview`
+  (`tsc -p src/webview/tsconfig.json`, `checkJs` + `globals.d.ts`).
 - Packaged with `@vscode/vsce`; published from `master` by a **manual** GitHub Actions
   workflow (`.github/workflows/release.yml`) gated by a `marketplace` environment approval.
   The published version is `package.json`'s `version` (idempotent — re-publishing an existing
@@ -419,9 +424,9 @@ graph LR
 
 ## Where to start reading
 
-1. `src/extension.ts` — `activate()` and the `ChatEditorProvider` wiring; then
-   `src/messageRouter.ts` (dispatch), `src/chatOps.ts` (turn ops), `src/inference.ts` (the loop).
-2. `src/providers/types.ts` + `index.ts` — the LLM abstraction.
-3. `src/chatDocument.ts` — the `.chat` data model.
-4. `media/app/main.js` — the chat webview entry; then `media/app/protocol.js` and the
+1. `src/host/extension.ts` — `activate()` and the `ChatEditorProvider` wiring; then
+   `src/host/messageRouter.ts` (dispatch), `src/host/chatOps.ts` (turn ops), `src/host/inference.ts` (the loop).
+2. `src/host/providers/types.ts` + `index.ts` — the LLM abstraction.
+3. `src/host/chatDocument.ts` — the `.chat` data model.
+4. `src/webview/app/main.ts` — the chat webview entry; then `src/webview/app/protocol.ts` and the
    `core/ → render/ → ui/ → features/ → chat/ → panels/` module layers.

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
-import { clampZoom, stepZoom, ZOOM_MIN, ZOOM_MAX, ZOOM_STEP } from '../zoomMath';
+import { clampZoom, stepZoom, ZOOM_MIN, ZOOM_MAX, ZOOM_STEP } from '../../shared/zoomMath';
 
 test('clampZoom respects the limits', () => {
   assert.strictEqual(clampZoom(5), ZOOM_MAX);
