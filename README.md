@@ -185,7 +185,7 @@ Jotflow is **MIT** licensed. It bundles or downloads third‑party components un
 | --- | --- | --- |
 | Hunspell dictionaries (`media/dict/{en,es,pt,fr,de,it}.*`) | bundled | each under its own license (see the matching `media/dict/<lang>.LICENSE`) |
 | [`nspell`](https://github.com/wooorm/nspell) | bundled (spell engine) | MIT |
-| [Mermaid](https://github.com/mermaid-js/mermaid) (`media/mermaid.min.js`) | bundled (diagram rendering, lazy‑loaded) | MIT |
+| [Mermaid](https://github.com/mermaid-js/mermaid) (npm devDep → `media/dist/mermaid.min.js`) | prebuilt UMD copied at build (diagram rendering, lazy‑loaded) | MIT |
 | [Piper](https://github.com/OHF-Voice/piper1-gpl) (`piper-tts`) | **downloaded at runtime** for neural TTS | **GPL** |
 | [Chatterbox](https://github.com/resemble-ai/chatterbox) (`chatterbox-tts` / [`mlx-audio`](https://github.com/Blaizzy/mlx-audio) on Apple Silicon) | **downloaded at runtime** for voice‑cloning TTS | MIT |
 | ffmpeg ([`imageio-ffmpeg`](https://github.com/imageio/imageio-ffmpeg)) | downloaded at runtime (trim a local file into a cloned-voice reference clip) | LGPL |

@@ -5,6 +5,19 @@ All notable changes to Jotflow. Format based on
 
 ## [Unreleased]
 
+## [2.6.12] - 2026-06-28
+
+### Internal
+- **Mermaid is no longer a committed blob.** `media/mermaid.min.js` (a 3.2 MB vendored UMD with no
+  version provenance) is gone from the repo. `mermaid` is now a pinned dev dependency (`^11.16.0`, the
+  current/maintained line) and `build:webview` copies its prebuilt UMD verbatim into
+  `media/dist/mermaid.min.js` (git-ignored) — never re-bundled, since it's lazy-loaded as a global.
+  Result: a reproducible, npm-tracked version and **zero committed `.js`** in the repo.
+- **Dependency hygiene automated.** Dependabot is on — alerts + security PRs (immediate on a CVE) and
+  weekly grouped minor/patch version PRs (`.github/dependabot.yml`); majors are ignored so intentional
+  pins like `undici` 6 / `@types/node` 20 (matching VS Code's Node runtime) aren't churned. `npm audit`
+  is clean (0 vulnerabilities). CI runs on every Dependabot PR.
+
 ## [2.6.11] - 2026-06-28
 
 ### Changed

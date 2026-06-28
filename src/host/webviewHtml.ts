@@ -225,7 +225,7 @@ export function renderWebviewHtml(
   window.CHATTERBOX_EXAGGERATION = ${jsonForScript(chatterboxExaggeration)}; // seeds the TTS panel's Expressiveness slider
   window.I18N_LANG = ${jsonForScript(lang)};
   window.I18N_BUNDLE = ${jsonForScript(bundle)};
-  window.MERMAID_SRC = '${uri('mermaid.min.js')}'; // lazy-loaded on first Mermaid block
+  window.MERMAID_SRC = '${uri('dist/mermaid.min.js')}'; // lazy-loaded on first Mermaid block
   window.JOTFLOW_NONCE = '${nonce}';                // so the lazy <script> passes the CSP</script>
   <!-- Classic scripts set window globals (LangI18n / LangSpell) consumed by the modules. -->
   <script nonce="${nonce}" src="${uri('dist/i18n.js')}"></script>

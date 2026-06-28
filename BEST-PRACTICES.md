@@ -283,8 +283,9 @@ micro-optimizar lo invisible.
 
 **T1.** Layout: todo el source bajo `src/` dividido por runtime — `src/host/` (Node; entry
 `src/host/extension.ts`), `src/webview/` (sandbox), `src/shared/` (puro). `media/` queda solo para
-assets servidos al webview (CSS, imágenes, `mermaid.min.js` vendored, `dict/`, `dist/` generado). Más
-`package.json` (manifiesto), `tsconfig.json`, `.vscode/{launch,tasks}.json`.
+assets servidos al webview (CSS, imágenes, `dict/`, y `dist/` generado — que incluye el UMD de
+`mermaid` copiado de su devDep npm; cero `.js` committeado). Más `package.json` (manifiesto),
+`tsconfig.json`, `.vscode/{launch,tasks}.json`.
 **T2.** **`@types/vscode`** para tipos (el paquete `vscode` está deprecado).
 **T3.** `activate(context)` al disparo; `deactivate()` para limpieza.
 **T4.** **Activación perezosa**: dispara por contribución concreta (comando, lenguaje, view), **no**

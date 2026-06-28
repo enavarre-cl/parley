@@ -29,8 +29,8 @@ All hand-written source lives under `src/`, split by the runtime it targets:
 - `src/webview/**` — the webview UI (browser sandbox: DOM, no Node). Bundled to `media/dist/`.
 - `src/shared/**` — pure, isomorphic logic imported by both (e.g. `zoomMath.ts`).
 
-`media/` holds **only what's served to the webview at runtime**: CSS, images, the vendored
-`mermaid.min.js`, `dict/` (licensed data), and `dist/` (generated bundles). No hand-written source.
+`media/` holds **only what's served to the webview at runtime**: CSS, images, `dict/` (licensed data),
+and `dist/` (generated bundles, incl. the `mermaid` UMD copied from npm). No hand-written source.
 
 ## Webview build
 
@@ -43,8 +43,8 @@ sandbox (the browser runs JS, not TS):
   `spell-engine.js` (the `nspell` engine bundled from npm).
 - The panels' HTML loads everything from `media/dist/`, which is **git-ignored** (built on dev/publish).
 - Type-checking is a **separate gate**: `npm run typecheck:webview` (`tsc -p src/webview/tsconfig.json`).
-  The only committed `.js` is the vendored `media/mermaid.min.js`; everything in `media/dist/` is
-  generated output — none of it is source.
+  There is **no committed `.js`** — `mermaid` is copied from its pinned npm package into `media/dist/`
+  at build time, like every other bundle; everything in `media/dist/` is generated output.
 
 ## Validation (run after changes)
 

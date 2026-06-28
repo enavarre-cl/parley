@@ -5,12 +5,18 @@
  *   2. one IIFE per classic global / standalone-panel webview: i18n, spell, models, modelsFormat,
  *      voices, compare, dictionary, engines.
  *   3. `spell-engine.js` — the third-party `nspell` library bundled to an IIFE (exposes window.nspell).
- * All generated → `media/dist/` is git-ignored, built on `npm run dev` and `vscode:prepublish`. The
- * only un-built `.js` is the vendored `media/mermaid.min.js`. Type-checking is a separate gate
- * (`npm run typecheck:webview` → `tsc -p src/webview/tsconfig.json`); the dictionary DATA is
- * refreshed by `scripts/build-spell.ts`.
+ *   4. `mermaid.min.js` — copied verbatim from the pinned `mermaid` dev dependency (a prebuilt UMD,
+ *      lazy-loaded as a global; we never re-bundle it).
+ * All generated → `media/dist/` is git-ignored, built on `npm run dev` and `vscode:prepublish`. No
+ * hand-written `.js` is committed. Type-checking is a separate gate (`npm run typecheck:webview` →
+ * `tsc -p src/webview/tsconfig.json`); the dictionary DATA is refreshed by `scripts/build-spell.ts`.
  */
 import * as esbuild from 'esbuild';
+import { createRequire } from 'node:module';
+import { copyFileSync } from 'node:fs';
+import * as path from 'node:path';
+
+const require = createRequire(import.meta.url); // to resolve the mermaid package dir
 
 const CLASSIC = ['i18n', 'spell', 'models', 'modelsFormat', 'voices', 'compare', 'dictionary', 'engines'];
 
@@ -31,6 +37,9 @@ async function build(): Promise<void> {
     outfile: 'media/dist/spell-engine.js',
     bundle: true, format: 'iife', target: 'es2020', logLevel: 'warning',
   });
+  // Mermaid: copy the prebuilt UMD from the pinned dev dependency (verbatim — never re-bundled).
+  const mermaidDir = path.dirname(require.resolve('mermaid/package.json'));
+  copyFileSync(path.join(mermaidDir, 'dist', 'mermaid.min.js'), 'media/dist/mermaid.min.js');
 }
 
 build().catch(() => process.exit(1));

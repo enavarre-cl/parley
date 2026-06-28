@@ -410,10 +410,11 @@ graph LR
   `dist/extension.js`, `main`; `undici` inlined, `vscode` external). `.vscodeignore` then excludes
   `out/`, `node_modules/` and `src/` from the `.vsix` (T12 — a small, fast package).
 - The webview is **also bundled with esbuild** (`npm run build:webview` → `media/dist/`: `app.js`
-  for the chat module graph + one IIFE per classic/standalone panel + `spell-engine.js`). Source is
-  `src/webview/**`; only `media/` (CSS, images, the vendored `mermaid.min.js`, `dict/` data, and the
-  generated `dist/`) is served to the webview via `asWebviewUri`. `media/dist/` is git-ignored and
-  built on dev/publish. Type-checking is a separate gate, not emitted: `npm run typecheck:webview`
+  for the chat module graph + one IIFE per classic/standalone panel + `spell-engine.js`, plus the
+  `mermaid` UMD copied verbatim from its pinned npm dev dependency). Source is `src/webview/**`; only
+  `media/` (CSS, images, `dict/` data, and the generated `dist/`) is served to the webview via
+  `asWebviewUri`. `media/dist/` is git-ignored and built on dev/publish — no `.js` is committed.
+  Type-checking is a separate gate, not emitted: `npm run typecheck:webview`
   (`tsc -p src/webview/tsconfig.json`, `checkJs` + `globals.d.ts`).
 - Packaged with `@vscode/vsce`; published from `master` by a **manual** GitHub Actions
   workflow (`.github/workflows/release.yml`) gated by a `marketplace` environment approval.
