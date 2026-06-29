@@ -5,6 +5,22 @@ All notable changes to Jotflow. Format based on
 
 ## [Unreleased]
 
+## [2.8.2] - 2026-06-29
+
+### Changed
+- **Tool-activity panel is collapsible.** Each tool call now starts **collapsed** — just its name with
+  a disclosure triangle (same idiom as the ⚙ config sections) — and expands on click. Its args/result
+  are capped at **256 chars** with a **Show more / Show less** toggle, so a verbose `fs_read` /
+  `run_command` no longer floods the panel.
+- **Tidier system-prompt layer list.** File names now truncate from the **start** (`…-5-npcs-1-tera.md`)
+  so the distinguishing tail + extension stay visible even when every layer shares a long common prefix.
+  The row actions (↑ ↓ Open ✕) reveal on **hover/focus** so the name owns the full row width at rest, and
+  the row no longer grows — vertically or horizontally — when they appear (reserved button height +
+  `max-width`; `#configBody` no longer becomes an accidental horizontal scroll container).
+
+### i18n
+- New **Show more** / **Show less** strings, translated across all 6 UI languages.
+
 ## [2.8.1] - 2026-06-29
 
 ### Fixed

@@ -221,18 +221,29 @@ const SLIDER_STEP = 0.01; // decimal precision for fractional sliders/number inp
     cb.title = t('Include this layer in the prompt');
     cb.addEventListener('change', () => vscode.postMessage({ type: 'toggleSysPrompt', index: i, enabled: cb.checked }));
 
+    // Name = a fixed 📄 + the path. The path truncates from the START (CSS `direction: rtl`), so the
+    // END — the part that actually differs between layers, plus the extension — is always visible.
     const name = document.createElement('span');
     name.className = 'syslayer-name';
-    name.textContent = '📄 ' + layer.path;
     name.title = layer.path;
+    const ico = document.createElement('span');
+    ico.className = 'syslayer-ico';
+    ico.textContent = '📄';
+    const pathEl = document.createElement('span');
+    pathEl.className = 'syslayer-path';
+    pathEl.textContent = layer.path;
+    name.appendChild(ico); name.appendChild(pathEl);
 
+    // Actions live in their own box, revealed on hover/focus so the name owns the full width at rest.
+    const actions = document.createElement('span');
+    actions.className = 'syslayer-actions';
     const up = sysLayerBtn('↑', t('Move up'), i > 0, () => vscode.postMessage({ type: 'moveSysPrompt', index: i, to: i - 1 }));
     const down = sysLayerBtn('↓', t('Move down'), i < count - 1, () => vscode.postMessage({ type: 'moveSysPrompt', index: i, to: i + 1 }));
     const open = sysLayerBtn(t('Open'), t('Open the .md file'), true, () => vscode.postMessage({ type: 'openSysPrompt', index: i }));
     const rm = sysLayerBtn('✕', t('Remove layer'), true, () => vscode.postMessage({ type: 'removeSysPrompt', index: i }));
+    actions.appendChild(up); actions.appendChild(down); actions.appendChild(open); actions.appendChild(rm);
 
-    row.appendChild(cb); row.appendChild(name);
-    row.appendChild(up); row.appendChild(down); row.appendChild(open); row.appendChild(rm);
+    row.appendChild(cb); row.appendChild(name); row.appendChild(actions);
     return row;
   }
 

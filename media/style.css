@@ -181,7 +181,10 @@ body {
 /* ---- Config panel (side) ---- */
 #configBody {
   flex: 1;
-  overflow-y: auto;
+  /* `overflow: hidden auto` (NOT bare `overflow-y: auto`, which makes overflow-x compute to `auto` and
+   * turns this into a horizontal scroll container — that relaxes the width constraint so a row grows
+   * sideways instead of shrinking its name when the hover actions appear). */
+  overflow: hidden auto;
   padding: 10px;
   display: flex;
   flex-direction: column;

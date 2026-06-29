@@ -200,12 +200,41 @@ mark.find-hit.current {
   display: flex;
   align-items: center;
   gap: 6px;
+  width: 100%;
   padding: 5px 8px;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
   font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.tool-item-head:hover {
+  background: var(--vscode-toolbar-hoverBackground);
 }
 .tool-item-head svg {
   width: 14px;
   height: 14px;
+  flex: 0 0 auto;
+}
+/* Disclosure triangle (same idiom as the ⚙ config sections): points right when collapsed and rotates
+ * down when the tool is open. The body holds the args/result and is hidden while collapsed. */
+.tool-chev {
+  flex: 0 0 auto;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 4px 0 4px 6px;
+  border-color: transparent transparent transparent currentColor;
+  opacity: .55;
+  transition: transform .12s ease;
+}
+.tool-item:not(.collapsed) .tool-chev {
+  transform: rotate(90deg);
+}
+.tool-item.collapsed .tool-item-body {
+  display: none;
 }
 .tool-args {
   padding: 0 8px 5px;
@@ -224,6 +253,21 @@ mark.find-hit.current {
   font-size: 11.5px;
   max-height: 300px;
   overflow: auto;
+}
+/* Expand/collapse toggle for a truncated tool args/result (see appendCollapsible). */
+.tool-more {
+  display: inline-block;
+  margin: 4px 8px 8px;
+  padding: 1px 8px;
+  font-size: 11px;
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--vscode-textLink-foreground);
+  cursor: pointer;
+}
+.tool-more:hover {
+  background: var(--vscode-toolbar-hoverBackground);
 }
 #thinkContent pre {
   background: var(--vscode-textCodeBlock-background, rgba(0,0,0,.25));

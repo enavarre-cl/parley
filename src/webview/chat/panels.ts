@@ -53,6 +53,33 @@ export function applyPanelState(doc) {
   updateSide();
 }
 
+const TOOL_PREVIEW_CHARS = 256; // a collapsed tool's args/result shows at most this many characters
+
+// Appends `text` to `parent` as <tag class=className>. Long content starts COLLAPSED — truncated to
+// TOOL_PREVIEW_CHARS with a toggle that expands to the full text and collapses again — so a verbose
+// tool's args/output don't flood the panel. Short content is shown in full, with no toggle.
+function appendCollapsible(parent, text, tag, className) {
+  const el = document.createElement(tag);
+  if (className) el.className = className;
+  if (text.length <= TOOL_PREVIEW_CHARS) {
+    el.textContent = text;
+    parent.appendChild(el);
+    return;
+  }
+  let expanded = false;
+  const toggle = document.createElement('button');
+  toggle.type = 'button';
+  toggle.className = 'tool-more';
+  const sync = () => {
+    el.textContent = expanded ? text : text.slice(0, TOOL_PREVIEW_CHARS) + '…';
+    toggle.textContent = expanded ? t('Show less') : t('Show more');
+  };
+  toggle.addEventListener('click', () => { expanded = !expanded; sync(); });
+  sync();
+  parent.appendChild(el);
+  parent.appendChild(toggle);
+}
+
 // Renders a list of tool activity in the panel.
 export function showTools(activity) {
   toolsContent.innerHTML = '';
@@ -64,22 +91,18 @@ export function showTools(activity) {
   toolsContent.classList.remove('empty');
   for (const a of activity) {
     const item = document.createElement('div');
-    item.className = 'tool-item';
-    const head = document.createElement('div');
+    item.className = 'tool-item collapsed'; // collapsed by default: only the header (name) shows
+    const head = document.createElement('button');
+    head.type = 'button';
     head.className = 'tool-item-head';
-    head.innerHTML = ICONS.tool + '<span>' + escapeHtml(a.name) + '</span>';
+    head.innerHTML = '<span class="tool-chev"></span>' + ICONS.tool + '<span class="tool-name">' + escapeHtml(a.name) + '</span>';
+    head.addEventListener('click', () => item.classList.toggle('collapsed'));
     item.appendChild(head);
-    if (a.args && a.args !== '{}') {
-      const args = document.createElement('div');
-      args.className = 'tool-args';
-      args.textContent = a.args;
-      item.appendChild(args);
-    }
-    if (a.result !== undefined) {
-      const pre = document.createElement('pre');
-      pre.textContent = a.result;
-      item.appendChild(pre);
-    }
+    const body = document.createElement('div');
+    body.className = 'tool-item-body'; // hidden while collapsed; holds args + result
+    if (a.args && a.args !== '{}') appendCollapsible(body, a.args, 'div', 'tool-args');
+    if (a.result !== undefined) appendCollapsible(body, String(a.result), 'pre', '');
+    item.appendChild(body);
     toolsContent.appendChild(item);
   }
   toolsContent.scrollTop = toolsContent.scrollHeight;

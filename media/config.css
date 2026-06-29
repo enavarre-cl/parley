@@ -89,21 +89,57 @@
   padding: 3px 4px;
   border: 1px solid var(--vscode-panel-border);
   border-radius: 6px;
+  /* Cap the row at the panel width and let it shrink, so the hover actions make the NAME shrink (it
+   * truncates) instead of stretching the row sideways. */
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  /* Reserve the action buttons' full box so revealing them on hover doesn't grow the row (no vertical
+   * "accordion"). With border-box the min-height is the OUTER box, so it must include the row's own
+   * padding+border: 32 = button 24 (line-height 16 + 6 padding + 2 border) + row 6 padding + 2 border. */
+  min-height: 32px;
 }
 .syslayer.disabled .syslayer-name {
   opacity: .5;
+}
+.syslayer.disabled .syslayer-path {
   text-decoration: line-through;
 }
 .syslayer-name {
   flex: 1;
   min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+}
+.syslayer-ico {
+  flex: 0 0 auto;
+}
+/* The path truncates from the START (ellipsis at the left) so the distinguishing tail (…-1-tera.md)
+ * stays visible even when every layer shares a long common prefix (systems/mansion-…). */
+.syslayer-path {
+  flex: 1;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 12px;
+  direction: rtl;
+  text-align: left;
+}
+/* Row actions show only on hover/focus, so the name spans the full row width at rest. */
+.syslayer-actions {
+  display: none;
+  flex: 0 0 auto;
+  gap: 4px;
+}
+.syslayer:hover .syslayer-actions,
+.syslayer:focus-within .syslayer-actions {
+  display: flex;
 }
 .syslayer button {
   font-size: 12px;
+  line-height: 16px; /* pins the button box to 24px tall — matches .syslayer min-height (no row jump) */
   padding: 3px 7px;
   border-radius: 6px;
   cursor: pointer;

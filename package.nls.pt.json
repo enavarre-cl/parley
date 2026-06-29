@@ -253,6 +253,8 @@
   "Regenerate the response to this message": "Regenerar a resposta para esta mensagem",
   "registering in Ollama": "registrando no Ollama",
   "Reload models": "Recarregar modelos",
+  "Show more": "Mostrar mais",
+  "Show less": "Mostrar menos",
   "Resolve the pattern and update the layer list": "Resolver o padrão e atualizar a lista de camadas",
   "Relative path or glob, resolved against this .chat’s folder": "Caminho relativo ou glob, resolvido em relação à pasta deste .chat",
   "Refresh": "Atualizar",
