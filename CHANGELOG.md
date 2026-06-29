@@ -5,99 +5,47 @@ All notable changes to Jotflow. Format based on
 
 ## [Unreleased]
 
-## [2.6.22] - 2026-06-29
+## [2.7.0] - 2026-06-29
+
+A **coding-agent** release: the model can now read/edit/delete/move files, run shell commands, and use
+the full MCP tool/roots/elicitation surface — with confirmations rendered as a card inside the chat.
 
 ### Added
-- **`fs_read` paginates large files.** It now takes an `offset` (byte) param, and when a file exceeds
-  the read cap it reports the exact offset to resume at (*"call fs_read again with offset: N"*) so the
-  model can walk the whole file in windows. Reads stay **byte-based and character-aligned**: a window
-  boundary never splits a multibyte UTF-8 char across reads — `nextOffset` lands after the last
-  *complete* character — so paginated reads reassemble byte-for-byte with no `�`. Binary (incl. UTF-16,
-  whose NUL bytes trip the check) is still rejected, and a giant single-line file never loads whole.
-  Logic extracted to `src/host/fsRead.ts`, unit-tested (4 tests incl. a 7-byte-window multibyte sweep;
-  154 total).
-
-## [2.6.21] - 2026-06-29
+- **Agentic file tools** — `fs_edit` (exact-text patch; literal slice/split so `$`/regex chars are
+  inert, refuses an ambiguous match unless `replace_all`), `fs_delete`, `fs_move`, and `temp_dir`
+  (a private scratch dir **outside** the workspace, `/tmp/jotflow-…`, bounded + cleaned on close). All
+  keep the `fs_write` gating: trusted workspace, deny `.git/`/`.vscode/`/`.mcp`, `realpath` symlink check.
+- **`fs_read` pagination** — a byte `offset` param + a "continue at offset N" hint so the model walks a
+  large file in windows. Byte-based and **character-aligned**: a window boundary never splits a multibyte
+  UTF-8 char (`nextOffset` lands after the last complete char); binary (incl. UTF-16's NUL bytes) is
+  rejected and a 4 TB single-line file never loads whole.
+- **`run_command` shell tool** — runs shell commands in the workspace root. **On by default** (matching
+  coding agents), but fully gated: trusted workspace only + an **in-chat confirmation card** per command
+  (`jotflow.tools.shellAutoApprove` opts out; `jotflow.tools.shell: false` removes it). Output capped,
+  60 s timeout, tree-killed on Stop.
+- **MCP roots** — advertises the `roots` capability and answers `roots/list` with the trusted workspace
+  folders (+ a server's `cwd`) as `file://` URIs, re-advertised on change. First server→client method
+  handled (unknown ones now get a JSON-RPC `method not found`).
+- **MCP elicitation** — a server can request input mid-task (`elicitation/create`), rendered as the
+  in-chat card (a confirm, or a form for text/number/enum/boolean). `jotflow.mcp.autoAcceptElicitations`
+  auto-accepts plain confirmations; data requests still prompt.
 
 ### Changed
-- **The shell tool (`run_command`) is now on by default** (`jotflow.tools.shell`), matching how coding
-  agents (Claude Code, Cline, …) ship. It stays fully gated: it only runs in a **trusted workspace**
-  and **confirms each command** with the in-chat card (`jotflow.tools.shellAutoApprove` opts out). Set
-  `jotflow.tools.shell: false` to remove the tool entirely.
-
-## [2.6.20] - 2026-06-28
-
-### Changed
-- **Tool confirmations & MCP elicitations now render as an inline card over the composer**, replacing
-  the native VS Code modal. `run_command`'s confirmation and every elicitation (a yes/no, or a small
-  form for text / number / enum / boolean fields) appear as a card in the chat; the answer flows back
-  over a host↔webview round-trip (`prompt` / `promptResult`). The card is **tied to the turn**: sending
-  a new message — or closing the chat — dismisses a stale card, fixing the "zombie dialog shows up
-  during the next turn" issue. As a bonus the shell/elicitation host code (`shellTool`, `mcpElicit`)
-  no longer imports `vscode` (the UI is the webview card via the pure `uiPrompt` bridge).
-
-## [2.6.19] - 2026-06-28
+- **Tool confirmations & elicitations render as an inline card over the composer**, not a native modal.
+  It flows over a host↔webview round-trip (`prompt`/`promptResult`) and is **tied to the turn** — a new
+  send or closing the chat dismisses a stale card (fixes the "zombie dialog in the next turn" bug). The
+  shell/elicitation host code no longer imports `vscode` (pure `uiPrompt` bridge).
 
 ### Fixed
-- **MCP tool calls no longer time out at 30s.** A `tools/call` that runs long or **pauses for an
-  elicitation** (waiting on the user to answer) was being killed by the 30s handshake timeout. Tool
-  calls now get a 10-minute ceiling; the handshake (`initialize`/`tools/list`) keeps its 30s, and the
-  turn's **Stop** still cancels instantly.
+- **MCP tool calls no longer time out at 30 s** — a `tools/call` that pauses for an elicitation (or runs
+  long) now gets a 10-minute ceiling; the handshake keeps 30 s and **Stop** still cancels instantly.
 
-## [2.6.18] - 2026-06-28
+### Internal
+- New host modules, pure where possible and unit-tested (**154 tests**): `shellTool`, `mcpElicit`,
+  `uiPrompt`, `fsRead`. All docs/comments translated to English (`BEST-PRACTICES.md` was the last
+  Spanish one). A local `.mcp` elicitation demo server is git-ignored.
 
-### Added
-- **`temp_dir` scratch directory.** A new tool returns a private throwaway directory **outside the
-  workspace** (`/tmp/jotflow-…`, created on first use, removed on close), so the model can write or run
-  throwaway files without touching your project. It's **bounded**: the fs tools allow only that dir (and
-  the workspace folders), never the rest of `/tmp` — every path stays `realpath`-checked against `..`
-  escape, and writing there still requires Workspace Trust.
-
-## [2.6.17] - 2026-06-28
-
-### Added
-- **More agentic file tools.** `fs_edit` (exact-text patch — far cheaper/safer than rewriting a file
-  whole), `fs_delete`, and `fs_move`. They follow the existing `fs_write` gating: trusted workspace,
-  deny `.git/` `.vscode/` `.mcp.json` `.mcp/`, workspace-confined with a `realpath` symlink check
-  (`fs_delete` also refuses a workspace root). `fs_edit`'s find+replace is **literal** (slice/split, so
-  `$` and regex chars are inert) and refuses an ambiguous match unless `replace_all`.
-- **`run_command` shell tool — off by default.** Lets the model run shell commands (`ls`, build/test
-  scripts) in the workspace root. It's arbitrary code execution, so it's gated hard: enable
-  **`jotflow.tools.shell`**, runs **only in a trusted workspace**, and **confirms each command** (modal)
-  unless **`jotflow.tools.shellAutoApprove`**. Output is capped, 60 s timeout, tree-killed on Stop;
-  it isn't even offered to the model unless enabled. Executor in `src/host/shellTool.ts`.
-- Pure logic unit-tested (`applyTextEdit`, `capOutput`, `runShellCommand`; +10 tests, 150 total).
-
-## [2.6.16] - 2026-06-28
-
-### Added
-- **MCP elicitation.** Servers can now request input from you mid-task (`elicitation/create`): Jotflow
-  renders the server's flat schema as native VS Code UI — a modal confirmation for a yes/no, a quick
-  pick for an `enum` or boolean, an input box (with numeric validation) for text/numbers — and replies
-  `{ action: accept | decline | cancel, content }`. The prompt is prefixed with the server name so you
-  know who's asking. The `elicitation` capability is declared in the handshake.
-- **`jotflow.mcp.autoAcceptElicitations`** (default off). Auto-accepts **confirmation-style**
-  elicitations (no fields, or a single boolean) without a dialog; requests for actual data (text,
-  choices) still always prompt. Enable only for trusted servers. The schema logic is pure and
-  unit-tested (`isConfirmation` / `confirmationAcceptContent`, 4 new tests; 140 total). The UI lives in
-  `src/host/mcpElicit.ts` (keeps `mcp.ts` small).
-
-## [2.6.15] - 2026-06-28
-
-### Added
-- **MCP roots.** The client now advertises the `roots` capability and answers the server-initiated
-  `roots/list` request with the **trusted workspace folders** (the "safe" folders — MCP only runs in a
-  trusted workspace) plus each server's own `cwd`, as `file://` URIs. Servers can now learn which
-  directories they should operate within, and Jotflow re-advertises (`notifications/roots/list_changed`)
-  when the workspace folders change. This is the first server→client method handled — the client used to
-  ignore all server-initiated requests; unknown ones now get a proper JSON-RPC `method not found`.
-  The root computation is pure and unit-tested (`computeRoots`, 5 new tests; 136 total).
-
-### Docs
-- **All docs/comments now in English** (the repo's source language, per BEST-PRACTICES A8).
-  Translated `BEST-PRACTICES.md` (the only Spanish doc, ~140 rules) and the `media/conversation.css`
-  header comment. README/CHANGELOG/CONTRIBUTING/ARCHITECTURE/SECURITY and all `.ts` comments were
-  already English.
+> Consolidates the 2.6.15–2.6.22 development iterations (never published separately).
 
 ## [2.6.14] - 2026-06-28
 

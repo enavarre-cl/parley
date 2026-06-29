@@ -135,7 +135,9 @@ graph LR
 
 **Pure, testable cores** (no VS Code / no network, unit-tested in `src/host/test/`):
 `chatHelpers.ts`, `findReplace.ts`, `ollama/parse.ts`, `ollama/assets.ts`, `ollama/htmlMarkdown.ts`,
-`providers/multimodal.ts`, `net.ts`, `audio.ts`, `download.ts`. The HTML-scraping parsers in
+`providers/multimodal.ts`, `net.ts`, `audio.ts`, `download.ts`, `circuitBreaker.ts`, `fsRead.ts`
+(`decodeUtf8Window`), `shellTool.ts` (`capOutput`), `mcpElicit.ts` (`isConfirmation`), `mcp.ts`
+(`computeRoots`), `tools.ts` (`applyTextEdit`). The HTML-scraping parsers in
 `ollama/library.ts` (search / tags / cloud / README) are pure and unit-tested too; only its fetch
 wrappers touch the network.
 
@@ -255,13 +257,19 @@ Context management before sending: **"last N messages"** (token-budget capped) *
 `ToolHub` aggregates **built-in tools** and **MCP server tools** into one schema list for the
 provider's function-calling.
 
-- **Built-in** (`tools.ts`): `fs_list`, `fs_read`, `fs_write`, `fs_glob`, `fs_search`,
-  `get_datetime`, `web_fetch`, `editor_context`. File tools are **confined to the workspace**
-  (resolved path must stay under a workspace folder, with `realpath` to defeat symlink
-  escape). `fs_write` additionally requires a **trusted** workspace.
-- **MCP** (`mcp.ts`): a minimal stdio JSON-RPC 2.0 client. Servers are declared in
-  `.mcp.json` / `.mcp/*.json` and spawned **only in trusted workspaces** (a malicious repo's
-  config would otherwise be RCE). Tools are namespaced `server__tool`.
+- **Built-in** (`tools.ts` + helpers `fsRead.ts`, `shellTool.ts`): file tools `fs_list`, `fs_read`
+  (paginated by byte offset, character-aligned), `fs_write`, `fs_edit` (exact-text patch), `fs_delete`,
+  `fs_move`, `fs_glob`, `fs_search`; plus `editor_context`, `web_fetch`, `get_datetime`, `temp_dir`
+  (a private scratch dir **outside** the workspace), and `run_command` (shell). File tools are
+  **confined** to the workspace folders — or the scratch dir — (resolved + `realpath`-checked to defeat
+  symlink escape). The write tools (`fs_write`/`fs_edit`/`fs_delete`/`fs_move`) and `run_command`
+  require a **trusted** workspace; `run_command` is gated further (opt-in default-on + a per-command
+  in-chat confirmation card).
+- **MCP** (`mcp.ts`): a stdio JSON-RPC 2.0 client. Servers are declared in `.mcp.json` / `.mcp/*.json`
+  and spawned **only in trusted workspaces** (a malicious repo's config would otherwise be RCE); tools
+  are namespaced `server__tool`. It also answers two **server→client** requests: `roots/list`
+  (advertises the trusted workspace folders) and `elicitation/create` (`mcpElicit.ts` — the server asks
+  the user for input, rendered as an in-chat card via the `uiPrompt` host↔webview bridge).
 
 ```mermaid
 graph TD
@@ -319,21 +327,21 @@ sentence chunks and plays the returned WAV.
 
 ## 8. Webviews
 
-The **chat editor** is a graph of **ES modules** (`<script type="module">`) under `media/`,
-grouped by concern (each ≤500 lines, explicit `import`/`export` — no `window.*` bridges):
+The **chat editor** is a graph of **ES modules** (`<script type="module">`) under `src/webview/`
+(esbuild-bundled to `media/dist/`), grouped by concern (each ≤500 lines, explicit `import`/`export`):
 
-| Layer (`media/`) | Modules | Role |
+| Layer (`src/webview/`) | Modules | Role |
 |---|---|---|
 | `core/` | `vscode` · `icons` · `i18n` · `dom` | VS Code API handle, SVG icons, `t()`, DOM helpers + tooltips |
 | `render/` | `markdown` · `mermaid` | Markdown renderer (memoized) · Mermaid render + pan/zoom viewer |
-| `ui/` | `store` · `notifications` | single owner of `doc` (getDoc/setDoc/subscribe) · banners + summarizing indicator |
+| `ui/` | `store` · `notifications` · `prompt` | single owner of `doc` · banners + summarizing indicator · the **confirm/elicit card** (tool confirmations + MCP elicitations over the composer) |
 | `features/` | `tts` · `find` · `autocomplete` · `spell` | read-aloud · find&replace · emoji/`@file` popups · spell overlay |
 | `chat/` | `message` · `conversation` · `composer` | one bubble · render + streaming + side panels · input/attachments/send |
 | `panels/` | `config` · `models` | ⚙ params + voices · status + model selector + context-budget bar |
 | `app/` | `protocol` · `main` | host→webview message dispatch · bootstrap + wiring |
 
-The **entry** is `app/main.js`; classic scripts that publish window globals
-(`zoom.js` → `LangZoom`, `i18n.js` → `LangI18n`, `spell-engine.js`/`spell.js` → `LangSpell`)
+The **entry** is `app/main.ts`; classic scripts that publish window globals
+(`i18n.js` → `LangI18n`, `spell-engine.js`/`spell.js` → `LangSpell`)
 load **first**, then the deferred module graph. **State has single owners**: `ui/store.js`
 owns `doc`; `chat/conversation.js` owns the streaming/tool state; `chat/composer.js` owns the
 send busy-state. The **protocol** dispatches host messages by calling feature functions — it
@@ -369,8 +377,10 @@ graph LR
 
 ## 10. Security
 
-- **Workspace Trust** is the gate for code execution: MCP servers, `fs_write`, and the Piper
-  **system-Python fallback** (a `python`/`py` resolved via `PATH`) are disabled in untrusted
+- **Workspace Trust** is the gate for code execution: MCP servers, the **write tools** (`fs_write`/
+  `fs_edit`/`fs_delete`/`fs_move`), the **`run_command` shell** (on by default but trusted-only and
+  **confirmed per command** via an in-chat card — `jotflow.tools.shell: false` removes it), and the
+  Piper **system-Python fallback** (a `python`/`py` resolved via `PATH`) are disabled in untrusted
   workspaces (`untrustedWorkspaces: limited`). Enabling **Tools** in an untrusted workspace nudges
   the user (warning + **Manage Trust** → `workbench.trust.manage`) up front, so tools don't fail
   mid-turn — trust itself is still granted only through VS Code's own UI.

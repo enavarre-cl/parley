@@ -210,8 +210,11 @@ Jotflow is **MIT** licensed. It bundles or downloads third‑party components un
 
 ## Changelog
 
-See [CHANGELOG.md](CHANGELOG.md) for the release history. **2.6.8–2.6.14** unify all source under
-`src/` (`host`/`webview`/`shared`), gate every push with **CI** + Dependabot, make the model catalog
+See [CHANGELOG.md](CHANGELOG.md) for the release history. **2.7.0** turns Jotflow into a **coding
+agent**: `fs_edit`/`fs_delete`/`fs_move`/`temp_dir` file tools, a gated **`run_command`** shell
+(on by default, confirmed per command), **paginated** `fs_read`, the full **MCP roots + elicitation**
+surface, and tool confirmations rendered as an **inline card** in the chat. **2.6.8–2.6.14** unify all
+source under `src/` (`host`/`webview`/`shared`), gate every push with **CI** + Dependabot, make the model catalog
 **degrade gracefully** (circuit breaker + contingency notice), vendor **Mermaid** from npm (so **no**
 `.js` is committed), and move **API keys to SecretStorage-only** (the plaintext-settings path was
 removed). **2.6.1–2.6.7** migrate the **entire webview to TypeScript** with an esbuild build (zero
