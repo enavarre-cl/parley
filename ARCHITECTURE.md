@@ -69,7 +69,7 @@ graph TB
 ```mermaid
 graph LR
   subgraph entry["Entry / orchestration (each ≤500 LoC)"]
-    extension["extension.ts (419)<br/>activate · ChatEditorProvider"]
+    extension["extension.ts (434)<br/>activate · ChatEditorProvider"]
     router["messageRouter.ts (+ sysprompt)<br/>webview→host dispatch (~50 cases)"]
     chatOps["chatOps.ts<br/>send/fork/regenerate/variants"]
     inference["inference.ts<br/>agentic loop"]
@@ -148,9 +148,10 @@ wrappers touch the network.
 A chat is a **`.chat` file** (JSON) opened by a `CustomTextEditorProvider`. The file is the
 single source of truth; the webview is a projection of it.
 
-- **`<name>.chat`** — JSON: provider, model, params, system prompt (inline or a referenced
-  file), messages (role/content/thinking/variants/attachments-as-refs), and the context
-  summary. Parsed/serialized by `chatDocument.ts`.
+- **`<name>.chat`** — JSON: provider, model, params, system prompt (an inline base plus ordered
+  `.md` layers, optionally resolved from a path/glob in `systemPromptGlob`), messages
+  (role/content/thinking/variants/attachments-as-refs), and the context summary.
+  Parsed/serialized by `chatDocument.ts`.
 - **`<name>.attach`** — sidecar holding attachment **blobs** (base64 images/docs) keyed by id.
   Messages store only `{kind,name,mime,ref}`; blobs are resolved for the webview and pruned
   when no longer referenced (incl. inside variants).
@@ -227,7 +228,7 @@ sequenceDiagram
   H->>H: store attachments → .attach, push user msg, writeDoc
   H->>R: runInference(doc, messages, allowTools)
   R->>R: trim context (last-N / auto-summary)
-  R->>R: resolveSystemPrompt (file or inline)
+  R->>R: resolveSystemPrompt (inline base + .md layers)
   R->>R: build wire = [system, summary?, history]
   loop agentic loop (≤ jotflow.tools.maxIterations, 0=∞, one AbortController)
     R->>P: chat(model, wire, params, callbacks)

@@ -205,3 +205,27 @@ test('serializeDoc round-trips systemPromptFiles and omits the key when there ar
   assert.equal(noLayers.systemPromptFiles, undefined);
   assert.ok(!/"systemPromptFiles":/.test(serializeDoc(noLayers)));
 });
+
+test('systemPromptGlob: round-trips, drops blank, and applyPatch sets/clears it', () => {
+  const withGlob = parseDoc(JSON.stringify({
+    version: 2, provider: 'ollama', model: 'm', systemPrompt: 'base',
+    systemPromptGlob: 'systems/*.md', params: { temperature: 0.7 }, messages: [],
+  }), DEFAULTS);
+  assert.equal(withGlob.systemPromptGlob, 'systems/*.md');
+  assert.equal(parseDoc(serializeDoc(withGlob), DEFAULTS).systemPromptGlob, 'systems/*.md');
+
+  // Blank/whitespace patterns are normalized away (key omitted from the serialized doc).
+  const blank = parseDoc(JSON.stringify({
+    version: 2, provider: 'ollama', model: 'm', systemPrompt: 'base',
+    systemPromptGlob: '   ', params: { temperature: 0.7 }, messages: [],
+  }), DEFAULTS);
+  assert.equal(blank.systemPromptGlob, undefined);
+  assert.ok(!/"systemPromptGlob":/.test(serializeDoc(blank)));
+
+  // applyPatch sets a pattern and clears it when emptied.
+  const doc = parseDoc(JSON.stringify({ version: 2, provider: 'ollama', model: 'm', params: { temperature: 0.7 }, messages: [] }), DEFAULTS);
+  applyPatch(doc, { systemPromptGlob: '**/inst-*.md' });
+  assert.equal(doc.systemPromptGlob, '**/inst-*.md');
+  applyPatch(doc, { systemPromptGlob: '' });
+  assert.equal(doc.systemPromptGlob, undefined);
+});

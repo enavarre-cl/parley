@@ -26,6 +26,7 @@ export interface WebviewMessage {
   index?: number;
   to?: number;           // target index for moveSysPrompt (reorder)
   enabled?: boolean;     // on/off flag for toggleSysPrompt
+  glob?: string;         // path/glob pattern for refreshSysPrompt
   text?: string;
   attachments?: Attachment[];
   rate?: number;
@@ -84,6 +85,9 @@ export interface RouterCtx {
   globalStorageUri: vscode.Uri;
   document: vscode.TextDocument;
   searchFiles: (q: string) => Promise<string[]>;
+  /** Resolves a path/glob (relative to the .chat) to workspace-relative file paths, within the
+   *  system-prompt allow-list. Powers the system-prompt "refresh" button. */
+  resolveSysPromptGlob: (pattern: string) => Promise<string[]>;
   sysPromptPathAllowed: (resolved: string) => boolean;
   confirmDelete: (msg: WebviewMessage, text: string) => Promise<boolean>;
   resolveAttachment: (a: Attachment) => Attachment;
@@ -327,8 +331,8 @@ export async function routeMessage(msg: WebviewMessage, ctx: RouterCtx): Promise
         case 'openSettings':
           await vscode.commands.executeCommand('workbench.action.openSettings', 'jotflow');
           break;
-        case 'createSysPrompt':
         case 'pickSysPrompt':
+        case 'refreshSysPrompt':
         case 'openSysPrompt':
         case 'removeSysPrompt':
         case 'moveSysPrompt':

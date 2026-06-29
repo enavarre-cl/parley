@@ -175,6 +175,31 @@ const SLIDER_STEP = 0.01; // decimal precision for fractional sliders/number inp
     requestAnimationFrame(sysAutosize);
     wrap.appendChild(sys);
 
+    // Layer source: a path/glob field + [Refresh] to resolve it, and a compact [+] to pick existing
+    // .md files. Refresh re-syncs the list below — keeping the order you set, re-adding any you removed
+    // at the end, and leaving it untouched when nothing was removed (see routeSysPrompt).
+    const globRow = document.createElement('div');
+    globRow.className = 'sysglob';
+    const glob = document.createElement('input');
+    glob.type = 'text';
+    glob.className = 'sysglob-input';
+    glob.value = doc.systemPromptGlob || '';
+    glob.placeholder = t('e.g. systems/*.md or **/inst-*.md');
+    glob.title = t('Relative path or glob, resolved against this .chat’s folder');
+    glob.addEventListener('change', () => patchConfig({ systemPromptGlob: glob.value }));
+    const refresh = document.createElement('button');
+    refresh.textContent = t('Refresh');
+    refresh.title = t('Resolve the pattern and update the layer list');
+    refresh.addEventListener('click', () => vscode.postMessage({ type: 'refreshSysPrompt', glob: glob.value }));
+    glob.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); refresh.click(); } });
+    const add = document.createElement('button');
+    add.className = 'sysglob-add';
+    add.textContent = '+';
+    add.title = t('Append one or more existing .md files as layers');
+    add.addEventListener('click', () => vscode.postMessage({ type: 'pickSysPrompt' }));
+    globRow.appendChild(glob); globRow.appendChild(refresh); globRow.appendChild(add);
+    wrap.appendChild(globRow);
+
     const layers = Array.isArray(doc.systemPromptFiles) ? doc.systemPromptFiles : [];
     if (layers.length) {
       const list = document.createElement('div');
@@ -182,19 +207,6 @@ const SLIDER_STEP = 0.01; // decimal precision for fractional sliders/number inp
       layers.forEach((layer, i) => list.appendChild(sysLayerRow(layer, i, layers.length)));
       wrap.appendChild(list);
     }
-
-    const actions = document.createElement('div');
-    actions.className = 'sysref-actions';
-    const add = document.createElement('button');
-    add.textContent = t('Add .md');
-    add.title = t('Append one or more existing .md files as layers');
-    add.addEventListener('click', () => vscode.postMessage({ type: 'pickSysPrompt' }));
-    const save = document.createElement('button');
-    save.textContent = t('Save base as .md');
-    save.title = t('Write the base prompt to a new .md file and append it as a layer');
-    save.addEventListener('click', () => vscode.postMessage({ type: 'createSysPrompt' }));
-    actions.appendChild(add); actions.appendChild(save);
-    wrap.appendChild(actions);
     return wrap;
   }
 

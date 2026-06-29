@@ -60,8 +60,10 @@ management and neural text‑to‑speech without leaving the editor.
 - 🧮 **Context management**: auto‑summarize when context fills up, or send only the last *N*
   messages — both shown visually in the chat.
 - 🧱 **Layered system prompt**: an open inline base plus **multiple ordered `.md` files** (⚙ panel) —
-  add several at once, **reorder** them, and **toggle** any layer on/off; at inference time the base
-  and every enabled layer are concatenated, in order, into the prompt that is sent.
+  resolve them from a **path/glob** (e.g. `systems/*.md`) with **Refresh**, or add individual files;
+  **reorder** them and **toggle** any layer on/off. Refresh is additive (keeps your order, appends new
+  matches, never drops). At inference time the base and every enabled layer are concatenated, in order,
+  into the prompt that is sent.
 - 🌍 **6 languages** (UI, spell‑check and TTS): English, Spanish, Portuguese, French, German,
   Italian — switchable live, with a personal spell‑check dictionary per language.
 
@@ -210,7 +212,9 @@ Jotflow is **MIT** licensed. It bundles or downloads third‑party components un
 
 ## Changelog
 
-See [CHANGELOG.md](CHANGELOG.md) for the release history. **2.7.0** turns Jotflow into a **coding
+See [CHANGELOG.md](CHANGELOG.md) for the release history. **2.8.0** drives the layered system prompt
+from a **path/glob + Refresh** (additive — keeps your order, re-adds removed-but-matching files, never
+drops hand-picked ones). **2.7.0** turns Jotflow into a **coding
 agent**: `fs_edit`/`fs_delete`/`fs_move`/`temp_dir` file tools, a gated **`run_command`** shell
 (on by default, confirmed per command), **paginated** `fs_read`, the full **MCP roots + elicitation**
 surface, and tool confirmations rendered as an **inline card** in the chat. **2.6.8–2.6.14** unify all

@@ -101,6 +101,10 @@ export interface ChatDoc {
   /** Ordered markdown layers appended after the base at send time (concatenated, in order). The
    *  legacy single `systemPromptFile` string is migrated into this on load. */
   systemPromptFiles?: SysPromptFile[];
+  /** Path/glob (relative to the .chat) the layer list is refreshed from. Refresh is additive: it
+   *  keeps `systemPromptFiles` (order + enabled) and appends any matched file not already present, so
+   *  a removed-but-still-matching file re-appears last and hand-picked layers survive. */
+  systemPromptGlob?: string;
   spellLang?: 'auto' | 'off' | 'es' | 'en'; // spell-checker language (per-chat). Absent/'auto' = system default
   ui?: ChatUi; // per-conversation panel visibility (Reasoning/Tools); persisted in the .chat
   params: ChatParams;
@@ -282,6 +286,8 @@ export function parseDoc(text: string, defaults: ChatDefaults): ChatDoc {
     systemPromptFiles = [{ path: raw.systemPromptFile }];
     systemPrompt = '';
   }
+  const systemPromptGlob =
+    typeof raw.systemPromptGlob === 'string' && raw.systemPromptGlob.trim() ? raw.systemPromptGlob : undefined;
 
   const doc: ChatDoc = {
     version: 2,
@@ -290,6 +296,7 @@ export function parseDoc(text: string, defaults: ChatDefaults): ChatDoc {
     model: typeof raw.model === 'string' ? raw.model : '',
     systemPrompt,
     systemPromptFiles: systemPromptFiles.length ? systemPromptFiles : undefined,
+    systemPromptGlob,
     spellLang: typeof raw.spellLang === 'string' && ['auto', 'off', 'es', 'en'].includes(raw.spellLang)
       ? raw.spellLang as ChatDoc['spellLang'] : undefined,
     ui,
@@ -375,7 +382,7 @@ const KNOWN_TOP_KEYS = new Set([
   // 'systemPromptFile' (legacy, singular) is listed so a migrated doc's old key is consumed, not
   // round-tripped into _extra alongside the new 'systemPromptFiles'.
   'version', 'title', 'provider', 'model', 'systemPrompt', 'systemPromptFile', 'systemPromptFiles',
-  'spellLang', 'ui', 'params', 'summary', 'usage', 'messages',
+  'systemPromptGlob', 'spellLang', 'ui', 'params', 'summary', 'usage', 'messages',
 ]);
 
 export function serializeDoc(doc: ChatDoc): string {
@@ -386,6 +393,7 @@ export function serializeDoc(doc: ChatDoc): string {
     model: doc.model,
     systemPrompt: doc.systemPrompt,
     systemPromptFiles: doc.systemPromptFiles,
+    systemPromptGlob: doc.systemPromptGlob,
     spellLang: doc.spellLang,
     ui: doc.ui,
     params: {

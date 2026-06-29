@@ -23,7 +23,7 @@ function docWith(messages: ChatMessage[]): ChatDoc {
 }
 
 /** Builds a RouterCtx whose every dependency records its invocations into `calls`. */
-function makeCtx(opts: { doc?: ChatDoc | null; busy?: boolean; confirm?: boolean } = {}) {
+function makeCtx(opts: { doc?: ChatDoc | null; busy?: boolean; confirm?: boolean; globMatches?: string[] } = {}) {
   const calls: Call[] = [];
   const doc = opts.doc === undefined ? defaultDoc(DEFAULTS) : opts.doc;
   const sync = (name: string) => (...args: unknown[]): void => { calls.push({ name, args }); };
@@ -62,6 +62,7 @@ function makeCtx(opts: { doc?: ChatDoc | null; busy?: boolean; confirm?: boolean
     globalStorageUri: { path: '/gs' },
     document: { uri: { fsPath: '/x/test.chat', path: '/x/test.chat', toString: () => 'file:///x/test.chat' } },
     searchFiles: async () => [],
+    resolveSysPromptGlob: async () => (opts.globMatches ?? []),
     sysPromptPathAllowed: () => true,
     confirmDelete: async (...a: unknown[]): Promise<boolean> => { calls.push({ name: 'confirmDelete', args: a }); return opts.confirm !== false; },
     resolveAttachment: (a: unknown) => a,
@@ -286,6 +287,34 @@ test('system-prompt layer ops (remove/move/toggle) persist and re-push', async (
   const tg = makeCtx({ doc: layers() });
   await route({ type: 'toggleSysPrompt', index: 0, enabled: false }, tg.ctx);
   assert.ok(had(tg.calls, 'writeDoc') && had(tg.calls, 'pushDoc'), 'toggleSysPrompt');
+});
+
+test('refreshSysPrompt re-syncs additively: keeps order + enabled, appends matched, never drops', async () => {
+  // Removed 'b' (custom order a, c); glob still matches a, b, c → b is re-appended last.
+  const reAdd = makeCtx({
+    doc: Object.assign(defaultDoc(DEFAULTS), { systemPromptFiles: [{ path: 'a.md' }, { path: 'c.md' }] }),
+    globMatches: ['a.md', 'b.md', 'c.md'],
+  });
+  await route({ type: 'refreshSysPrompt', glob: 'systems/*.md' }, reAdd.ctx);
+  assert.deepEqual(reAdd.ctx.getDoc()!.systemPromptFiles, [{ path: 'a.md' }, { path: 'c.md' }, { path: 'b.md' }]);
+  assert.equal(reAdd.ctx.getDoc()!.systemPromptGlob, 'systems/*.md');
+  assert.ok(had(reAdd.calls, 'writeDoc') && had(reAdd.calls, 'pushDoc'));
+
+  // Nothing removed (and the pattern still matches the same set) → list and order are untouched.
+  const stable = makeCtx({
+    doc: Object.assign(defaultDoc(DEFAULTS), { systemPromptFiles: [{ path: 'b.md', enabled: false }, { path: 'a.md' }] }),
+    globMatches: ['a.md', 'b.md'],
+  });
+  await route({ type: 'refreshSysPrompt', glob: '*.md' }, stable.ctx);
+  assert.deepEqual(stable.ctx.getDoc()!.systemPromptFiles, [{ path: 'b.md', enabled: false }, { path: 'a.md' }]);
+
+  // A hand-picked layer the pattern does not match is preserved (refresh only appends, never drops).
+  const keep = makeCtx({
+    doc: Object.assign(defaultDoc(DEFAULTS), { systemPromptFiles: [{ path: 'a.md' }, { path: 'manual.md' }] }),
+    globMatches: ['a.md', 'b.md'],
+  });
+  await route({ type: 'refreshSysPrompt', glob: 'a.md' }, keep.ctx);
+  assert.deepEqual(keep.ctx.getDoc()!.systemPromptFiles, [{ path: 'a.md' }, { path: 'manual.md' }, { path: 'b.md' }]);
 });
 
 // ── Negative control ────────────────────────────────────────────────────────────────────────────

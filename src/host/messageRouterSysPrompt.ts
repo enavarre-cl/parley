@@ -16,24 +16,24 @@ export async function routeSysPrompt(msg: WebviewMessage, ctx: RouterCtx): Promi
   const dir = vscode.Uri.joinPath(ctx.document.uri, '..');
 
   switch (msg.type) {
-    case 'createSysPrompt': {
-      // Externalises the current inline base into a NEW .md layer: writes the base to the file, appends
-      // it as a layer, clears the base (the text now lives in the file — no doubling) and opens it.
+    case 'refreshSysPrompt': {
+      // Re-syncs the layer list from the path/glob, additively: every layer already in the list is
+      // kept in its current order (and enabled flag), and any matched file not yet present is appended
+      // at the end. So refreshing with nothing removed leaves the list (and order) untouched, a
+      // removed-but-still-matching file reappears last, and files added by hand (the [+] picker) are
+      // never wiped. Removal stays manual (the row's ✕).
       const doc = ctx.getDoc();
       if (!doc) break;
-      const stem = path.basename(ctx.document.uri.fsPath).replace(/\.chat$/i, '') || 'system';
-      const target = await vscode.window.showSaveDialog({
-        defaultUri: vscode.Uri.joinPath(dir, `${stem}.md`),
-        filters: { 'System prompt': ['md', 'sysprompt', 'txt'] },
-        saveLabel: tr('Create .md'),
-      });
-      if (!target) break;
-      await vscode.workspace.fs.writeFile(target, Buffer.from(doc.systemPrompt || '', 'utf8'));
-      doc.systemPromptFiles = [...(doc.systemPromptFiles ?? []), { path: path.relative(dir.fsPath, target.fsPath) }];
-      doc.systemPrompt = '';
+      const pattern = typeof msg.glob === 'string' ? msg.glob : (doc.systemPromptGlob ?? '');
+      doc.systemPromptGlob = pattern.trim() ? pattern : undefined;
+      const matched = await ctx.resolveSysPromptGlob(pattern);
+      const existing = doc.systemPromptFiles ?? [];
+      const have = new Set(existing.map((l) => l.path));
+      const appended = matched.filter((p) => !have.has(p)).map((p): SysPromptFile => ({ path: p }));
+      const next = [...existing, ...appended];
+      doc.systemPromptFiles = next.length ? next : undefined;
       await ctx.writeDoc(doc);
       ctx.pushDoc();
-      await vscode.commands.executeCommand('vscode.open', target);
       break;
     }
     case 'pickSysPrompt': {

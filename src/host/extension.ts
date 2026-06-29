@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import * as crypto from 'crypto';
+import * as path from 'path';
 import { chatDefaults, providerInfo, ChatMessage } from './providers';
 import {
   ChatDoc,
@@ -244,6 +245,22 @@ class ChatEditorProvider implements vscode.CustomTextEditorProvider {
     // the prompt and exfiltrate them to the model.
     const { resolveSystemPrompt, readSystemPrompt, sysPromptPathAllowed } = makeSystemPrompt(document);
 
+    // Resolves a path/glob (relative to the .chat's folder) to .chat-relative file paths — the same
+    // shape the layer list stores — within the layer allow-list. Powers the "refresh" button: a bare
+    // path matches one file, `*`/`**` wildcards expand to many. Results are de-duped and sorted so the
+    // appended order is stable. findFiles only searches workspace folders, matching the allow-list.
+    const resolveSysPromptGlob = async (pattern: string): Promise<string[]> => {
+      const p = (pattern || '').trim();
+      if (!p) return [];
+      const dir = path.dirname(document.uri.fsPath);
+      const uris = await vscode.workspace.findFiles(new vscode.RelativePattern(dir, p));
+      const rel = uris
+        .map((u) => u.fsPath)
+        .filter((fsPath) => sysPromptPathAllowed(fsPath))
+        .map((fsPath) => path.relative(dir, fsPath).split(path.sep).join('/'));
+      return [...new Set(rel)].sort((a, b) => a.localeCompare(b));
+    };
+
     // ---- Attachment sidecar (.attach): blobs live here, the .chat only holds references ----
     const attachStore = new AttachmentStore(document.uri);
 
@@ -321,7 +338,7 @@ class ChatEditorProvider implements vscode.CustomTextEditorProvider {
         downloadedChatterboxVoices: () => this.downloadedChatterboxVoices(),
         piper: this.piper, chatterbox: this.chatterbox,
         globalStorageUri: this.context.globalStorageUri,
-        document, searchFiles, sysPromptPathAllowed, confirmDelete, resolveAttachment: attachStore.resolve,
+        document, searchFiles, resolveSysPromptGlob, sysPromptPathAllowed, confirmDelete, resolveAttachment: attachStore.resolve,
       }).catch((err) => {
         // A throwing handler would otherwise be an unhandled rejection: no log, and the UI left
         // hanging (e.g. a busy state never cleared). Log it and surface it to the webview.

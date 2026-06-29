@@ -37,6 +37,44 @@
 }
 /* equal width, distributed */
 
+/* System-prompt source row: a path/glob field + Refresh + a compact [+] picker, above the layer list. */
+.sysglob {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
+.sysglob-input {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  padding: 5px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--vscode-panel-border);
+  background: var(--vscode-input-background);
+  color: var(--vscode-input-foreground);
+}
+.sysglob-input:focus {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: -1px;
+}
+.sysglob button {
+  font-size: 12px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  border: 1px solid var(--vscode-panel-border);
+  background: transparent;
+  color: var(--vscode-foreground);
+  white-space: nowrap;
+}
+.sysglob button:hover {
+  background: var(--vscode-toolbar-hoverBackground);
+}
+.sysglob-add {
+  font-weight: 600;
+  padding: 5px 9px;
+}
+
 /* System-prompt .md layers: an ordered list under the base prompt. */
 .syslayers {
   display: flex;

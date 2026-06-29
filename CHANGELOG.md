@@ -5,6 +5,26 @@ All notable changes to Jotflow. Format based on
 
 ## [Unreleased]
 
+## [2.8.0] - 2026-06-29
+
+### Changed
+- **System prompt: path/glob source.** The ⚙ panel resolves `.md` layers from a relative path/glob
+  (e.g. `systems/*.md`) via a text field + **Refresh**, with a compact **`+`** to add individual
+  files. Refresh is **additive** — it keeps the order you set, re-appends a removed-but-still-matching
+  file at the end, leaves the list untouched when nothing changed, and never drops hand-picked layers
+  (removal stays manual). Persisted as `systemPromptGlob`; glob matches are confined to the same
+  workspace allow-list as the layers. Replaces the old "Add .md" / "Save base as .md" buttons.
+
+### Tests
+- `messageRouter.test.ts` covers the `refreshSysPrompt` reconcile (additive: keeps order + enabled,
+  appends matched, never drops); `applyPatch.test.ts` covers the `systemPromptGlob` parse/serialize
+  round-trip + patch set/clear. Suite: **156 tests, all passing**.
+
+### Docs
+- i18n: the new strings land in **all** language bundles (`es/de/fr/it/pt`); the buttons removed by
+  the redesign drop their now-orphan keys (T6). README · ARCHITECTURE · SECURITY synced — the
+  path-traversal row notes `resolveSysPromptGlob` filters every glob match through the layer allow-list.
+
 ## [2.7.0] - 2026-06-29
 
 A **coding-agent** release: the model can now read/edit/delete/move files, run shell commands, and use
