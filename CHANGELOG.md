@@ -5,6 +5,14 @@ All notable changes to Jotflow. Format based on
 
 ## [Unreleased]
 
+## [2.6.21] - 2026-06-29
+
+### Changed
+- **The shell tool (`run_command`) is now on by default** (`jotflow.tools.shell`), matching how coding
+  agents (Claude Code, Cline, …) ship. It stays fully gated: it only runs in a **trusted workspace**
+  and **confirms each command** with the in-chat card (`jotflow.tools.shellAutoApprove` opts out). Set
+  `jotflow.tools.shell: false` to remove the tool entirely.
+
 ## [2.6.20] - 2026-06-28
 
 ### Changed

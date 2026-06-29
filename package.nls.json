@@ -72,6 +72,6 @@
   "config.tts.chatterboxExaggeration.desc": "Chatterbox emotion/intensity (0–1). Higher is more expressive.",
   "cmd.engines.manage.title": "Manage engines",
   "config.mcp.autoAcceptElicitations.desc": "Auto-accept **confirmation** prompts from MCP servers (yes/no, no data requested) without showing a dialog. Requests for data (text, choices) still always ask. Enable only for servers you trust — a server could phrase a risky action as a simple confirmation.",
-  "config.tools.shell.desc": "Enable the **`run_command`** tool so the model can run shell commands in the workspace (e.g. `ls`, build scripts). **Off by default — this is arbitrary code execution.** Only works in a trusted workspace, and each command asks for confirmation unless `shellAutoApprove` is on.",
+  "config.tools.shell.desc": "Let the model run shell commands in the workspace (e.g. `ls`, build scripts) via the **`run_command`** tool. **On by default**, but it is arbitrary code execution — so it **only runs in a trusted workspace** and **asks you to confirm each command** (unless `shellAutoApprove` is on). Turn this off to remove the tool entirely.",
   "config.tools.shellAutoApprove.desc": "Run `run_command` commands **without** the per-command confirmation. **Dangerous** — the model could run destructive commands unattended. Leave off unless you fully trust the model and the workspace. (No effect unless `jotflow.tools.shell` is on.)"
 }

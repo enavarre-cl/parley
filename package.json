@@ -2,7 +2,7 @@
   "name": "jotflow",
   "displayName": "Jotflow",
   "description": "%ext.description%",
-  "version": "2.6.20",
+  "version": "2.6.21",
   "publisher": "enavarre",
   "license": "MIT",
   "engines": {
@@ -592,7 +592,7 @@
           },
           "jotflow.tools.shell": {
             "type": "boolean",
-            "default": false,
+            "default": true,
             "markdownDescription": "%config.tools.shell.desc%"
           },
           "jotflow.tools.shellAutoApprove": {

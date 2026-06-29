@@ -130,9 +130,10 @@ With **Tools** on (⚙, available on every backend), the model can call tools in
   escape) and never touch `.git/`, `.vscode/` or the MCP configs. `temp_dir` returns a private
   **scratch directory outside the workspace** (`/tmp/jotflow-…`) for throwaway files that must not
   touch the project — bounded to that dir only, and cleaned up on close.
-- **Shell** (`run_command`, **off by default**): runs a shell command in the workspace root. Enable
-  with **`jotflow.tools.shell`** — it's arbitrary code execution, so it only runs in a **trusted
-  workspace** and **asks you to confirm each command** (skip with `jotflow.tools.shellAutoApprove`).
+- **Shell** (`run_command`, **on by default**): runs a shell command in the workspace root. It's
+  arbitrary code execution, so it only runs in a **trusted workspace** and shows a **confirmation
+  card for each command** (skip with `jotflow.tools.shellAutoApprove`, or remove the tool with
+  `jotflow.tools.shell: false`).
 - **MCP servers**: define them in a **`.mcp/`** folder (one `*.json` per server) or a **`.mcp.json`**
   at the workspace root. Each server's tools are exposed as `server__tool`. Jotflow advertises your
   **workspace folders as MCP roots** (plus a server's own `cwd`), so servers know which directories to
@@ -183,7 +184,7 @@ Settings under `Settings → Jotflow`:
 | `jotflow.tools.maxIterations` | `8` | Max agentic tool-loop rounds per turn (`0` = unlimited) |
 | `jotflow.tools.maxReadBytes` | `100000` | Max bytes returned by the native `fs_read` tool (`0` = unlimited) |
 | `jotflow.mcp.autoAcceptElicitations` | `false` | Auto-accept **confirmation** prompts from MCP servers (yes/no) without a dialog; data requests still ask |
-| `jotflow.tools.shell` | `false` | Enable the `run_command` shell tool (**arbitrary code execution**; trusted workspace + per-command confirm) |
+| `jotflow.tools.shell` | `true` | The `run_command` shell tool (**arbitrary code execution**; trusted workspace + per-command confirmation card) |
 | `jotflow.tools.shellAutoApprove` | `false` | Run `run_command` commands **without** the confirmation dialog (**dangerous**) |
 | `jotflow.tts.chatterboxModel` | `multilingual` | Chatterbox model: `multilingual` (23 languages) or `english` (lighter). Ignored on Apple Silicon (always the MLX multilingual model) |
 | `jotflow.tts.chatterboxDevice` | `auto` | Compute device for the PyTorch Chatterbox backend: `auto` / `mps` / `cuda` / `cpu` |
